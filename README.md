@@ -305,6 +305,18 @@ Scripting = { version = "1.0", guid = "{...}" }
    <br>It will run the end-to-end CLI scenarios in excel.e2e.ts, covering workflows like build, export, new, and version against fixtures.
    <br>To keep temporary e2e work folders for manual inspection, set `KEEP_E2E_TMP=1` before running (PowerShell: `$env:KEEP_E2E_TMP=1; npm run test:e2e`, cmd: `set KEEP_E2E_TMP=1 && npm run test:e2e`).
 
+### Install local version
+
+To install the local version you can use the `devinstall.ps1` script available in the installer submodule.
+
+```powershell
+# Update submodule
+git submodule update --init --recursive installer
+
+# Run devinstall
+.\installer\devinstall.ps1
+```
+
 ### Release
 
 1. Run `npm version`
