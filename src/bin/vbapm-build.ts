@@ -29,6 +29,13 @@ export default async function (args: Args) {
 	console.log(`Done. ${time(process.hrtime(start))}`);
 
 	if (!!args.open) {
-		await open(path);
+		console.log(`Opening built target: ${path}`);
+
+		try {
+			const result = await open(path, { wait: true });
+		} catch (error: any) {
+			console.error(`Failed to open built target: ${error?.message || error}`);
+			throw error;
+		}
 	}
 }
