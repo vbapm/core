@@ -93,7 +93,7 @@
         "@rollup/plugin-replace": "^6.0.2",
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.2",
-        "@types/archiver": "^2",
+        "@types/archiver": "^7.0.0",
         "@types/fs-extra": "^5",
         "@types/jest": "^29",
         "@types/node": "^22",
