@@ -99,7 +99,7 @@
         "@types/node": "^22",
         "@types/node-fetch": "^2.6.13",
         "@types/semver": "^5",
-        "@types/tmp": "^0.0",
+        "@types/tmp": "^0.2.0",
         "aws-sdk": "^2.562.0",
         "builtin-modules": "^3.0.0",
         "cross-env": "^5",
