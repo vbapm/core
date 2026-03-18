@@ -62,7 +62,7 @@
         }
     },
     "dependencies": {
-        "@decimalturn/toml-patch": "^0.7",
+        "@decimalturn/toml-patch": "^1.0.0",
         "@timhall/ansi-colors": "^5.0.0",
         "@timhall/dedent": "^0.10.0",
         "archiver": "^7.0.1",
