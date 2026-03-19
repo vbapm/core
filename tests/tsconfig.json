@@ -9,6 +9,7 @@
     "lib": ["es2017"],
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "allowJs": true,
     "useUnknownInCatchVariables": false,
     "baseUrl": "..",
     "paths": {
