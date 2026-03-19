@@ -29,7 +29,6 @@
 const { dirname, resolve, relative, join } = require("path");
 const { ensureDir, pathExists, readFile, remove } = require("fs-extra");
 const mri = require("mri");
-const { parse } = require("@decimalturn/toml-patch");
 const ls = require("./lib/ls");
 const zip = require("./lib/zip");
 const sanitizeName = require("./lib/sanitize-name");
@@ -47,6 +46,7 @@ main().catch(error => {
 
 // Usage: node scripts/pack ./input/dir
 async function main() {
+	const { parse } = await import("@decimalturn/toml-patch");
 	const {
 		_: [input],
 		force = false

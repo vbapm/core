@@ -28,7 +28,6 @@ const execFile = promisify(require("child_process").execFile);
 const { readFile, ensureFile, pathExists, writeFile } = require("fs-extra");
 const mri = require("mri");
 const tmpDir = promisify(require("tmp").dir);
-const { parse } = require("@decimalturn/toml-patch");
 const joinUrl = require("url-join");
 const checksum = require("./lib/checksum");
 const download = require("./lib/download");
@@ -45,6 +44,7 @@ main().catch(error => {
 
 // Usage: node scripts/publish ./input/dir
 async function main() {
+	const { parse } = await import("@decimalturn/toml-patch");
 	let {
 		_: [input],
 		dryrun = false

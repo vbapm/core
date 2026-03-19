@@ -62,7 +62,7 @@
         }
     },
     "dependencies": {
-        "@decimalturn/toml-patch": "^0.7",
+        "@decimalturn/toml-patch": "^1.0.5",
         "@timhall/ansi-colors": "^5.0.0",
         "@timhall/dedent": "^0.10.0",
         "archiver": "^7.0.1",
@@ -95,7 +95,7 @@
         "@rollup/plugin-typescript": "^12.1.2",
         "@types/archiver": "^7.0.0",
         "@types/fs-extra": "^5",
-        "@types/jest": "^29",
+        "@types/jest": "^30",
         "@types/node": "^22",
         "@types/node-fetch": "^2.6.13",
         "@types/semver": "^5",
@@ -104,7 +104,7 @@
         "builtin-modules": "^5.0.0",
         "cross-env": "^10.0.0",
         "dotenv": "^17.0.0",
-        "jest": "^29",
+        "jest": "^30",
         "mustache": "^3",
         "npm-run-all2": "^8.0.0",
         "prettier": "^3",
