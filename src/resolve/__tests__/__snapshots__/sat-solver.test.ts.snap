@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`fails to solve unresolvable tree 1`] = `[Error: Failed to resolve dependency graph for given manifest]`;
 
