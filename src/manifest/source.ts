@@ -22,6 +22,8 @@ const EXAMPLE = `Example vbaproject.toml:
   A = "src/a.bas"
   B = { path = "src/b.cls" }`;
 
+const VBA_EXTENSIONS = /^(bas|cls|frm|doccls)$/i;
+
 export function parseSrc(value: any, dir: string): Source[] {
 	return Object.entries(value).map(([name, value]) => parseSource(name, value, dir));
 }
@@ -30,7 +32,17 @@ export function parseSource(name: string, value: string | any, dir: string): Sou
 	if (isString(value)) value = { path: value };
 	const { path: relativePath, binary } = value;
 
-	manifestOk(relativePath, `src "${name}" is missing path. \n\n${EXAMPLE}`);
+	if (!relativePath) {
+		const extKey = Object.keys(value).find(k => VBA_EXTENSIONS.test(k));
+		if (extKey) {
+			manifestOk(
+				false,
+				`src key <${name}.${extKey}> looks like a dotted TOML key. You want to use a quoted key instead (<"${name}.${extKey}">):\n\n  '${name}.${extKey}' = '${value[extKey]}'\n\n${EXAMPLE}`
+			);
+		}
+	}
+
+	manifestOk(relativePath, `src <${name}> is missing path. \n\n${EXAMPLE}`);
 	const path = join(dir, relativePath);
 
 	const source: Source = { name, path };
