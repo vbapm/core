@@ -164,9 +164,21 @@ End Sub
 
 Private Function CreateWorkbook(Path As String) As Object
     Dim WB As Object
+    Dim FileFormat As Long
+    Dim Ext As String
+
+    Ext = LCase(Mid(Path, InStrRev(Path, ".") + 1))
+    Select Case Ext
+        Case "xlam"
+            FileFormat = 55 ' XlFileFormat.xlOpenXMLAddIn
+        Case "xlsx"
+            FileFormat = 51 ' XlFileFormat.xlOpenXMLWorkbook
+        Case Else
+            FileFormat = 52 ' XlFileFormat.xlOpenXMLWorkbookMacroEnabled
+    End Select
 
     Set WB = Application.Workbooks.Add
-    WB.SaveAs Path, 52 ' XlFileFormat.xlOpenXMLWorkbookMacroEnabled
+    WB.SaveAs Path, FileFormat
 
     Set CreateWorkbook = WB
 End Function
