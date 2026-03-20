@@ -28,7 +28,7 @@
         "README.md"
     ],
     "engines": {
-        "node": ">=18.0.0"
+        "node": ">=18.14.0"
     },
     "scripts": {
         "format": "prettier --write \"**/*.{ts,js}\"",
@@ -46,23 +46,9 @@
         "build:bootstrap": "cd scripts/bootstrap && node --no-warnings ../../lib/vbapm build",
         "clean": "rimraf lib && rimraf dist && rimraf addins/build"
     },
-    "jest": {
-        "preset": "ts-jest",
-        "testEnvironment": "node",
-        "testPathIgnorePatterns": [
-            "/node_modules/",
-            "/lib/"
-        ],
-        "moduleNameMapper": {
-            "^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js"
-        },
-        "snapshotFormat": {
-            "escapeString": true,
-            "printBasicPrototype": true
-        }
-    },
+
     "dependencies": {
-        "@decimalturn/toml-patch": "^0.7",
+        "@decimalturn/toml-patch": "^1.0.5",
         "@timhall/ansi-colors": "^5.0.0",
         "@timhall/dedent": "^0.10.0",
         "archiver": "^7.0.1",
@@ -95,7 +81,7 @@
         "@rollup/plugin-typescript": "^12.1.2",
         "@types/archiver": "^7.0.0",
         "@types/fs-extra": "^5",
-        "@types/jest": "^29",
+        "@types/jest": "^30",
         "@types/node": "^22",
         "@types/node-fetch": "^2.6.13",
         "@types/semver": "^5",
@@ -104,7 +90,7 @@
         "builtin-modules": "^5.0.0",
         "cross-env": "^10.0.0",
         "dotenv": "^17.0.0",
-        "jest": "^29",
+        "jest": "^30",
         "mustache": "^3",
         "npm-run-all2": "^8.0.0",
         "prettier": "^3",
@@ -133,6 +119,8 @@
             "scripts.build:bootstrap": "Update the bootstrap file (used to build the addin) by using the latest addin build (inception!)",
             "scripts.clean": "Removes generated files from lib, dist, and addins/build directories",
             "devDependencies.cross-env": "Used to set environment variables in a cross-platform-compatible way for build scripts",
+            "jest.transformIgnorePatterns": "@decimalturn/toml-patch v1+ is ESM-only. Jest (running in CJS mode via ts-jest) skips transforming node_modules by default, which causes 'Unexpected token export' errors. This pattern excludes toml-patch from that skip list so ts-jest can downcompile it to CJS at test time.",
+            "jest.transform": "Required alongside transformIgnorePatterns: overrides the default ts-jest transform to add allowJs:true so ts-jest can process the plain .js ESM dist file of @decimalturn/toml-patch.",
             "overrides": "Pins vulnerable transitive dependencies to patched versions to remove critical npm audit findings without large upstream upgrades.",
             "overrides.minimist": "Prototype pollution fix, mainly needed for ts-jest/handlebars transitive chain.",
             "overrides.underscore": "Arbitrary code execution mitigation, mainly needed for logic-solver transitive dependency.",
