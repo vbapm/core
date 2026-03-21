@@ -1,6 +1,6 @@
 {
     "name": "vbapm",
-    "version": "0.6.15",
+    "version": "0.6.16-pre",
     "description": "A package manager and build tool for VBA",
     "repository": "https://github.com/vbapm/core.git",
     "contributors": [
