@@ -53,7 +53,7 @@
         "@timhall/dedent": "^0.10.0",
         "archiver": "^7.0.1",
         "conf": "^3",
-        "date-fns": "^2",
+        "date-fns": "^4.0.0",
         "debug": "^4",
         "decompress": "^4",
         "editorconfig": "^0.15.3",
