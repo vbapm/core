@@ -64,7 +64,7 @@
         "meant": "^1.0",
         "mri": "^1",
         "node-fetch": "^2",
-        "open": "^6",
+        "open": "^11.0.0",
         "pretty-hrtime": "^1",
         "sanitize-filename": "^1",
         "semver": "^5",
