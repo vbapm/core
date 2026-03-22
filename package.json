@@ -67,7 +67,7 @@
         "open": "^11.0.0",
         "pretty-hrtime": "^1",
         "sanitize-filename": "^1",
-        "semver": "^5",
+        "semver": "^7.0.0",
         "tmp": "^0.2.5",
         "walk-sync": "^4.0.1",
         "xml-js": "^1.6"
@@ -84,7 +84,7 @@
         "@types/jest": "^30",
         "@types/node": "^22",
         "@types/node-fetch": "^2.6.13",
-        "@types/semver": "^5",
+        "@types/semver": "^7.0.0",
         "@types/tmp": "^0.2.0",
         "aws-sdk": "^2.562.0",
         "builtin-modules": "^5.0.0",
