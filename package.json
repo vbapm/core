@@ -61,7 +61,7 @@
         "fs-extra": "^7",
         "isomorphic-git": "^1.37.1",
         "logic-solver": "^2",
-        "meant": "^1.0",
+        "meant": "^2.0.0",
         "mri": "^1",
         "node-fetch": "^2",
         "open": "^11.0.0",
