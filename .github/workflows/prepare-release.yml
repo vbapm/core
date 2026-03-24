@@ -128,7 +128,7 @@ jobs:
 
   build-packages:
     needs: prepare-release
-    runs-on: windows-2022
+    runs-on: windows-2025
     outputs:
       release_url: ${{ steps.upload_assets.outputs.url }}
     steps:
