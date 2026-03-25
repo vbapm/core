@@ -56,7 +56,7 @@
         "date-fns": "^4.0.0",
         "debug": "^4",
         "decompress": "^4",
-        "editorconfig": "^0.15.3",
+        "editorconfig": "^3.0.0",
         "env-paths": "^2",
         "fs-extra": "^7",
         "isomorphic-git": "^1.37.1",
