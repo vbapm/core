@@ -82,7 +82,7 @@
         "@types/archiver": "^7.0.0",
         "@types/fs-extra": "^5",
         "@types/jest": "^30",
-        "@types/node": "^22",
+        "@types/node": "^24.0.0",
         "@types/node-fetch": "^2.6.13",
         "@types/semver": "^7.0.0",
         "@types/tmp": "^0.2.0",

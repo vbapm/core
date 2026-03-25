@@ -220,6 +220,9 @@ jobs:
   # Integration test: TypeScript escape() / unescape() round-trip
   # ------------------------------------------------------------------
   typescript-escape-roundtrip:
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
     runs-on: ubuntu-latest
 
     steps:
@@ -229,7 +232,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
         run: npm install
@@ -278,6 +281,7 @@ jobs:
   script-selection:
     strategy:
       matrix:
+        node-version: [22.x, 24.x]
         include:
           - os: windows-2022
             expected_ext: .ps1
@@ -292,7 +296,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
         run: npm install

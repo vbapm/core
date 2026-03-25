@@ -1,12 +1,9 @@
-name: Windows Package E2E Test
+name: Windows NPM Library E2E Test
 
 on:
   push:
     branches:
-      - main*
-      - dev
-      - dev-*
-      - dual-output*
+      - main
     paths-ignore:
       - '**/*.md'
       - '.github/workflows/prepare-release.yml'
@@ -19,6 +16,8 @@ jobs:
     strategy:
       matrix:
         os: [windows-2025]
+        # Run Node 22.x only on main; use Node 24.x for PRs and other refs.
+        node-version: ${{ github.ref == 'refs/heads/main' && fromJSON('["22.x","24.x"]') || fromJSON('["24.x"]') }}
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -33,7 +32,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: ${{ matrix.node-version }}
 
       - name: Install Node dependencies and build
         run: |
