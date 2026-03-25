@@ -35,6 +35,13 @@ function shebang() {
 					}
 				}
 			}
+
+			// editorconfig's one-ini parser may load this wasm file at runtime.
+			const wasmSource = path.resolve("node_modules", "@one-ini", "wasm", "one_ini_bg.wasm");
+			if (fs.existsSync(wasmSource)) {
+				const wasmTarget = path.resolve(options.dir, "one_ini_bg.wasm");
+				fs.copyFileSync(wasmSource, wasmTarget);
+			}
 		}
 	};
 }
