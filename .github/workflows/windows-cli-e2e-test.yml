@@ -1,11 +1,9 @@
-name: Windows Integration Test
+name: Windows CLI Tool E2E Test
 
 on:
   push:
     branches:
       - main*
-      - dev
-      - dev-*
     paths-ignore:
       - '**/*.md'
       - '.github/workflows/prepare-release.yml'
