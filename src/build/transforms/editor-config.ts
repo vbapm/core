@@ -1,4 +1,4 @@
-import { KnownProps as EditorConfig, parse } from "editorconfig";
+import { KnownProps, parse } from "editorconfig";
 import { env } from "../../env";
 import { parallel } from "../../utils/parallel";
 import { extname } from "../../utils/path";
@@ -7,7 +7,7 @@ import { BuildGraph } from "../build-graph";
 import { Component } from "../component";
 
 const debug = env.debug("vbapm:editor-config");
-const cache: Map<string, EditorConfig> = new Map();
+const cache: Map<string, KnownProps> = new Map();
 
 export async function toCompiled(graph: BuildGraph): Promise<BuildGraph> {
 	return graph;
@@ -37,11 +37,11 @@ async function formatComponent(component: Component): Promise<Component> {
 	return component;
 }
 
-async function loadEditorConfig(component: Component): Promise<EditorConfig> {
+async function loadEditorConfig(component: Component): Promise<KnownProps> {
 	const extension = extname(component.filename);
 	if (cache.has(extension)) return cache.get(extension)!;
 
-	const config = await parse(component.filename);
+	const config = (await parse(component.filename)) as KnownProps;
 	cache.set(extension, config);
 
 	debug(`Formatting ${extension} with`, config);
