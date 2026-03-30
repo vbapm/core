@@ -1,3 +1,4 @@
+export { addSource } from "./actions/add-source";
 export { buildProject } from "./actions/build-project";
 export { createProject } from "./actions/create-project";
 export { exportProject } from "./actions/export-project";
