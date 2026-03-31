@@ -1,3 +1,4 @@
+import dedent from "@timhall/dedent";
 import { manifestOk } from "../errors";
 import { isString } from "../utils/is";
 import { join, relative } from "../utils/path";
@@ -37,7 +38,10 @@ export function parseSource(name: string, value: string | any, dir: string): Sou
 		if (extKey) {
 			manifestOk(
 				false,
-				`src key <${name}.${extKey}> looks like a dotted TOML key. You want to use a quoted key instead (<"${name}.${extKey}">):\n\n  '${name}.${extKey}' = '${value[extKey]}'\n\n${EXAMPLE}`
+				dedent`
+				src key <${name}.${extKey}> should not include the file extension.
+				You want to use a <${name}> instead.
+				`
 			);
 		}
 	}
