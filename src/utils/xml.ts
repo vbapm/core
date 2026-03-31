@@ -13,10 +13,15 @@ export function parseXml(xml: string | Buffer): Element {
 export interface ConvertOptions {
 	// https://github.com/nashwaan/xml-js#options-for-converting-js-object--json--xml
 	compact?: boolean;
+	spaces?: number | string;
 }
 
 export function convertXml(value: Xml, options?: ConvertOptions): string {
 	return js2xml(value, options);
+}
+
+export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): string {
+	return convertXml(parseXml(xml), options);
 }
 
 export function findElement(
