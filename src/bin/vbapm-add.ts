@@ -8,11 +8,12 @@ const help = dedent`
   Usage: vbapm add <name> [options]
 
   Options:
-    <name>          Source name (optionally with .bas or .cls extension)
+    <name>          Source name or file path (optionally with .bas or .cls extension)
     --type=TYPE     Source type (module or class)
     --dev           Add to [dev-src] instead of [src]
 
   Examples:
+  vbapm add ./src/subfolder/Module1.bas
   vbapm add Module1
   vbapm add JsonParser --type class
   vbapm add TestHelpers --dev

@@ -4,7 +4,7 @@ import { CliError, ErrorCode } from "../errors";
 import { loadManifest, writeManifest } from "../manifest";
 import { Source } from "../manifest/source";
 import { ensureDir, pathExists, writeFile } from "../utils/fs";
-import { basename, extname, join } from "../utils/path";
+import { basename, dirname, extname, join } from "../utils/path";
 
 const extensionToType: { [extension: string]: "module" | "class" } = {
 	".bas": "module",
@@ -44,21 +44,17 @@ export async function addSource(options: AddSourceOptions): Promise<AddSourceRes
 	}
 
 	const manifest = await loadManifest(root);
-	if (name.includes("/") || name.includes("\\")) {
-		throw new CliError(
-			ErrorCode.AddInvalidName,
-			`Invalid source name "${name}". Use a VBA component name without path separators.`
-		);
+	const extension = getExtension(name, type);
+	const hasPathParts = name.includes("/") || name.includes("\\");
+	let path = hasPathParts ? join(root, name) : join(root, "src", name);
+	if (!extname(path)) {
+		path = `${path}${extension}`;
 	}
 
-	const extension = getExtension(name, type);
-	const componentName = basename(name, extname(name));
+	const componentName = basename(path, extname(path));
 	if (!componentName) {
 		throw new CliError(ErrorCode.AddInvalidName, `Invalid source name "${name}".`);
 	}
-
-	const filename = `${componentName}${extension}`;
-	const path = join(root, "src", filename);
 
 	const section = dev ? manifest.devSrc : manifest.src;
 	const duplicate = section.find(source => source.name === componentName || source.path === path);
@@ -72,7 +68,7 @@ export async function addSource(options: AddSourceOptions): Promise<AddSourceRes
 	const fileExists = await pathExists(path);
 
 	if (!fileExists) {
-		await ensureDir(join(root, "src"));
+		await ensureDir(dirname(path));
 		await writeFile(path, template(componentName, extension));
 	}
 
