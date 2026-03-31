@@ -10,12 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.0] - 2026-03-31
 
 ### Added
-- New `add` command support to create and register source files.
-- Better error message when the file extension is included in the VBA Component name.
+- New `add` command support to create and register source files ([#46]).
+- Better error message when the file extension is included in the VBA Component name ([#39]).
+- Add support for .xlam and .xlsx files ([#40]).
 
 ### Fixed
-- Improved duplicate source detection across `src` and `dev-src`.
-- Added VBA component name validation.
+- Improved duplicate source detection across `src` and `dev-src`([#46]).
+- Added VBA component name validation ([#46]).
 
 ## [0.6.15] - 2026-02-25
 
@@ -49,3 +50,6 @@ Note: The online registry remains the vba-blocks.com registry.
 [0.6.15]: https://github.com/DecimalTurn/vba-blocks/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/DecimalTurn/vba-blocks/compare/v0.6.12...v0.6.14
 [0.6.12]: https://github.com/DecimalTurn/vba-blocks/releases/tag/v0.6.12
+[#40]: https://github.com/vbapm/core/pull/40
+[#46]: https://github.com/vbapm/core/pull/46
+[#39]: https://github.com/vbapm/core/pull/39
