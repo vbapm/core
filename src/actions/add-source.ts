@@ -16,6 +16,10 @@ const typeToExtension: { [type: string]: ".bas" | ".cls" } = {
 	class: ".cls"
 };
 
+// VBA component names can contain Unicode letters (as supported by the local Code Page), numbers, and underscores, but must start with a letter or underscore
+// The rule below is more permissive since we don't check if the letters are valid in the local Code Page, but it should be sufficient to prevent invalid names in most cases.
+const VBA_COMPONENT_NAME = /^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u;
+
 export interface AddSourceOptions {
 	name?: string;
 	type?: string;
@@ -54,6 +58,12 @@ export async function addSource(options: AddSourceOptions): Promise<AddSourceRes
 	const componentName = basename(path, extname(path));
 	if (!componentName) {
 		throw new CliError(ErrorCode.AddInvalidName, `Invalid source name "${name}".`);
+	}
+	if (!VBA_COMPONENT_NAME.test(componentName)) {
+		throw new CliError(
+			ErrorCode.AddInvalidName,
+			`Invalid VBA component name "${componentName}". Use Unicode letters, numbers, and underscores only, and do not start with a number.`
+		);
 	}
 
 	const sectionName = dev ? "dev-src" : "src";
