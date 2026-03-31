@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-31
+
 ### Added
 - New `add` command support to create and register source files.
 - Better error message when the file extension is included in the VBA Component name.

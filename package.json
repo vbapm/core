@@ -1,6 +1,6 @@
 {
     "name": "vbapm",
-    "version": "0.6.16-pre",
+    "version": "0.7.0",
     "description": "A package manager and build tool for VBA",
     "repository": "https://github.com/vbapm/core.git",
     "contributors": [
@@ -46,7 +46,6 @@
         "build:bootstrap": "cd scripts/bootstrap && node --no-warnings ../../lib/vbapm build",
         "clean": "rimraf lib && rimraf dist && rimraf addins/build"
     },
-
     "dependencies": {
         "@decimalturn/toml-patch": "^1.0.5",
         "@timhall/ansi-colors": "^5.0.0",
