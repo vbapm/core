@@ -122,6 +122,40 @@ Create a blank package:
 vba init --package
 ```
 
+### `add`
+
+Create a new source file in `src/` and register it in `vbaproject.toml`.
+
+Create a standard module:
+
+```txt
+vba add Module1
+```
+
+Create a class module:
+
+```txt
+vba add JsonParser --type class
+```
+
+Register an existing source file by path (no overwrite):
+
+```txt
+vba add .\src\Test.bas
+```
+
+Create and register a file in a nested path (missing folders are created):
+
+```txt
+vba add .\src\features\auth\LoginHelper.bas
+```
+
+Add a development-only source to `[dev-src]`:
+
+```txt
+vba add TestHelpers --dev
+```
+
 ### `build`
 
 Build an Excel workbook from the project's source. The built file is located in the `build/` folder and if a previously built file is found it is moved to `/.backup` to protect against losing any previously saved work.

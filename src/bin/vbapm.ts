@@ -19,6 +19,7 @@ type Command = (args: Args) => Promise<void>;
 const commands: { [name: string]: () => Promise<Command> } = {
 	new: async () => (await import("./vbapm-new")).default,
 	init: async () => (await import("./vbapm-init")).default,
+	add: async () => (await import("./vbapm-add")).default,
 	build: async () => (await import("./vbapm-build")).default,
 	test: async () => (await import("./vbapm-test")).default,
 	export: async () => (await import("./vbapm-export")).default,
@@ -52,6 +53,7 @@ const help = dedent`
   Commands:
     - new           Create a new project / package in a new directory
     - init          Initialize a new project / package in the current directory
+    - add           Create and register a new src file in vbaproject.toml
     - build         Build project from manifest
     - test          Run tests for built target
     - export        Export src from built target
