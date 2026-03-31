@@ -53,7 +53,7 @@ const help = dedent`
   Commands:
     - new           Create a new project / package in a new directory
     - init          Initialize a new project / package in the current directory
-	- add           Create and register a new src file in vbaproject.toml
+    - add           Create and register a new src file in vbaproject.toml
     - build         Build project from manifest
     - test          Run tests for built target
     - export        Export src from built target
