@@ -138,6 +138,18 @@ Create a class module:
 vba add JsonParser --type class
 ```
 
+Register an existing source file by path (no overwrite):
+
+```txt
+vba add .\src\Test.bas
+```
+
+Create and register a file in a nested path (missing folders are created):
+
+```txt
+vba add .\src\features\auth\LoginHelper.bas
+```
+
 Add a development-only source to `[dev-src]`:
 
 ```txt
