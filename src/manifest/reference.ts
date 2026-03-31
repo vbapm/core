@@ -49,9 +49,9 @@ export function parseReference(name: string, value: any): Reference {
 
 	manifestOk(
 		isVersion(version),
-		`Reference "${name}" has an invalid version "${version}". \n\n${EXAMPLE}.`
+		`Reference <${name}> has an invalid version <${version}>. \n\n${EXAMPLE}.`
 	);
-	manifestOk(isGuid(guid), `Reference "${name}" has an invalid guid "${guid}". \n\n${EXAMPLE}'`);
+	manifestOk(isGuid(guid), `Reference <${name}> has an invalid guid <${guid}>. \n\n${EXAMPLE}.`);
 
 	const { major, minor } = getMajorMinor(version);
 

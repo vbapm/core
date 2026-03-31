@@ -85,7 +85,7 @@ export function parseDependency(name: string, value: Version | any, dir: string)
 
 	manifestOk(
 		version || path || git,
-		`Invalid dependency "${name}", no version, path, or git specified. \n\n${EXAMPLE}`
+		`Invalid dependency <${name}>, no version, path, or git specified. \n\n${EXAMPLE}`
 	);
 
 	if (version) {

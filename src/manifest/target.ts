@@ -37,10 +37,10 @@ export function parseTarget(value: any, pkgName: string, dir: string): Target {
 	if (!has(value, "name")) value = { name: pkgName, ...value };
 	const { type, name, path: relativePath = "target" } = value;
 
-	manifestOk(isString(type), `Target is missing "type". \n\n${EXAMPLE}.`);
+	manifestOk(isString(type), `Target is missing <type>. \n\n${EXAMPLE}.`);
 	manifestOk(
 		isSupportedTargetType(type),
-		`Unsupported target type "${type}". Only "xlsx", "xlsm", and "xlam" are supported currently.`
+		`Unsupported target type <${type}>. Only <xlsx>, <xlsm>, and <xlam> are supported currently.`
 	);
 
 	const path = join(dir, relativePath);
