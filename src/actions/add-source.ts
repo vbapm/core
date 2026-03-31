@@ -56,14 +56,22 @@ export async function addSource(options: AddSourceOptions): Promise<AddSourceRes
 		throw new CliError(ErrorCode.AddInvalidName, `Invalid source name "${name}".`);
 	}
 
-	const section = dev ? manifest.devSrc : manifest.src;
-	const duplicate = section.find(source => source.name === componentName || source.path === path);
-	if (duplicate) {
+	const sectionName = dev ? "dev-src" : "src";
+	const existingInSrc = manifest.src.find(
+		source => source.name === componentName || source.path === path
+	);
+	const existingInDevSrc = manifest.devSrc.find(
+		source => source.name === componentName || source.path === path
+	);
+	if (existingInSrc || existingInDevSrc) {
+		const existingSection = existingInSrc ? "src" : "dev-src";
 		throw new CliError(
 			ErrorCode.AddSourceExists,
-			`Source "${componentName}" already exists in [${dev ? "dev-src" : "src"}].`
+			`Source "${componentName}" already exists in [${existingSection}] and cannot be added to [${sectionName}].`
 		);
 	}
+
+	const section = dev ? manifest.devSrc : manifest.src;
 
 	const fileExists = await pathExists(path);
 
