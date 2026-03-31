@@ -28,6 +28,10 @@ export default async function (args: Args) {
 	const type = <string | undefined>args.type;
 	const dev = !!args.dev;
 
-	const path = await addSource({ name, type, dev });
-	console.log(`Created ${path}`);
+	const result = await addSource({ name, type, dev });
+	if (result.isNew) {
+		console.log(`Created ${result.path}`);
+	} else {
+		console.log(`Registered existing file ${result.path}`);
+	}
 }

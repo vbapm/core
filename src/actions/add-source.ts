@@ -23,7 +23,12 @@ export interface AddSourceOptions {
 	dev: boolean;
 }
 
-export async function addSource(options: AddSourceOptions): Promise<string> {
+export interface AddSourceResult {
+	path: string;
+	isNew: boolean;
+}
+
+export async function addSource(options: AddSourceOptions): Promise<AddSourceResult> {
 	const { name, type, dir, dev } = options;
 	const root = dir || env.cwd;
 
@@ -64,15 +69,12 @@ export async function addSource(options: AddSourceOptions): Promise<string> {
 		);
 	}
 
-	if (await pathExists(path)) {
-		throw new CliError(
-			ErrorCode.AddSourceExists,
-			`A file already exists at "${path}". Remove it first or choose a different name.`
-		);
-	}
+	const fileExists = await pathExists(path);
 
-	await ensureDir(join(root, "src"));
-	await writeFile(path, template(componentName, extension));
+	if (!fileExists) {
+		await ensureDir(join(root, "src"));
+		await writeFile(path, template(componentName, extension));
+	}
 
 	const source: Source = {
 		name: componentName,
@@ -82,7 +84,7 @@ export async function addSource(options: AddSourceOptions): Promise<string> {
 
 	await writeManifest(manifest, root);
 
-	return path;
+	return { path, isNew: !fileExists };
 }
 
 function getExtension(name: string, type?: string): ".bas" | ".cls" {
