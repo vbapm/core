@@ -127,11 +127,11 @@ function template(name: string, extension: ".bas" | ".cls"): string {
       Attribute VB_PredeclaredId = False
       Attribute VB_Exposed = False
       
-    `;
+    ` + "\n\n";
 	}
 
 	return dedent`
     Attribute VB_Name = "${name}"
     
-  `;
+    ` + "\n\n";
 }
