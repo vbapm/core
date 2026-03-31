@@ -100,13 +100,27 @@ jobs:
         if: github.event.inputs.version_bump != 'no-bump'
         run: npm install --package-lock-only
 
+      - name: Update CHANGELOG.md
+        if: github.event.inputs.version_bump != 'no-bump'
+        run: |
+          today=$(date +%Y-%m-%d)
+          version="${{ steps.next_version.outputs.version }}"
+
+          if ! grep -q '^## \[Unreleased\]' CHANGELOG.md; then
+            echo "CHANGELOG.md is missing the '## [Unreleased]' header."
+            exit 1
+          fi
+
+          # Insert the new release header right after [Unreleased], moving current notes into the new version section.
+          sed -i "0,/^## \[Unreleased\]$/s//## [Unreleased]\\n\\n## [$version] - $today/" CHANGELOG.md
+
       - name: Commit changes
         id: commit
         run: |
             if [[ "${{ github.event.inputs.version_bump }}" != "no-bump" ]]; then
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
-              git add package.json package-lock.json
+              git add package.json package-lock.json CHANGELOG.md
               git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }}"
               git push origin ${{ github.ref_name }}
               echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
