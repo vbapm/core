@@ -116,7 +116,8 @@ function getExtension(name: string, type?: string): ".bas" | ".cls" {
 
 function template(name: string, extension: ".bas" | ".cls"): string {
 	if (extension === ".cls") {
-		return dedent`
+		return (
+			dedent`
       VERSION 1.0 CLASS
       BEGIN
         MultiUse = -1  'True
@@ -126,12 +127,13 @@ function template(name: string, extension: ".bas" | ".cls"): string {
       Attribute VB_Creatable = False
       Attribute VB_PredeclaredId = False
       Attribute VB_Exposed = False
-      
-    ` + "\n\n";
+    ` + "\n\n"
+		);
 	}
 
-	return dedent`
+	return (
+		dedent`
     Attribute VB_Name = "${name}"
-    
-    ` + "\n\n";
+    ` + "\n\n"
+	);
 }
