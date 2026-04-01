@@ -4,8 +4,19 @@ import { UnzipFile } from "../../utils/zip";
 const XML = /\.(xml|rels)$/i;
 const XML_INDENT = 2;
 
+// TODO: Remove once formatXml handles non-UTF-8 encodings correctly.
+function isNonUtf8Encoding(data: Buffer): boolean {
+	if (data.length >= 2 && ((data[0] === 0xff && data[1] === 0xfe) || (data[0] === 0xfe && data[1] === 0xff))) {
+		return true;
+	}
+	return false;
+}
+
 export default function transformFormatXml(file: UnzipFile): UnzipFile {
 	if (!XML.test(file.path)) return file;
+
+	// TODO: Remove once formatXml handles non-UTF-8 encodings correctly.
+	//if (isNonUtf8Encoding(file.data)) return file;
 
 	try {
 		file.data = Buffer.from(formatXml(file.data, { spaces: XML_INDENT }));
