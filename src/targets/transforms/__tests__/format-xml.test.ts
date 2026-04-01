@@ -59,7 +59,11 @@ describe("transformFormatXml", () => {
 		const utf16le = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")]);
 		const file = toFileBuffer("xl/workbook.xml", utf16le);
 
+		const transformed = transformFormatXml(file);
+
 		expect(() => transformFormatXml(file)).not.toThrow();
-		expect(transformFormatXml(file).data.toString("utf8")).toContain("<child>value</child>");
+		expect(transformed.data[0]).toBe(0xff);
+		expect(transformed.data[1]).toBe(0xfe);
+		expect(transformed.data.toString("utf16le")).toContain("<child>value</child>");
 	});
 });

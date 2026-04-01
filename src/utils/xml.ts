@@ -2,25 +2,35 @@ import { xml2js, js2xml, Element } from "xml-js";
 
 export type Xml = any;
 
-function decodeXmlBuffer(xml: Buffer): string {
+type XmlEncoding = "utf8" | "utf16le" | "utf16be";
+
+interface XmlBufferEncoding {
+	encoding: XmlEncoding;
+	hasBom: boolean;
+}
+
+function swap16Bytes(buffer: Buffer): Buffer {
+	const swapped = Buffer.allocUnsafe(buffer.length);
+	for (let i = 0; i < buffer.length - 1; i += 2) {
+		swapped[i] = buffer[i + 1];
+		swapped[i + 1] = buffer[i];
+	}
+
+	if (buffer.length % 2 === 1) {
+		swapped[buffer.length - 1] = buffer[buffer.length - 1];
+	}
+
+	return swapped;
+}
+
+function detectXmlBufferEncoding(xml: Buffer): XmlBufferEncoding {
 	if (xml.length >= 2) {
 		if (xml[0] === 0xff && xml[1] === 0xfe) {
-			return xml.toString("utf16le");
+			return { encoding: "utf16le", hasBom: true };
 		}
 
 		if (xml[0] === 0xfe && xml[1] === 0xff) {
-			// Node does not support utf16be directly.
-			const littleEndian = Buffer.allocUnsafe(xml.length);
-			for (let i = 0; i < xml.length - 1; i += 2) {
-				littleEndian[i] = xml[i + 1];
-				littleEndian[i + 1] = xml[i];
-			}
-
-			if (xml.length % 2 === 1) {
-				littleEndian[xml.length - 1] = xml[xml.length - 1];
-			}
-
-			return littleEndian.toString("utf16le");
+			return { encoding: "utf16be", hasBom: true };
 		}
 	}
 
@@ -37,29 +47,51 @@ function decodeXmlBuffer(xml: Buffer): string {
 
 	// UTF-16 XML without BOM often has null bytes at every other position.
 	if (oddNulls > 8 && oddNulls > evenNulls * 2) {
-		return xml.toString("utf16le");
+		return { encoding: "utf16le", hasBom: false };
 	}
 
 	if (evenNulls > 8 && evenNulls > oddNulls * 2) {
-		const littleEndian = Buffer.allocUnsafe(xml.length);
-		for (let i = 0; i < xml.length - 1; i += 2) {
-			littleEndian[i] = xml[i + 1];
-			littleEndian[i + 1] = xml[i];
-		}
-
-		if (xml.length % 2 === 1) {
-			littleEndian[xml.length - 1] = xml[xml.length - 1];
-		}
-
-		return littleEndian.toString("utf16le");
+		return { encoding: "utf16be", hasBom: false };
 	}
 
-	return xml.toString("utf8");
+	return { encoding: "utf8", hasBom: false };
+}
+
+function decodeXmlBuffer(xml: Buffer): { text: string; encoding: XmlBufferEncoding } {
+	const encoding = detectXmlBufferEncoding(xml);
+
+	if (encoding.encoding === "utf16le") {
+		return { text: xml.toString("utf16le"), encoding };
+	}
+
+	if (encoding.encoding === "utf16be") {
+		return { text: swap16Bytes(xml).toString("utf16le"), encoding };
+	}
+
+	return { text: xml.toString("utf8"), encoding };
+}
+
+function encodeXmlBuffer(xml: string, encoding: XmlBufferEncoding): Buffer {
+	if (encoding.encoding === "utf16le") {
+		const data = Buffer.from(xml, "utf16le");
+		if (!encoding.hasBom) return data;
+		return Buffer.concat([Buffer.from([0xff, 0xfe]), data]);
+	}
+
+	if (encoding.encoding === "utf16be") {
+		const data = swap16Bytes(Buffer.from(xml, "utf16le"));
+		if (!encoding.hasBom) return data;
+		return Buffer.concat([Buffer.from([0xfe, 0xff]), data]);
+	}
+
+	const data = Buffer.from(xml, "utf8");
+	if (!encoding.hasBom) return data;
+	return Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), data]);
 }
 
 export function parseXml(xml: string | Buffer): Element {
 	if (Buffer.isBuffer(xml)) {
-		xml = decodeXmlBuffer(xml);
+		xml = decodeXmlBuffer(xml).text;
 	}
 
 	return xml2js(xml, { compact: false }) as Element;
@@ -79,6 +111,12 @@ export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): s
 	// Always use non-compact representation to match parseXml's xml2js({ compact: false })
 	const convertOptions: ConvertOptions = { ...options, compact: false };
 	return convertXml(parseXml(xml), convertOptions);
+}
+
+export function formatXmlBuffer(xml: Buffer, options: ConvertOptions = {}): Buffer {
+	const decoded = decodeXmlBuffer(xml);
+	const formatted = formatXml(decoded.text, options);
+	return encodeXmlBuffer(formatted, decoded.encoding);
 }
 
 export function findElement(

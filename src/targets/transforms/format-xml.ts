@@ -1,31 +1,19 @@
-import { formatXml } from "../../utils/xml";
+import { formatXmlBuffer } from "../../utils/xml";
 import { UnzipFile } from "../../utils/zip";
 
 const XML = /\.(xml|rels)$/i;
 const XML_INDENT = 2;
 
-// TODO: Remove once formatXml handles non-UTF-8 encodings correctly.
-function isNonUtf8Encoding(data: Buffer): boolean {
-	if (data.length >= 2 && ((data[0] === 0xff && data[1] === 0xfe) || (data[0] === 0xfe && data[1] === 0xff))) {
-		return true;
-	}
-	return false;
-}
-
 export default function transformFormatXml(file: UnzipFile): UnzipFile {
 	if (!XML.test(file.path)) return file;
 
-	// TODO: Remove once formatXml handles non-UTF-8 encodings correctly.
-	//if (isNonUtf8Encoding(file.data)) return file;
-
 	try {
-		file.data = Buffer.from(formatXml(file.data, { spaces: XML_INDENT }));
+		file.data = formatXmlBuffer(file.data, { spaces: XML_INDENT });
 	} catch {
 		// Some OOXML parts contain content that xml-js cannot parse (e.g. data
 		// query files with trailing bytes or a BOM before the declaration).
 		// Leave the file unmodified rather than failing the whole export.
 		console.warn(`Warning: Failed to parse ${file.path} as XML. Leaving unmodified.`);
-
 	}
 	return file;
 }
