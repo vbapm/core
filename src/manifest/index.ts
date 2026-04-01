@@ -87,7 +87,14 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
-		const { name: projectName, version: projectVersion, authors: projectAuthors, publish: projectPublish, target: projectTarget, ...projectMetadata } = value.project;
+		const {
+			name: projectName,
+			version: projectVersion,
+			authors: projectAuthors,
+			publish: projectPublish,
+			target: projectTarget,
+			...projectMetadata
+		} = value.project;
 
 		type = "project";
 		name = projectName;
@@ -101,7 +108,14 @@ export function parseManifest(value: any, dir: string): Manifest {
 
 		target = parseTarget(projectTarget, name, dir);
 	} else {
-		const { name: packageName, version: packageVersion, authors: packageAuthors, publish: packagePublish, target: packageTarget, ...packageMetadata } = value.package;
+		const {
+			name: packageName,
+			version: packageVersion,
+			authors: packageAuthors,
+			publish: packagePublish,
+			target: packageTarget,
+			...packageMetadata
+		} = value.package;
 
 		type = "package";
 		name = packageName;
