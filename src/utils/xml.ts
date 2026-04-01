@@ -76,7 +76,9 @@ export function convertXml(value: Xml, options?: ConvertOptions): string {
 }
 
 export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): string {
-	return convertXml(parseXml(xml), options);
+	// Always use non-compact representation to match parseXml's xml2js({ compact: false })
+	const convertOptions: ConvertOptions = { ...options, compact: false };
+	return convertXml(parseXml(xml), convertOptions);
 }
 
 export function findElement(
