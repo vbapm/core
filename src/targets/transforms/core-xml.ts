@@ -9,7 +9,7 @@ const CORE_XML = /docProps[\/,\\]core\.xml/i;
 export default function transformCoreXml(file: UnzipFile): UnzipFile {
 	if (!CORE_XML.test(file.path)) return file;
 
-	const xml = parseXml(file.data.toString("utf8"));
+	const xml = parseXml(file.data);
 
 	// 1. cp:coreProperties > cp:lastModifiedBy -> Replace with dc:creator
 	// 2. cp:coreProperties > dcterms:modified -> Replace with dcterms:created

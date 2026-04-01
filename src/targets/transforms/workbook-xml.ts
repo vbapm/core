@@ -10,7 +10,7 @@ const WORKBOOK_XML = /xl[\/,\\]workbook\.xml/i;
 export default function transformWorkbookXml(file: UnzipFile): UnzipFile {
 	if (!WORKBOOK_XML.test(file.path)) return file;
 
-	const xml = parseXml(file.data.toString("utf8"));
+	const xml = parseXml(file.data);
 
 	// 1. workbook > mc:AlternateContent > mc:Choice > x15ac:absPath -> Replace 'url' with empty string
 	// 2. workbook > bookViews > workbookView -> Remove (maybe bookViews too)
