@@ -10,9 +10,6 @@ export default function transformFormatXml(file: UnzipFile): UnzipFile {
 	try {
 		file.data = formatXmlBuffer(file.data, { spaces: XML_INDENT });
 	} catch {
-		// Some OOXML parts contain content that xml-js cannot parse (e.g. data
-		// query files with trailing bytes or a BOM before the declaration).
-		// Leave the file unmodified rather than failing the whole export.
 		console.warn(`Warning: Failed to parse ${file.path} as XML. Leaving unmodified.`);
 	}
 	return file;
