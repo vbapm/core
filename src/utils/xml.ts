@@ -1,11 +1,11 @@
 import { xml2js, js2xml, Element } from "xml-js";
-import { decodeXmlBuffer, encodeXmlBuffer } from "./xml-encoding";
+import { decodeBuffer, encodeBuffer } from "./encoding";
 
 export type Xml = any;
 
 export function parseXml(xml: string | Buffer): Element {
 	if (Buffer.isBuffer(xml)) {
-		xml = decodeXmlBuffer(xml).text;
+		xml = decodeBuffer(xml).text;
 	}
 
 	return xml2js(xml, { compact: false }) as Element;
@@ -28,9 +28,9 @@ export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): s
 }
 
 export function formatXmlBuffer(xml: Buffer, options: ConvertOptions = {}): Buffer {
-	const decoded = decodeXmlBuffer(xml);
+	const decoded = decodeBuffer(xml);
 	const formatted = formatXml(decoded.text, options);
-	return encodeXmlBuffer(formatted, decoded.encoding);
+	return encodeBuffer(formatted, decoded.encoding);
 }
 
 export function findElement(
