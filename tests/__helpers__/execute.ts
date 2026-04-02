@@ -10,6 +10,10 @@ const exec = promisify(require("child_process").exec);
 
 export { RunResult };
 
+// Ensure all child processes (PowerShell run scripts) create a new hidden
+// Excel instance instead of attaching to an already-running visible one.
+process.env.VBA_BACKGROUND_BUILD = "0";
+
 const tmp_dir = join(__dirname, "../.tmp");
 ensureDirSync(tmp_dir);
 // To keep the tmp folder around for inspection, run `$env:KEEP_E2E_TMP=1` in PowerShell or `export KEEP_E2E_TMP=1` in bash before running the tests. The tmp folder is located at `tests/.tmp`.
@@ -62,7 +66,7 @@ export async function execute(
 	options?: { binDir?: string }
 ): Promise<{ stdout: string; stderr: string }> {
 	const bin = getVbaBin(options?.binDir);
-	const result = await exec(`${bin} ${command}`, { cwd });
+	const result = await exec(`${bin} ${command}`, { cwd, env: process.env });
 
 	// Give Office time to clean up
 	await wait(500);
