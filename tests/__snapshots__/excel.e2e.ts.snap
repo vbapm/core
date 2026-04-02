@@ -248,6 +248,7 @@ Object {
 name = \\"blank-package\\"
 version = \\"0.1.0-beta.0\\"
 authors = []
+license = \\"UNLICENSED\\"
 
 [src]
 ",
@@ -261,6 +262,7 @@ Object {
 name = \\"blank-package\\"
 version = \\"2.0.0\\"
 authors = []
+license = \\"UNLICENSED\\"
 
 [src]
 ",
