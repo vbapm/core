@@ -27,7 +27,13 @@ export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): s
 	return convertXml(parseXml(xml), convertOptions);
 }
 
+const MAX_FORMAT_SIZE = 5 * 1024 * 1024; // 5 MB
+
 export function formatXmlBuffer(xml: Buffer, options: ConvertOptions = {}): Buffer {
+	if (xml.length >= MAX_FORMAT_SIZE) {
+		console.log(`Skipping XML formatting: file size (${xml.length} bytes) exceeds the 5 MB limit.`);
+		return xml;
+	}
 	const decoded = decodeBuffer(xml);
 	const formatted = formatXml(decoded.text, options);
 	return encodeBuffer(formatted, decoded.encoding);
