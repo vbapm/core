@@ -1,5 +1,6 @@
 export default {
 	testEnvironment: "node",
+	testTimeout: 120000,
 	testMatch: ["**/tests/**/*.e2e.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/"],
 	transformIgnorePatterns: ["/node_modules/(?!@decimalturn/toml-patch/)"],
