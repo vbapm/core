@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- XML formatting transformation that pretty-prints `.xml` and `.rels` files on export.
+
+### Fixed
+- Extracting now preserves extra metadata fields from `[project]` and `[package]` sections instead of silently discarding them.
+
 ## [0.7.0] - 2026-03-31
 
 ### Added
@@ -46,7 +52,8 @@ Note: The online registry remains the vba-blocks.com registry.
 - Update dependencies (all moderate to critical vulnerabilities were resolved)
 - VBScript replaced with PowerShell
 
-[Unreleased]: https://github.com/DecimalTurn/vba-blocks/compare/v0.6.15...HEAD
+[Unreleased]: https://github.com/DecimalTurn/vba-blocks/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/DecimalTurn/vba-blocks/compare/v0.6.15...v0.7.0
 [0.6.15]: https://github.com/DecimalTurn/vba-blocks/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/DecimalTurn/vba-blocks/compare/v0.6.12...v0.6.14
 [0.6.12]: https://github.com/DecimalTurn/vba-blocks/releases/tag/v0.6.12
