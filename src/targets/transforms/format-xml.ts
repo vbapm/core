@@ -8,7 +8,7 @@ export default function transformFormatXml(file: UnzipFile): UnzipFile {
 	if (!XML.test(file.path)) return file;
 
 	try {
-		file.data = formatXmlBuffer(file.data, { spaces: XML_INDENT });
+		file.data = formatXmlBuffer(file.data, { spaces: XML_INDENT }, file.path);
 	} catch {
 		console.warn(`Warning: Failed to parse ${file.path} as XML. Leaving unmodified.`);
 	}
