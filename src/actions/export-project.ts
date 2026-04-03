@@ -14,9 +14,17 @@ export interface ExportOptions {
 	completed?: string;
 	addin?: string;
 	xmlOnly?: boolean;
+	vbaOnly?: boolean;
 }
 
 export async function exportProject(options: ExportOptions = {}) {
+	if (options.xmlOnly && options.vbaOnly) {
+		throw new CliError(
+			ErrorCode.ExportOptionsConflict,
+			"--xml-only and --vba-only are mutually exclusive."
+		);
+	}
+
 	const steps = options.xmlOnly ? 2 : 3;
 	env.reporter.log(Message.ExportProjectLoading, `[1/${steps}] Loading project...`);
 
@@ -82,7 +90,8 @@ export async function exportProject(options: ExportOptions = {}) {
 		const finalStep = options.xmlOnly ? 2 : 3;
 		env.reporter.log(Message.ExportToProject, `\n[${finalStep}/${steps}] Updating project`);
 		await exportTarget(target, { project, dependencies, blankTarget }, staging, {
-			xmlOnly: options.xmlOnly
+			xmlOnly: options.xmlOnly,
+			vbaOnly: options.vbaOnly
 		});
 	} catch (err) {
 		throw err;

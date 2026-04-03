@@ -18,6 +18,7 @@ import { filterTarget, mapTarget } from "./transform-target";
 
 export interface ExportOptions {
 	xmlOnly?: boolean;
+	vbaOnly?: boolean;
 }
 
 /**
@@ -35,11 +36,11 @@ export async function exportTarget(
 	options: ExportOptions = {}
 ) {
 	const { project, dependencies, blankTarget } = info;
-	const { xmlOnly = false } = options;
+	const { xmlOnly = false, vbaOnly = false } = options;
 
 	// Extract target to staging
 	let extracted: string;
-	if (!blankTarget) {
+	if (!blankTarget && !vbaOnly) {
 		extracted = await extractTarget(project, target, staging);
 	}
 
@@ -54,7 +55,7 @@ export async function exportTarget(
 	}
 
 	// Move target to dest
-	if (!blankTarget) {
+	if (!blankTarget && !vbaOnly) {
 		await remove(target.path);
 		await copy(extracted!, target.path);
 	}
