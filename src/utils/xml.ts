@@ -17,8 +17,20 @@ export interface ConvertOptions {
 	spaces?: number | string;
 }
 
+// js2xml pre-escapes " → &quot; in attribute values before calling
+// attributeValueFn, then outputs the result verbatim. This means we must NOT
+// re-escape the & in those pre-added &quot; sequences, but we DO need to
+// escape bare & (decoded from &amp;), < (from &lt;), and > (from &gt;) which
+// js2xml leaves unescaped in attribute values by default.
+function escapeXmlAttrValue(v: string): string {
+	return v
+		.replace(/&(?!(?:amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
 export function convertXml(value: Xml, options?: ConvertOptions): string {
-	return js2xml(value, options);
+	return js2xml(value, { attributeValueFn: escapeXmlAttrValue, ...options });
 }
 
 export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): string {
@@ -29,7 +41,11 @@ export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): s
 
 const MAX_FORMAT_SIZE = 5 * 1024 * 1024; // 5 MB
 
-export function formatXmlBuffer(xml: Buffer, options: ConvertOptions = {}, fileName?: string): Buffer {
+export function formatXmlBuffer(
+	xml: Buffer,
+	options: ConvertOptions = {},
+	fileName?: string
+): Buffer {
 	if (xml.length >= MAX_FORMAT_SIZE) {
 		const sizeMb = (xml.length / (1024 * 1024)).toFixed(2);
 		const label = fileName ? `"${fileName}"` : "XML buffer";
