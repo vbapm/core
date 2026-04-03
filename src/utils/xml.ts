@@ -19,12 +19,12 @@ export interface ConvertOptions {
 
 // js2xml pre-escapes " → &quot; in attribute values before calling
 // attributeValueFn, then outputs the result verbatim. This means we must NOT
-// re-escape the & in those pre-added &quot; sequences, but we DO need to
-// escape bare & (decoded from &amp;), < (from &lt;), and > (from &gt;) which
-// js2xml leaves unescaped in attribute values by default.
+// re-escape the & in those pre-added &quot; sequences. Excel XML only uses
+// the four standard entities (&amp; &lt; &gt; &quot;), so the lookahead only
+// needs to skip those.
 function escapeXmlAttrValue(v: string): string {
 	return v
-		.replace(/&(?!(?:amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)/g, "&amp;")
+		.replace(/&(?!(?:amp|lt|gt|quot);)/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;");
 }
