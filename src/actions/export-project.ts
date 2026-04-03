@@ -13,10 +13,12 @@ export interface ExportOptions {
 	target?: string;
 	completed?: string;
 	addin?: string;
+	xmlOnly?: boolean;
 }
 
 export async function exportProject(options: ExportOptions = {}) {
-	env.reporter.log(Message.ExportProjectLoading, `[1/3] Loading project...`);
+	const steps = options.xmlOnly ? 2 : 3;
+	env.reporter.log(Message.ExportProjectLoading, `[1/${steps}] Loading project...`);
 
 	const project = await loadProject();
 
@@ -63,17 +65,25 @@ export async function exportProject(options: ExportOptions = {}) {
 		if (!options.completed) {
 			staging = join(project.paths.staging, "export");
 
-			env.reporter.log(Message.ExportToStaging, `\n[2/3] Exporting src from "${target.filename}"`);
-
 			await ensureDir(staging);
 			await emptyDir(staging);
-			await exportTo(project, target, staging, options);
+
+			if (!options.xmlOnly) {
+				env.reporter.log(
+					Message.ExportToStaging,
+					`\n[2/3] Exporting src from "${target.filename}"`
+				);
+				await exportTo(project, target, staging, options);
+			}
 		} else {
 			staging = options.completed;
 		}
 
-		env.reporter.log(Message.ExportToProject, `\n[3/3] Updating project`);
-		await exportTarget(target, { project, dependencies, blankTarget }, staging);
+		const finalStep = options.xmlOnly ? 2 : 3;
+		env.reporter.log(Message.ExportToProject, `\n[${finalStep}/${steps}] Updating project`);
+		await exportTarget(target, { project, dependencies, blankTarget }, staging, {
+			xmlOnly: options.xmlOnly
+		});
 	} catch (err) {
 		throw err;
 	} finally {
