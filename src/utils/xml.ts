@@ -69,9 +69,9 @@ function formatXmlString(xml: string, indent: string): string {
 		if (pos >= N) break;
 
 		if (xml[pos] !== "<") {
-			// Text node: copy trimmed content and advance to next tag.
+			// Text node: copy content and advance to next tag.
 			const nextTag = xml.indexOf("<", pos);
-			const text = (nextTag === -1 ? xml.slice(pos) : xml.slice(pos, nextTag)).trim();
+			const text = nextTag === -1 ? xml.slice(pos) : xml.slice(pos, nextTag);
 			if (text) parts.push(indent.repeat(depth), text, "\n");
 			pos = nextTag === -1 ? N : nextTag;
 			continue;

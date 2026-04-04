@@ -4,6 +4,6 @@
   "git.detectSubmodules": true,
   "git.openRepositoryInParentFolders": "always",
     "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#553955" // Change this color!
+    "titleBar.activeBackground": "#553955"
     }
 }
