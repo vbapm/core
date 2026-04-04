@@ -42,9 +42,9 @@ describe("transformFormatXml", () => {
 	});
 
 	test("should leave unparseable xml files unmodified", () => {
-		// Some OOXML parts (e.g. data query files) contain content that xml-js
-		// cannot parse. The transform should not throw and should return the
-		// original content unchanged.
+		// The transform should not throw an error if the XML is invalid
+		// and should return the original content unchanged.
+		const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 		const original = "not valid xml \x00\x01\x02";
 		const file = toFile("xl/queryTables/queryTable1.xml", original);
 
@@ -52,6 +52,8 @@ describe("transformFormatXml", () => {
 		expect(
 			transformFormatXml(toFile("xl/queryTables/queryTable1.xml", original)).data.toString("utf8")
 		).toBe(original);
+		expect(warnSpy).toHaveBeenCalled();
+		warnSpy.mockRestore();
 	});
 
 	test("should parse utf-16le xml input", () => {

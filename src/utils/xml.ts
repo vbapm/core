@@ -22,7 +22,7 @@ export interface ConvertOptions {
 	spaces?: number | string;
 }
 
-// js2xml pre-escapes " → &quot; in attribute values before calling
+// js2xml pre-escapes `"` → &quot; in attribute values before calling
 // attributeValueFn, then outputs the result verbatim. This means we must NOT
 // re-escape the & in those pre-added &quot; sequences. Excel XML only uses
 // the four standard entities (&amp; &lt; &gt; &quot;), so the lookahead only
@@ -159,7 +159,12 @@ function formatXmlString(xml: string, indent: string): string {
 
 	return parts.join("");
 }
-
+/**
+ * Single-pass XML formatting
+ * @param xml The XML string or buffer to format.
+ * @param options Formatting options.
+ * @returns The formatted XML string.
+ */
 export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): string {
 	if (Buffer.isBuffer(xml)) {
 		xml = decodeBuffer(xml).text;

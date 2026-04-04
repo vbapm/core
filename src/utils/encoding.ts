@@ -80,7 +80,13 @@ export function decodeBuffer(data: Buffer): { text: string; encoding: BufferEnco
 
 	return { text: data.toString("utf8"), encoding };
 }
-
+/**
+ * Encodes a text string into a UTF-8, UTF-16 LE, or UTF-16 BE buffer.
+ * Optionally includes a BOM if specified in the encoding information.
+ * @param text The text string to encode.
+ * @param encoding The encoding information, including the desired encoding and BOM presence.
+ * @returns A buffer containing the encoded text.
+ */
 export function encodeBuffer(text: string, encoding: BufferEncoding): Buffer {
 	if (encoding.encoding === "utf16le") {
 		const data = Buffer.from(text, "utf16le");
