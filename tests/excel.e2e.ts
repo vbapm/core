@@ -148,6 +148,16 @@ describe("export", () => {
 			});
 		});
 	});
+
+	test("export fails when --xml-only and --vba-only are both specified", async () => {
+		await tmp("export-options-conflict", async cwd => {
+			await expect(
+				execute(cwd, "export --target xlsm --xml-only --vba-only")
+			).rejects.toMatchObject({
+				stderr: expect.stringContaining("--xml-only and --vba-only are mutually exclusive.")
+			});
+		});
+	});
 });
 
 describe("new", () => {
