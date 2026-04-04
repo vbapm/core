@@ -16,7 +16,10 @@ import { unzip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 import { filterTarget, mapTarget } from "./transform-target";
 
-export interface ExportOptions {}
+export interface ExportOptions {
+	xmlOnly?: boolean;
+	vbaOnly?: boolean;
+}
 
 /**
  * Export target (with staging directory)
@@ -26,25 +29,33 @@ export interface ExportOptions {}
  * 3. Export build graph to src
  * 4. Move extracted to target to src
  */
-export async function exportTarget(target: Target, info: ProjectInfo, staging: string) {
+export async function exportTarget(
+	target: Target,
+	info: ProjectInfo,
+	staging: string,
+	options: ExportOptions = {}
+) {
 	const { project, dependencies, blankTarget } = info;
+	const { xmlOnly = false, vbaOnly = false } = options;
 
 	// Extract target to staging
 	let extracted: string;
-	if (!blankTarget) {
+	if (!blankTarget && !vbaOnly) {
 		extracted = await extractTarget(project, target, staging);
 	}
 
-	// Compare project and exported and apply changes to project
-	const project_build_graph = await loadFromProject(project, dependencies);
-	const exported_build_graph = await loadFromExport(staging);
-	const transformed_build_graph = await toSrc(exported_build_graph);
+	if (!xmlOnly) {
+		// Compare project and exported and apply changes to project
+		const project_build_graph = await loadFromProject(project, dependencies);
+		const exported_build_graph = await loadFromExport(staging);
+		const transformed_build_graph = await toSrc(exported_build_graph);
 
-	const changeset = compareBuildGraphs(project_build_graph, transformed_build_graph);
-	await applyChangeset(project, changeset);
+		const changeset = compareBuildGraphs(project_build_graph, transformed_build_graph);
+		await applyChangeset(project, changeset);
+	}
 
 	// Move target to dest
-	if (!blankTarget) {
+	if (!blankTarget && !vbaOnly) {
 		await remove(target.path);
 		await copy(extracted!, target.path);
 	}

@@ -8,7 +8,9 @@ const help = dedent`
   Usage: vbapm export
 
   Options:
-    --target=TYPE   Export target of type TYPE`;
+    --target=TYPE   Export target of type TYPE
+    --xml-only      Only extract the target XML, skip VBA source export
+    --vba-only      Only export the VBA source, skip target XML extraction`;
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -19,6 +21,8 @@ export default async function (args: Args) {
 	const target = <string | undefined>args.target;
 	const completed = <string | undefined>args.completed;
 	const addin = <string | undefined>args.addin;
+	const xmlOnly = !!args["xml-only"];
+	const vbaOnly = !!args["vba-only"];
 
-	await exportProject({ target, completed, addin });
+	await exportProject({ target, completed, addin, xmlOnly, vbaOnly });
 }

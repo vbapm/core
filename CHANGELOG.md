@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- XML formatting transformation that pretty-prints `.xml` and `.rels` files on export.
+- XML formatting transformation that pretty-prints `.xml` and `.rels` files on export ([#47])
+- Add `--xml-only` and `--vba-only` options when exporting ([#54])
 
 ### Fixed
-- Extracting now preserves extra metadata fields from `[project]` and `[package]` sections instead of silently discarding them.
+- Extracting now preserves extra metadata fields from `[project]` and `[package]` sections instead of silently discarding them ([#47]).
 
 ## [0.7.0] - 2026-03-31
 
@@ -60,3 +61,5 @@ Note: The online registry remains the vba-blocks.com registry.
 [#40]: https://github.com/vbapm/core/pull/40
 [#46]: https://github.com/vbapm/core/pull/46
 [#39]: https://github.com/vbapm/core/pull/39
+[#47]: https://github.com/vbapm/core/pull/47
+[#54]: https://github.com/vbapm/core/pull/54

@@ -110,6 +110,54 @@ describe("export", () => {
 			});
 		});
 	});
+
+	test("export with --xml-only skips VBA source export", async () => {
+		await setup(empty, "export-xml-only", async cwd => {
+			await setup(standard, "export-standard-xml-only", async built => {
+				// 1. Build standard project (provides a valid xlsm to extract XML from)
+				await execute(built, "build");
+
+				// 2. Copy built xlsm into empty project
+				await copy(join(built, "build/standard.xlsm"), join(cwd, "build/empty.xlsm"));
+
+				// 3. Export --xml-only: should update targets/xlsm/ but NOT create src/
+				const { stdout } = await execute(cwd, "export --target xlsm --xml-only");
+
+				const result = await readdir(cwd);
+				expect(result).toMatchSnapshot();
+				expect(stdout).toMatchSnapshot();
+			});
+		});
+	});
+
+	test("export with --vba-only skips XML extraction", async () => {
+		await setup(empty, "export-vba-only", async cwd => {
+			await setup(standard, "export-standard-vba-only", async built => {
+				// 1. Build standard project
+				await execute(built, "build");
+
+				// 2. Copy built xlsm into empty project
+				await copy(join(built, "build/standard.xlsm"), join(cwd, "build/empty.xlsm"));
+
+				// 3. Export --vba-only: should create src/ but NOT update targets/xlsm/
+				const { stdout } = await execute(cwd, "export --target xlsm --vba-only");
+
+				const result = await readdir(cwd);
+				expect(result).toMatchSnapshot();
+				expect(stdout).toMatchSnapshot();
+			});
+		});
+	});
+
+	test("export fails when --xml-only and --vba-only are both specified", async () => {
+		await tmp("export-options-conflict", async cwd => {
+			await expect(
+				execute(cwd, "export --target xlsm --xml-only --vba-only")
+			).rejects.toMatchObject({
+				stderr: expect.stringContaining("--xml-only and --vba-only are mutually exclusive.")
+			});
+		});
+	});
 });
 
 describe("new", () => {
