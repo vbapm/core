@@ -6,6 +6,7 @@
 # OXML files - Enforce LF for reduced file size (xml, rels)
 *.xml text eol=lf
 *.rels text eol=lf
+.rels text eol=lf
 
 # VBA extensions - Prevent LF normalization (bas, cls, frm, vba, doccls)
 *.[bB][aA][sS]              -text diff
