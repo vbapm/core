@@ -90,6 +90,7 @@ function RunMacro {
 
 class Excel {
     hidden [object]$App
+    hidden [bool]$BackgroundBuild = $false
     hidden [bool]$ExcelWasOpen = $false
     hidden [object]$Workbook
     hidden [bool]$WorkbookWasOpen = $false
@@ -106,13 +107,29 @@ class Excel {
     }
 
     hidden [void] OpenExcel() {
-        try {
-            $this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
-            $this.ExcelWasOpen = $true
-        } catch {
+        # When VBA_BACKGROUND_BUILD is set, always create a new hidden instance
+        # instead of attaching to an already-running (visible) Excel process.
+        # This prevents the application window from flashing during automated runs.
+        $this.BackgroundBuild = $env:VBA_BACKGROUND_BUILD -match '^(1|true|yes)$'
+
+        if (-not $this.BackgroundBuild) {
+            try {
+                $this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+                $this.ExcelWasOpen = $true
+            } catch {
+                # Excel not running; fall through to create a new instance
+            }
+        }
+
+        if (-not $this.ExcelWasOpen) {
             try {
                 $this.App = New-Object -ComObject "Excel.Application"
-                $this.App.Visible = $false
+                $this.App.Visible = if ($this.BackgroundBuild) { $false } else { $true }
+                $this.App.ScreenUpdating = $false
+				$this.App.DisplayStatusBar = $false
+				$this.App.PrintCommunication = $false
+				$this.App.EnableAnimations = $false
+                $this.App.EnableEvents = $false
             } catch {
                 Fail "ERROR #5: Failed to open Excel - $($_.Exception.Message)"
             }
@@ -147,6 +164,14 @@ class Excel {
         # Open the workbook
         try {
             $this.Workbook = $this.App.Workbooks.Open($Path)
+            # Workbooks.Open() can flip Excel back to visible; re-enforce
+            # invisible mode if we created this instance for automation.
+            # Also apply workbook-level performance flags now that a workbook is open.
+            if ($this.BackgroundBuild) {
+                $this.App.Visible = $false
+                try { $this.App.Calculation = -4135 } catch {}  # xlCalculationManual — requires an open workbook
+
+            }
         } catch {
             Fail "ERROR #6: Failed to open workbook - $($_.Exception.Message)"
         }

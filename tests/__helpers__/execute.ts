@@ -62,7 +62,7 @@ export async function execute(
 	options?: { binDir?: string }
 ): Promise<{ stdout: string; stderr: string }> {
 	const bin = getVbaBin(options?.binDir);
-	const result = await exec(`${bin} ${command}`, { cwd });
+	const result = await exec(`${bin} ${command}`, { cwd, env: process.env });
 
 	// Give Office time to clean up
 	await wait(500);

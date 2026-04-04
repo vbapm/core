@@ -76,7 +76,7 @@ export async function run(
 
 	let result;
 	try {
-		const { stdout, stderr } = await exec(command);
+		const { stdout, stderr } = await exec(command, { env: process.env });
 		result = toResult(stdout, stderr);
 	} catch (err: any) {
 		result = toResult(err?.stdout, err?.stderr, err);
