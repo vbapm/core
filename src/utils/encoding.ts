@@ -26,7 +26,7 @@ function swap16Bytes(buffer: Buffer): Buffer {
 	return swapped;
 }
 
-export function detectBufferEncoding(data: Buffer): BufferEncoding {
+function detectBufferEncoding(data: Buffer): BufferEncoding {
 	if (data.length >= 2) {
 		if (data[0] === 0xff && data[1] === 0xfe) {
 			return { encoding: "utf16le", hasBom: true };

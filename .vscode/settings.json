@@ -1,3 +1,4 @@
+// --*- mode: jsonc -*-
 {
   "git.autoRepositoryDetection": "subFolders",
   "git.detectSubmodules": true,
