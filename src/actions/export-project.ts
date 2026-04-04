@@ -25,7 +25,8 @@ export async function exportProject(options: ExportOptions = {}) {
 		);
 	}
 
-	const steps = options.xmlOnly ? 2 : 3;
+	const skipStaging = !!options.completed || !!options.xmlOnly;
+	const steps = skipStaging ? 2 : 3;
 	env.reporter.log(Message.ExportProjectLoading, `[1/${steps}] Loading project...`);
 
 	const project = await loadProject();
@@ -87,8 +88,7 @@ export async function exportProject(options: ExportOptions = {}) {
 			staging = options.completed;
 		}
 
-		const finalStep = options.xmlOnly ? 2 : 3;
-		env.reporter.log(Message.ExportToProject, `\n[${finalStep}/${steps}] Updating project`);
+		env.reporter.log(Message.ExportToProject, `\n[${steps}/${steps}] Updating project`);
 		await exportTarget(target, { project, dependencies, blankTarget }, staging, {
 			xmlOnly: options.xmlOnly,
 			vbaOnly: options.vbaOnly

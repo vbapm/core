@@ -38,6 +38,7 @@
         "deps": "npm i",
         "dev": "run-s deps typecheck format:check test build:cli",
         "test:e2e": "jest --config e2e.config.mjs --runInBand",
+        "test:e2e:updateSnapshots": "jest --config e2e.config.mjs --runInBand --updateSnapshot",
         "build": "rimraf lib && rollup -c rollup.config.mjs",
         "build:lib": "run-s build && tsc -p tsconfig.build.json",
         "build:cli": "run-s build && node scripts/ensure-vendor",
