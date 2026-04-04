@@ -160,18 +160,15 @@ Object {
   "src/Sheet3.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet3\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/ThisWorkbook.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"ThisWorkbook\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{...",
   "src/Validation.bas": "Attribute VB_Name = \\"Validation\\"{CR}{LF}Public Function Validate() As String{CR}{LF}    On Error GoTo ErrorHandling{CR}{LF}{CR}{LF}    Dim Errors As New Collection{CR}{LF}{CR}{LF}    If ThisWorkbook.V...",
-  "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{LF}  <Default Extension=\\"bin\\" ContentType=\\"application/vnd.ms-of...",
-  "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schemas.openxm...",
+  "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{LF}  <Default Extension=\\"rels\\" ContentType=\\"application/vnd.open...",
+  "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\"><Relationship Id=\\"rId3\\" Type=\\"http://schemas.openxmlf...",
   "targets/xlsm/docProps/app.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Properties xmlns=\\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\\" xmlns:vt=\\"http://schemas.openxmlformats.org/off...",
   "targets/xlsm/docProps/core.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<cp:coreProperties xmlns:cp=\\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\\" xmlns:dc=\\"http://purl.org/dc/elements/1...",
   "targets/xlsm/xl/_rels/workbook.xml.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schemas.openxm...",
-  "targets/xlsm/xl/sharedStrings.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<sst xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" count=\\"3\\" uniqueCount=\\"3\\">{LF}  <si>{LF}    <t>A1</t>{LF}  </si>{LF}  ...",
   "targets/xlsm/xl/styles.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<styleSheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:mc=\\"http://schemas.openxmlformats.org/markup-compatibilit...",
-  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office 2013 - 2022 Theme\\">{LF}  <a:themeElements>{LF}    <a:cl...",
+  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office Theme\\">{LF}  <a:themeElements>{LF}    <a:clrScheme name...",
   "targets/xlsm/xl/workbook.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<workbook xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/2006/re...",
   "targets/xlsm/xl/worksheets/sheet1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/2006/r...",
-  "targets/xlsm/xl/worksheets/sheet2.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/2006/r...",
-  "targets/xlsm/xl/worksheets/sheet3.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/2006/r...",
   "vbaproject.toml":
   "[project]
 name = \\"empty\\"
@@ -209,14 +206,6 @@ Updating src files
 exports[`export export with --xml-only skips VBA source export 1`] = `
 Object {
   "build/empty.xlsm": "<TODO>",
-  "src/Class1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Class1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
-  "src/Dictionary.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Dictionary\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF...",
-  "src/JsonConverter.bas": "Attribute VB_Name = \\"JsonConverter\\"{CR}{LF}''{CR}{LF}' VBA-JSON v2.3.0{CR}{LF}' (c) Tim Hall - https://github.com/VBA-tools/VBA-JSON{CR}{LF}'{CR}{LF}' JSON Converter for VBA{CR}{LF}'{CR}{LF}' Errors:{...",
-  "src/Sheet1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
-  "src/Sheet2.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet2\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
-  "src/Sheet3.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet3\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
-  "src/ThisWorkbook.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"ThisWorkbook\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{...",
-  "src/Validation.bas": "Attribute VB_Name = \\"Validation\\"{CR}{LF}Public Function Validate() As String{CR}{LF}    On Error GoTo ErrorHandling{CR}{LF}{CR}{LF}    Dim Errors As New Collection{CR}{LF}{CR}{LF}    If ThisWorkbook.V...",
   "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{LF}  <Default Extension=\\"bin\\" ContentType=\\"application/vnd.ms-of...",
   "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schemas.openxm...",
   "targets/xlsm/docProps/app.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{LF}<Properties xmlns=\\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\\" xmlns:vt=\\"http://schemas.openxmlformats.org/off...",
@@ -233,33 +222,16 @@ Object {
   "[project]
 name = \\"empty\\"
 target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
-
-[src]
-Class1 = \\"src/Class1.cls\\"
-Dictionary = \\"src/Dictionary.cls\\"
-JsonConverter = \\"src/JsonConverter.bas\\"
-Sheet1 = \\"src/Sheet1.cls\\"
-Sheet2 = \\"src/Sheet2.cls\\"
-Sheet3 = \\"src/Sheet3.cls\\"
-ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-Validation = \\"src/Validation.bas\\"
-
-[references]
-VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
 ",
 }
 `;
 
 exports[`export export with --xml-only skips VBA source export 2`] = `
-"[1/3] Loading project...
+"[1/2] Loading project...
 Resolving dependencies
 Fetching dependencies
 
-[2/3] Exporting src from \\"empty.xlsm\\"
-
-[3/3] Updating project
-Loading exported components
-Updating src files
+[2/2] Updating project
 "
 `;
 
