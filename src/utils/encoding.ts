@@ -59,16 +59,23 @@ function detectBufferEncoding(data: Buffer): BufferEncoding {
 
 	return { encoding: "utf8", hasBom: false };
 }
-
+/**
+ * Decodes a UTF-8, UTF-16 LE, or UTF-16 BE buffer into a text string, along with the detected encoding and BOM presence for later re-encoding.
+ * If the buffer has a BOM, it will be stripped from the output text.
+ * @param data The buffer containing the encoded text.
+ * @returns An object containing the decoded text and the detected encoding information.
+ */
 export function decodeBuffer(data: Buffer): { text: string; encoding: BufferEncoding } {
 	const encoding = detectBufferEncoding(data);
 
 	if (encoding.encoding === "utf16le") {
-		return { text: data.toString("utf16le"), encoding };
+		const payload = encoding.hasBom ? data.subarray(2) : data;
+		return { text: payload.toString("utf16le"), encoding };
 	}
 
 	if (encoding.encoding === "utf16be") {
-		return { text: swap16Bytes(data).toString("utf16le"), encoding };
+		const payload = encoding.hasBom ? data.subarray(2) : data;
+		return { text: swap16Bytes(payload).toString("utf16le"), encoding };
 	}
 
 	return { text: data.toString("utf8"), encoding };

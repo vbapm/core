@@ -3,6 +3,11 @@ import { decodeBuffer, encodeBuffer } from "./encoding";
 
 export type Xml = any;
 
+/**
+ * Parses an XML string or buffer into an (xml-js) Element object.
+ * @param xml The XML content as a string or buffer.
+ * @returns The parsed XML as an (xml-js) Element object.
+ */
 export function parseXml(xml: string | Buffer): Element {
 	if (Buffer.isBuffer(xml)) {
 		xml = decodeBuffer(xml).text;
