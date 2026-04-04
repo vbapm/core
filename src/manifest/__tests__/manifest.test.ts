@@ -25,6 +25,21 @@ test("throws for invalid package metadata", () => {
 	expect(() => parseManifest({ package: { authors: ["Tim Hall"] } }, FIXTURES)).toThrow();
 });
 
+test("preserves custom package metadata like license", () => {
+	const value = {
+		package: {
+			...BASE_MANIFEST.package,
+			license: "UNLICENSED"
+		}
+	};
+
+	const manifest = parseManifest(value, FIXTURES);
+	expect(manifest.metadata.license).toBe("UNLICENSED");
+
+	const formatted: any = formatManifest(manifest, FIXTURES);
+	expect(formatted.package.license).toBe("UNLICENSED");
+});
+
 test("loads valid sources", () => {
 	const value = {
 		...BASE_MANIFEST,

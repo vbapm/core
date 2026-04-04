@@ -1,5 +1,9 @@
+// --*- mode: jsonc -*-
 {
   "git.autoRepositoryDetection": "subFolders",
   "git.detectSubmodules": true,
-  "git.openRepositoryInParentFolders": "always"
+  "git.openRepositoryInParentFolders": "always",
+    "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#553955"
+    }
 }

@@ -10,6 +10,7 @@ const WORKBOOK_XML = /xl[\/,\\]workbook\.xml/i;
 export default function transformWorkbookXml(file: UnzipFile): UnzipFile {
 	if (!WORKBOOK_XML.test(file.path)) return file;
 
+	// workbook.xml is always utf-8 encoded, so we can directly parse the buffer as utf-8 string without needing to detect encoding.
 	const xml = parseXml(file.data.toString("utf8"));
 
 	// 1. workbook > mc:AlternateContent > mc:Choice > x15ac:absPath -> Replace 'url' with empty string

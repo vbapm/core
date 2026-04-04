@@ -84,29 +84,51 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let authors: string[] | undefined;
 	let publish: boolean | undefined;
 	let target: Target | undefined;
+	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
+		const {
+			name: projectName,
+			version: projectVersion,
+			authors: projectAuthors,
+			publish: projectPublish,
+			target: projectTarget,
+			...projectMetadata
+		} = value.project;
+
 		type = "project";
-		name = value.project.name;
-		version = value.project.version || DEFAULT_VERSION;
-		authors = value.project.authors;
+		name = projectName;
+		version = projectVersion || DEFAULT_VERSION;
+		authors = projectAuthors;
+		publish = projectPublish;
+		sectionMetadata = projectMetadata;
 
 		manifestOk(name, `[project] name is a required field. \n\n${EXAMPLE}`);
 		manifestOk(value.project.target, `[project] target is a required field. \n\n${EXAMPLE}`);
 
-		target = parseTarget(value.project.target, name, dir);
+		target = parseTarget(projectTarget, name, dir);
 	} else {
+		const {
+			name: packageName,
+			version: packageVersion,
+			authors: packageAuthors,
+			publish: packagePublish,
+			target: packageTarget,
+			...packageMetadata
+		} = value.package;
+
 		type = "package";
-		name = value.package.name;
-		version = value.package.version;
-		authors = value.package.authors;
-		publish = value.package.publish;
+		name = packageName;
+		version = packageVersion;
+		authors = packageAuthors;
+		publish = packagePublish;
+		sectionMetadata = packageMetadata;
 
 		manifestOk(name, `[package] name is a required field. \n\n${EXAMPLE}`);
 		manifestOk(version, `[package] version is a required field. \n\n${EXAMPLE}`);
 		manifestOk(authors, `[package] authors is a required field. \n\n${EXAMPLE}`);
 
-		target = value.package.target && parseTarget(value.package.target, name, dir);
+		target = packageTarget && parseTarget(packageTarget, name, dir);
 	}
 
 	const src = parseSrc(value.src || {}, dir);
@@ -121,7 +143,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		type,
 		name,
 		version,
-		metadata: { authors, publish },
+		metadata: { authors, publish, ...sectionMetadata },
 		src,
 		dependencies,
 		references,

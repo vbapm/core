@@ -1,6 +1,7 @@
 import { pipeFilter, pipeMap } from "../utils/pipe";
 import { UnzipFile } from "../utils/zip";
 import transformCoreXml from "./transforms/core-xml";
+import transformFormatXml from "./transforms/format-xml";
 import transformWorkbookXml from "./transforms/workbook-xml";
 
 const VBA_BIN = /vba.*\.bin/i;
@@ -9,4 +10,4 @@ function filterVbaBin(file: UnzipFile): boolean {
 }
 
 export const filterTarget = pipeFilter(filterVbaBin);
-export const mapTarget = pipeMap(transformCoreXml, transformWorkbookXml);
+export const mapTarget = pipeMap(transformCoreXml, transformWorkbookXml, transformFormatXml);
