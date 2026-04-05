@@ -15,6 +15,7 @@ import { dirname, join } from "../utils/path";
 import { unzip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 import { filterTarget, mapTarget } from "./transform-target";
+import { normalizeWorksheetNames } from "./transforms/normalize-worksheet-names";
 
 export interface ExportOptions {
 	xmlOnly?: boolean;
@@ -42,6 +43,7 @@ export async function exportTarget(
 	let extracted: string;
 	if (!blankTarget && !vbaOnly) {
 		extracted = await extractTarget(project, target, staging);
+		await normalizeWorksheetNames(extracted);
 	}
 
 	if (!xmlOnly) {
