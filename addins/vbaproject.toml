@@ -6,6 +6,7 @@ target = { type = "xlam", path = "targets/xlam" }
 
 [src]
 Build = "src/Build.bas"
+DebugLog = "src/DebugLog.bas"
 OfficeApplication = "src/OfficeApplication.cls"
 Output = "src/Output.bas"
 ThisWorkbook = "src/ThisWorkbook.cls"
