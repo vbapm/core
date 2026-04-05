@@ -8,6 +8,8 @@ param(
     [Parameter(Position=2)]
     [string]$Command,
 
+    [switch]$KeepOpen,
+
     [Parameter(Position=3, ValueFromRemainingArguments=$true)]
     [string[]]$MacroArgs
 )
@@ -177,12 +179,16 @@ class Excel {
         }
     }
 
-    [void] Dispose() {
-        if (-not $this.WorkbookWasOpen -and $null -ne $this.Workbook) {
+    [void] Dispose([bool]$KeepOpen) {
+        # A file that was open before we started is never closed by us
+        $closeWorkbook = -not $this.WorkbookWasOpen -and -not $KeepOpen
+
+        if ($closeWorkbook -and $null -ne $this.Workbook) {
             $this.Workbook.Close($true)
             $this.Workbook = $null
         }
-        if (-not $this.ExcelWasOpen -and $null -ne $this.App) {
+        # Quit Excel only if we launched it AND we are not keeping the file open
+        if (-not $this.ExcelWasOpen -and -not $KeepOpen -and $null -ne $this.App) {
             $this.App.Quit()
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
             $this.App = $null
@@ -199,6 +205,7 @@ function Run {
         [string]$AppName,
         [string]$FilePath,
         [string]$MacroName,
+        [bool]$KeepOpen,
         [string[]]$MacroArgValues
     )
 
@@ -208,7 +215,7 @@ function Run {
             try {
                 $result = $excel.Run($FilePath, $MacroName, $MacroArgValues)
             } finally {
-                $excel.Dispose()
+                $excel.Dispose($KeepOpen)
             }
         }
         default {
@@ -239,5 +246,5 @@ foreach ($arg in $MacroArgs) {
     $UnescapedArgs += Unescape $arg
 }
 
-Run $AppName $File $Command $UnescapedArgs
+Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
 exit 0
