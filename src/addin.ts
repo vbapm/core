@@ -12,6 +12,7 @@ export type Addin = string;
 
 export interface AddinOptions {
 	addin?: string;
+	open?: boolean;
 	staging?: boolean;
 }
 
@@ -49,7 +50,7 @@ export async function importGraph(
 			src: components,
 			references
 		})
-	]);
+	], { keepOpen: options.open });
 }
 
 /**

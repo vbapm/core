@@ -38,11 +38,16 @@ export function isRunError(error: Error | RunError): error is RunError {
 	return has(error, "result");
 }
 
+export interface RunOptions {
+	keepOpen?: boolean;
+}
+
 export async function run(
 	application: string,
 	file: string,
 	macro: string,
-	args: string[]
+	args: string[],
+	options: RunOptions = {}
 ): Promise<RunResult> {
 	const script = join(env.scripts, env.isWindows ? "run.ps1" : "run.applescript");
 
@@ -65,8 +70,9 @@ export async function run(
 		return env.isWindows ? escape(arg) : arg;
 	});
 	const parts = [application, file, macro, ...formatted_args];
+	const keepOpenFlag = options.keepOpen ? "-KeepOpen " : "";
 	const command = env.isWindows
-		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${parts
+		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${keepOpenFlag}${parts
 				.map(part => `"${part}"`)
 				.join(" ")}`
 		: `osascript '${script}' ${parts.map(part => `'${part}'`).join(" ")}`;
