@@ -3,23 +3,27 @@
 -- appname (e.g. "excel")
 -- addin: posix full path to addin (e.g. "...")
 -- command: macro to execute in addin (e.g. "Build.ImportGraph")
+-- keep_open: "1" to leave the workbook/app open after the macro, "0" to close
 -- ...args: arguments to pass to macro (up to 10)
 
 on run argv
 	set output to ""
 
-	if (count of argv) >= 3 and (count of argv) <= 13 then
+	if (count of argv) >= 4 and (count of argv) <= 14 then
 		set appname to (item 1 of argv)
 		set addin to POSIX file (item 2 of argv)
 		set command to (item 3 of argv)
+		set keep_open to (item 4 of argv) is "1"
 
 		set args to {}
-		repeat with index from 4 to count of argv
+		repeat with index from 5 to count of argv
 			set end of args to (item index of argv)
 		end repeat
 
 		if appname is "excel" then
 			set workbook_name to name of (info for addin)
+
+			set excel_was_open to application "Microsoft Excel" is running
 
 			tell application "Microsoft Excel"
 				set workbook_was_open to (exists workbook workbook_name)
@@ -27,18 +31,25 @@ on run argv
 					open workbook workbook file name addin without notify
 				end if
 
-				set output to output & my run_excel_macro(command, args)
+				set output to my run_excel_macro(command, args)
 
-				if not workbook_was_open then
+				-- A workbook that was already open is never closed by us.
+				-- Otherwise close it unless keep_open was requested.
+				if not workbook_was_open and not keep_open then
 					close workbook workbook_name saving yes
 				end if
 			end tell
+
+			-- Quit Excel only if we launched it AND we are not keeping the file open.
+			if not excel_was_open and not keep_open then
+				tell application "Microsoft Excel" to quit
+			end if
 		end if
 	else
-		if (count of argv) < 3 then
-			set output to output & "ERROR #1: Invalid Input (appname, file, and macro are required"
+		if (count of argv) < 4 then
+			set output to "ERROR #1: Invalid Input (appname, file, macro, and keep_open are required)"
 		else
-			set output to output & "ERROR #2: Invalid Input (only 10 arguments are supported)"
+			set output to "ERROR #2: Invalid Input (only 10 arguments are supported)"
 		end if
 	end if
 

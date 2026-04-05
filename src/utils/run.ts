@@ -69,12 +69,15 @@ export async function run(
 
 		return env.isWindows ? escape(arg) : arg;
 	});
-	const parts = [application, file, macro, ...formatted_args];
-	const keepOpenFlag = options.keepOpen ? "-KeepOpen " : "";
+	const keepOpen = !!options.keepOpen;
+	// Windows uses a named switch; macOS receives keepOpen as a positional arg (position 4)
+	const parts = env.isWindows
+		? [application, file, macro, ...formatted_args]
+		: [application, file, macro, keepOpen ? "1" : "0", ...formatted_args];
 	const command = env.isWindows
-		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${keepOpenFlag}${parts
-				.map(part => `"${part}"`)
-				.join(" ")}`
+		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${
+				keepOpen ? "-KeepOpen " : ""
+		  }${parts.map(part => `"${part}"`).join(" ")}`
 		: `osascript '${script}' ${parts.map(part => `'${part}'`).join(" ")}`;
 
 	debug("params:", { application, file, macro, args });
