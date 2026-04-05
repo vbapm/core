@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-04-05
+
 ### Added
 - XML formatting transformation that pretty-prints `.xml` and `.rels` files on export ([#47])
 - Add `--xml-only` and `--vba-only` options when exporting ([#54])
