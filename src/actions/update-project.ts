@@ -8,25 +8,25 @@ import { getTarget } from "../targets/get-target";
 import { pathExists } from "../utils/fs";
 import { join } from "../utils/path";
 
-export interface SyncOptions {
+export interface UpdateOptions {
 	target?: string;
 	addin?: string;
 	release?: boolean;
 	open?: boolean;
 }
 
-export async function syncProject(options: SyncOptions = {}): Promise<string> {
-	env.reporter.log(Message.SyncProjectLoading, `[1/2] Loading project...`);
+export async function updateProject(options: UpdateOptions = {}): Promise<string> {
+	env.reporter.log(Message.UpdateProjectLoading, `[1/2] Loading project...`);
 
 	const project = await loadProject();
 	const { target } = getTarget(project, options.target);
 	const dependencies = await fetchDependencies(project);
 
-	// Guard: a built file must already exist — sync does not create one
+	// Guard: a built file must already exist — update does not create one
 	const builtFile = join(project.paths.build, target.filename);
 	if (!(await pathExists(builtFile))) {
 		throw new CliError(
-			ErrorCode.SyncTargetNotBuilt,
+			ErrorCode.UpdateTargetNotBuilt,
 			dedent`
         No built target found for "${target.name}" at "${builtFile}".
 
@@ -36,8 +36,8 @@ export async function syncProject(options: SyncOptions = {}): Promise<string> {
 	}
 
 	env.reporter.log(
-		Message.SyncTargetSyncing,
-		`\n[2/2] Syncing VBA into "${target.filename}"...`
+		Message.UpdateTargetUpdating,
+		`\n[2/2] Updating VBA in "${target.filename}"...`
 	);
 
 	await importTarget(target, { project, dependencies }, builtFile, {

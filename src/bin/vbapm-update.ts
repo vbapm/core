@@ -1,17 +1,17 @@
 import dedent from "@timhall/dedent";
 import { Args } from "mri";
 import time from "pretty-hrtime";
-import { syncProject } from "../actions/sync-project";
+import { updateProject } from "../actions/update-project";
 
 const help = dedent`
-  Sync VBA source into a built target (including one currently open in Excel).
+  Update VBA source in a built target (including one currently open in Excel).
 
-  Usage: vbapm sync [options]
+  Usage: vbapm update [options]
 
   Options:
-    --target=TYPE   Sync VBA to a target of type TYPE
-    --release       Exclude dev-* items from sync
-    --open          Leave the target open in Excel after syncing`;
+    --target=TYPE   Update VBA in a target of type TYPE
+    --release       Exclude dev-* items from update
+    --open          Leave the target open in Excel after updating`;
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -25,6 +25,6 @@ export default async function (args: Args) {
 	const release = !!args.release;
 	const open = !!args.open;
 
-	await syncProject({ target, addin, release, open });
+	await updateProject({ target, addin, release, open });
 	console.log(`Done. ${time(process.hrtime(start))}`);
 }

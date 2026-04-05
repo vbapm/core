@@ -9,8 +9,8 @@ export enum Message {
 	ExportToStaging = "export-to-staging",
 	ExportToProject = "export-to-project",
 
-	SyncProjectLoading = "sync-project-loading",
-	SyncTargetSyncing = "sync-target-syncing",
+	UpdateProjectLoading = "update-project-loading",
+	UpdateTargetUpdating = "update-target-updating",
 
 	ProjectUpdating = "project-updating",
 	DependenciesResolving = "dependencies-resolving",

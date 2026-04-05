@@ -23,7 +23,7 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	build: async () => (await import("./vbapm-build")).default,
 	test: async () => (await import("./vbapm-test")).default,
 	export: async () => (await import("./vbapm-export")).default,
-	sync: async () => (await import("./vbapm-sync")).default,
+	update: async () => (await import("./vbapm-update")).default,
 	run: async () => (await import("./vbapm-run")).default,
 	version: async () => (await import("./vbapm-version")).default
 };
@@ -58,7 +58,7 @@ const help = dedent`
     - build         Build project from manifest
     - test          Run tests for built target
     - export        Export src from built target
-    - sync          Sync VBA source into a built target
+    - update        Update VBA source in a built target
     - run           Run macro in document / add-in
     - help          Outputs this message or the help of the given command
 

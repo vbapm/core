@@ -1,14 +1,14 @@
-# `vbapm sync` Command
+# `vbapm update` Command
 
 Import VBA source directly into a built target — including one that is currently open in Excel — without rebuilding the file from XML.
 
 ## Usage
 
 ```
-vbapm sync [options]
+vbapm update [options]
 
 Options:
-  --open          Open the target in Excel after syncing (if not already open)
+  --open          Open the target in Excel after updating (if not already open)
 ```
 
 ## How It Works
@@ -32,20 +32,20 @@ importTarget(target, info, builtFilePath, options)
        └─ Document.Save()
 ```
 
-The key difference from `build`: `sync` operates on `build/<target>` directly instead of a staged copy, and performs **no** zip/unzip, backup, or move operations.
+The key difference from `build`: `update` operates on `build/<target>` directly instead of a staged copy, and performs **no** zip/unzip, backup, or move operations.
 
 ## Files to Add / Modify
 
 | File | Change |
 |---|---|
-| `src/bin/vbapm-sync.ts` | **New** — CLI entry point |
-| `src/actions/sync-project.ts` | **New** — `syncProject()` action |
-| `src/bin/vbapm.ts` | **Modify** — register `sync` in the `commands` map |
+| `src/bin/vbapm-update.ts` | **New** — CLI entry point |
+| `src/actions/update-project.ts` | **New** — `syncProject()` action |
+| `src/bin/vbapm.ts` | **Modify** — register `update` in the `commands` map |
 | `run-scripts/run.ps1` | **Modify** — accept `keepOpen` parameter in `Dispose()` |
 
 ## Implementation Details
 
-### `src/actions/sync-project.ts`
+### `src/actions/update-project.ts`
 
 Reuses `importTarget` (already exported from `src/targets/build-target.ts`) — that function does exactly: load build graph → stage → call `Build.ImportGraph`. The only difference is that we pass the live built file path directly instead of a staged copy.
 
@@ -56,7 +56,7 @@ export async function syncProject(options: SyncOptions = {}): Promise<string> {
   const { target } = getTarget(project, options.target);
   const dependencies = await fetchDependencies(project);
 
-  // Guard: built file must exist (sync does not create it)
+  // Guard: built file must exist (update does not create it)
   const builtFile = join(project.paths.build, target.filename);
   if (!await pathExists(builtFile)) {
     throw new CliError(ErrorCode.SyncTargetNotBuilt, `...`);
@@ -73,7 +73,7 @@ export async function syncProject(options: SyncOptions = {}): Promise<string> {
 
 The `--open` flag is passed as an extra argument to `run.ps1` (or forwarded via an existing args slot) so that `Dispose()` can make the right call. The rules are:
 
-| State when sync starts | `--open` not set | `--open` set |
+| State when update starts | `--open` not set | `--open` set |
 |---|---|---|
 | File already open in Excel | Leave file open | Leave file open |
 | Excel open, file not open | Close workbook; leave Excel running | Leave file open; leave Excel running |
@@ -101,7 +101,7 @@ The `Dispose()` logic becomes:
 }
 ```
 
-`sync-project.ts` passes `options.open` down through `importTarget` so the value reaches the `run.ps1` invocation.
+`update-project.ts` passes `options.open` down through `importTarget` so the value reaches the `run.ps1` invocation.
 
 ### Error codes to add to `src/errors.ts`
 
@@ -110,7 +110,8 @@ The `Dispose()` logic becomes:
 ### Help text registration in `src/bin/vbapm.ts`
 
 ```typescript
-sync: async () => (await import("./vbapm-sync")).default,
+update: async () => (await import("./vbapm-update")).default,
 ```
 
-And add `sync` to the `Commands:` section of the help string.
+And add `update` to the `Commands:` section of the help string.
+
