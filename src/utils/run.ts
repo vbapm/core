@@ -77,7 +77,7 @@ export async function run(
 	const command = env.isWindows
 		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${
 				keepOpen ? "-KeepOpen " : ""
-		  }${parts.map(part => `"${part}"`).join(" ")}`
+			}${parts.map(part => `"${part}"`).join(" ")}`
 		: `osascript '${script}' ${parts.map(part => `'${part}'`).join(" ")}`;
 
 	debug("params:", { application, file, macro, args });

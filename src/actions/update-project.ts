@@ -35,10 +35,7 @@ export async function updateProject(options: UpdateOptions = {}): Promise<string
 		);
 	}
 
-	env.reporter.log(
-		Message.UpdateTargetUpdating,
-		`\n[2/2] Updating VBA in "${target.filename}"...`
-	);
+	env.reporter.log(Message.UpdateTargetUpdating, `\n[2/2] Updating VBA in "${target.filename}"...`);
 
 	await importTarget(target, { project, dependencies }, builtFile, {
 		addin: options.addin,
