@@ -80,7 +80,7 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 		.map(el => ({
 			id: el.attributes!.Id as string,
 			type: el.attributes!.Type as string,
-			target: el.attributes!.Target as string,
+			target: el.attributes!.Target as string
 		}));
 
 	const worksheetRels = rels.filter(r => r.type === WORKSHEET_REL_TYPE);
@@ -103,7 +103,7 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 			continue;
 		}
 
-		const buf = await readFile(currentAbs) as unknown as Buffer;
+		const buf = (await readFile(currentAbs)) as unknown as Buffer;
 		const codeName = extractCodeName(buf);
 		if (!codeName) {
 			debug(`No codeName found in ${currentAbs}, keeping current name`);
@@ -150,7 +150,11 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 		}
 	}
 	if (relsChanged) {
-		const formatted = formatXmlBuffer(Buffer.from(convertXml(relsXml)), { spaces: 2 }, "workbook.xml.rels");
+		const formatted = formatXmlBuffer(
+			Buffer.from(convertXml(relsXml)),
+			{ spaces: 2 },
+			"workbook.xml.rels"
+		);
 		await writeFile(relsPath, formatted);
 		debug("workbook.xml.rels updated");
 	}
@@ -166,12 +170,8 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 	if (!types || !types.elements) return;
 
 	// Build set of desired absolute PartNames for worksheets
-	const desiredParts = new Set(
-		[...ridToDesiredTarget.values()].map(t => `/xl/${t}`)
-	);
-	const oldParts = new Set(
-		worksheetRels.map(r => `/xl/${r.target}`)
-	);
+	const desiredParts = new Set([...ridToDesiredTarget.values()].map(t => `/xl/${t}`));
+	const oldParts = new Set(worksheetRels.map(r => `/xl/${r.target}`));
 
 	let ctChanged = false;
 	for (const el of types.elements) {
@@ -191,7 +191,11 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 		}
 	}
 	if (ctChanged) {
-		const formatted = formatXmlBuffer(Buffer.from(convertXml(ctXml)), { spaces: 2 }, "[Content_Types].xml");
+		const formatted = formatXmlBuffer(
+			Buffer.from(convertXml(ctXml)),
+			{ spaces: 2 },
+			"[Content_Types].xml"
+		);
 		await writeFile(contentTypesPath, formatted);
 		debug("[Content_Types].xml updated");
 	}
