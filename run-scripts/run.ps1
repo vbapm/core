@@ -154,14 +154,19 @@ class Excel {
 			# Not found in add-ins, continue
 		}
 
-		# Check already-open workbooks
-		try {
-			$this.Workbook = $this.App.Workbooks($fileBase)
-			$this.WorkbookWasOpen = $true
-			return
-		} catch {
-			# Not already open, continue
-		}
+        # Check already-open workbooks — match by full path to avoid picking up
+        # a same-named file from a different directory.
+        try {
+            foreach ($wb in $this.App.Workbooks) {
+                if ($wb.FullName -eq $Path) {
+                    $this.Workbook = $wb
+                    $this.WorkbookWasOpen = $true
+                    return
+                }
+            }
+        } catch {
+            # Not already open, continue
+        }
 
 		# Open the workbook
 		try {
