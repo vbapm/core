@@ -14,6 +14,7 @@ export interface BuildOptions {
 	release?: boolean;
 	target?: string;
 	addin?: string;
+	open?: boolean;
 }
 
 const isCreateDocumentError = (message: string) => /1004/.test(message);

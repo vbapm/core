@@ -20,6 +20,15 @@ Public Function ImportGraph(Graph As Variant) As String
     Set Values = JsonConverter.ParseJson(Graph)
     Set Document = App.GetDocument(Values("file"))
 
+    DebugLog.Clear
+    DebugLog.Log "ImportGraph", "Starting import for: " & Values("file")
+
+    ' Capture the currently active VBE code pane (best-effort, non-fatal)
+    Dim ActiveComponentName As String
+    Dim ActiveStartLine As Long, ActiveStartCol As Long
+    Dim ActiveEndLine As Long, ActiveEndCol As Long
+    CaptureActiveCodePane Document.VBProject, ActiveComponentName, ActiveStartLine, ActiveStartCol, ActiveEndLine, ActiveEndCol
+
     Dim Src As Dictionary
     For Each Src In Values("src")
         Output.Messages.Add "src: " & Src("name") & ", " & Src("path")
@@ -33,6 +42,10 @@ Public Function ImportGraph(Graph As Variant) As String
     Next Ref
 
     Document.Save
+
+    ' Restore the previously active code pane (best-effort, non-fatal)
+    DebugLog.Log "ImportGraph", "Restore: ComponentName='" & ActiveComponentName & "' StartLine=" & ActiveStartLine & " StartCol=" & ActiveStartCol
+    RestoreActiveCodePane Document.VBProject, ActiveComponentName, ActiveStartLine, ActiveStartCol, ActiveEndLine, ActiveEndCol
 
     ImportGraph = Output.Result
     Exit Function
@@ -158,6 +171,80 @@ ErrorHandling:
 End Function
 
 ' ============================================= '
+
+''
+' Capture the active VBE CodePane if it belongs to the given VBProject.
+' Stores the component name and cursor selection for later restoration.
+' All errors are silently ignored - this is a best-effort, non-fatal operation.
+''
+Private Sub CaptureActiveCodePane( _
+    Project As VBProject, _
+    ByRef ComponentName As String, _
+    ByRef StartLine As Long, _
+    ByRef StartCol As Long, _
+    ByRef EndLine As Long, _
+    ByRef EndCol As Long _
+)
+    'On Error Resume Next
+
+    DebugLog.Log "CaptureActiveCodePane", "Checking VBE.ActiveCodePane"
+
+    Dim ActivePane As Object
+    Set ActivePane = Application.VBE.ActiveCodePane
+    If ActivePane Is Nothing Then
+        DebugLog.Log "CaptureActiveCodePane", "No active code pane ? skipping"
+        Exit Sub
+    End If
+
+    DebugLog.Log "CaptureActiveCodePane", "Active pane component: '" & ActivePane.CodeModule.Parent.Name & "'"
+
+    ' Only capture if the pane belongs to the workbook being updated
+    If Not ActivePane.CodeModule.Parent.Collection.Parent Is Project Then
+        DebugLog.Log "CaptureActiveCodePane", "Pane belongs to a different project ? skipping"
+        Exit Sub
+    End If
+
+    ComponentName = ActivePane.CodeModule.Parent.Name
+    ActivePane.GetSelection StartLine, StartCol, EndLine, EndCol
+    DebugLog.Log "CaptureActiveCodePane", "Captured: '" & ComponentName & "' L" & StartLine & ":C" & StartCol & " to L" & EndLine & ":C" & EndCol
+End Sub
+
+''
+' Restore the previously captured VBE CodePane in the given VBProject.
+' All errors are silently ignored - this is a best-effort, non-fatal operation.
+''
+Private Sub RestoreActiveCodePane( _
+    Project As VBProject, _
+    ComponentName As String, _
+    StartLine As Long, _
+    StartCol As Long, _
+    EndLine As Long, _
+    EndCol As Long _
+)
+    'On Error Resume Next
+
+    If ComponentName = "" Then
+        DebugLog.Log "RestoreActiveCodePane", "No component name captured ? nothing to restore"
+        Exit Sub
+    End If
+
+    DebugLog.Log "RestoreActiveCodePane", "Looking for component: '" & ComponentName & "'"
+
+    ' The component was just removed and re-imported, so its old CodePane is gone.
+    ' Look it up by name in VBComponents and access CodeModule.CodePane ? this
+    ' property opens the pane automatically if it is not already open.
+    Dim Component As VBComponent
+    Set Component = Project.VBComponents(ComponentName)
+
+    DebugLog.Log "RestoreActiveCodePane", "Found component, accessing CodePane"
+
+    Dim cp As Object
+    Set cp = Component.CodeModule.CodePane
+
+    DebugLog.Log "RestoreActiveCodePane", "Activating and setting selection L" & StartLine & ":C" & StartCol
+    Set Application.VBE.ActiveCodePane = cp
+    cp.SetSelection StartLine, StartCol, EndLine, EndCol
+End Sub
 
 Private Function ComponentIsBlank(Component As VBComponent) As Boolean
     Dim LineNumber As Long

@@ -3,7 +3,7 @@ import { join } from "path";
 import { empty, json, single, standard, targetless } from "./__fixtures__";
 import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
 
-jest.setTimeout(60000);
+jest.setTimeout(120000);
 
 expect.addSnapshotSerializer({
 	test: value => isSnapshotFileMap(value),

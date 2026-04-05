@@ -38,11 +38,16 @@ export function isRunError(error: Error | RunError): error is RunError {
 	return has(error, "result");
 }
 
+export interface RunOptions {
+	keepOpen?: boolean;
+}
+
 export async function run(
 	application: string,
 	file: string,
 	macro: string,
-	args: string[]
+	args: string[],
+	options: RunOptions = {}
 ): Promise<RunResult> {
 	const script = join(env.scripts, env.isWindows ? "run.ps1" : "run.applescript");
 
@@ -64,11 +69,15 @@ export async function run(
 
 		return env.isWindows ? escape(arg) : arg;
 	});
-	const parts = [application, file, macro, ...formatted_args];
+	const keepOpen = !!options.keepOpen;
+	// Windows uses a named switch; macOS receives keepOpen as a positional arg (position 4)
+	const parts = env.isWindows
+		? [application, file, macro, ...formatted_args]
+		: [application, file, macro, keepOpen ? "1" : "0", ...formatted_args];
 	const command = env.isWindows
-		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${parts
-				.map(part => `"${part}"`)
-				.join(" ")}`
+		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${
+				keepOpen ? "-KeepOpen " : ""
+			}${parts.map(part => `"${part}"`).join(" ")}`
 		: `osascript '${script}' ${parts.map(part => `'${part}'`).join(" ")}`;
 
 	debug("params:", { application, file, macro, args });

@@ -9,6 +9,9 @@ export enum Message {
 	ExportToStaging = "export-to-staging",
 	ExportToProject = "export-to-project",
 
+	UpdateProjectLoading = "update-project-loading",
+	UpdateTargetUpdating = "update-target-updating",
+
 	ProjectUpdating = "project-updating",
 	DependenciesResolving = "dependencies-resolving",
 	DependenciesFetching = "dependencies-fetching",

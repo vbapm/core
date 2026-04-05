@@ -12,6 +12,7 @@ export type Addin = string;
 
 export interface AddinOptions {
 	addin?: string;
+	open?: boolean;
 	staging?: boolean;
 }
 
@@ -42,14 +43,20 @@ export async function importGraph(
 	const { application, addin } = getTargetInfo(project, target);
 	const { name, components, references } = graph;
 
-	await run(application, options.addin || addin, "Build.ImportGraph", [
-		JSON.stringify({
-			file,
-			name,
-			src: components,
-			references
-		})
-	]);
+	await run(
+		application,
+		options.addin || addin,
+		"Build.ImportGraph",
+		[
+			JSON.stringify({
+				file,
+				name,
+				src: components,
+				references
+			})
+		],
+		{ keepOpen: options.open }
+	);
 }
 
 /**

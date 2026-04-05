@@ -72,6 +72,7 @@ export enum ErrorCode {
 	ExportNoMatching = "export-no-matching",
 	ExportTargetNotFound = "export-target-not-found",
 	ExportOptionsConflict = "export-options-conflict",
+	UpdateTargetNotBuilt = "update-target-not-built",
 	AddinUnsupportedType = "addin-unsupported-type",
 	RunMissingFile = "run-missing-file",
 	RunMissingMacro = "run-missing-macro",

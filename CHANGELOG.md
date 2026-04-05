@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - XML formatting transformation that pretty-prints `.xml` and `.rels` files on export ([#47])
 - Add `--xml-only` and `--vba-only` options when exporting ([#54])
+- New `update` command that allows updating VBA source code directly into an existing built target file ([#56]).
 
 ### Fixed
 - Extracting now preserves extra metadata fields from `[project]` and `[package]` sections instead of silently discarding them ([#47]).
@@ -63,3 +64,4 @@ Note: The online registry remains the vba-blocks.com registry.
 [#39]: https://github.com/vbapm/core/pull/39
 [#47]: https://github.com/vbapm/core/pull/47
 [#54]: https://github.com/vbapm/core/pull/54
+[#56]: https://github.com/vbapm/core/pull/56
