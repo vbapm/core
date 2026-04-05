@@ -10,8 +10,14 @@ Attribute VB_Name = "FileSystem"
 ' @license MIT
 '' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 
+#If Mac Then
+    Public Const PATH_SEPARATOR = "/"
+#Else
+    Public Const PATH_SEPARATOR = "\"
+#End If
+
 Public Property Get Separator()
-    Separator = Application.PathSeparator
+    Separator = PATH_SEPARATOR
 End Property
 
 Public Function FileExists(FilePath As String) As Boolean

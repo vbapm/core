@@ -12,6 +12,12 @@ Attribute VB_Name = "DebugLog"
 ' @module DebugLog
 '' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 
+#If Mac Then
+    Public Const PATH_SEPARATOR = "/"
+#Else
+    Public Const PATH_SEPARATOR = "\"
+#End If
+
 Private Function LogPath() As String
     Dim tmp As String
 
@@ -23,7 +29,7 @@ Private Function LogPath() As String
     If tmp = "" Then tmp = "C:\Temp"
 #End If
 
-    LogPath = tmp & Application.PathSeparator & "vbapm-debug.log"
+    LogPath = tmp & PATH_SEPARATOR & "vbapm-debug.log"
 End Function
 
 ''
