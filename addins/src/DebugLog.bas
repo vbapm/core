@@ -12,6 +12,8 @@ Attribute VB_Name = "DebugLog"
 ' @module DebugLog
 '' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 
+Private Const DEBUG_MODE As Boolean = False
+
 #If Mac Then
     Public Const PATH_SEPARATOR = "/"
 #Else
@@ -38,6 +40,8 @@ End Function
 ' @param {String} Message  The message to log
 ''
 Public Sub Log(Source As String, Message As String)
+    If Not DEBUG_MODE Then Exit Sub
+
     Dim f As Integer
     f = FreeFile
 
@@ -50,6 +54,8 @@ End Sub
 ' Clear the log file (call once at the start of an operation).
 ''
 Public Sub Clear()
+    If Not DEBUG_MODE Then Exit Sub
+
     Dim f As Integer
     f = FreeFile
 
