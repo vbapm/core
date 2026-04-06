@@ -144,7 +144,7 @@ jobs:
 
       - name: Create Draft Release
         id: create_draft_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           tag_name: ${{ steps.next_version.outputs.tag }}
           target_commitish: ${{ steps.commit.outputs.sha }}
@@ -185,7 +185,7 @@ jobs:
 
       - name: Upload release assets
         id: upload_assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           tag_name: ${{ needs.prepare-release.outputs.tag }}
           files: |
