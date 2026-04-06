@@ -162,9 +162,9 @@ describe("export", () => {
 
 describe("update", () => {
 	test("update --target writes src changes into the specified built target", async () => {
-		await setup(dev, "update-target", async cwd => {
-			// 1. Build the project so a built target exists
-			await execute(cwd, "build");
+		await setup(targetless, "update-target", async cwd => {
+			// 1. Build the package with explicit --target (targetless has no default target)
+			await execute(cwd, "build --target xlsm");
 
 			// 2. Modify a [src] module
 			await writeFile(
@@ -173,7 +173,7 @@ describe("update", () => {
 				"utf8"
 			);
 
-			// 3. Update using explicit --target
+			// 3. Update using explicit --target (required since there is no default target)
 			const { stdout } = await execute(cwd, "update --target xlsm");
 
 			// 4. Export VBA only so we can inspect what ended up in the built file
