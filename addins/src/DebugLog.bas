@@ -15,9 +15,9 @@ Attribute VB_Name = "DebugLog"
 Private Const DEBUG_MODE As Boolean = False
 
 #If Mac Then
-    Public Const PATH_SEPARATOR = "/"
+    Private Const PATH_SEPARATOR = "/"
 #Else
-    Public Const PATH_SEPARATOR = "\"
+    Private Const PATH_SEPARATOR = "\"
 #End If
 
 Private Function LogPath() As String

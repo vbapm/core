@@ -11,9 +11,9 @@ Attribute VB_Name = "FileSystem"
 '' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 
 #If Mac Then
-    Public Const PATH_SEPARATOR = "/"
+    Private Const PATH_SEPARATOR = "/"
 #Else
-    Public Const PATH_SEPARATOR = "\"
+    Private Const PATH_SEPARATOR = "\"
 #End If
 
 Public Property Get Separator()
