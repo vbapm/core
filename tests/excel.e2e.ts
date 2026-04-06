@@ -191,14 +191,19 @@ describe("update", () => {
 			// 1. Build the project (dev-src included in the built file)
 			await execute(cwd, "build");
 
-			// 2. Add a marker to a [dev-src] module
+			// 2. Modify a [src] module and add a marker to a [dev-src] module
+			await writeFile(
+				join(cwd, "src/Validation.bas"),
+				`Attribute VB_Name = "Validation"\nPublic Function GetReleaseMarker() As String\n    GetReleaseMarker = "release-updated"\nEnd Function\n`,
+				"utf8"
+			);
 			await writeFile(
 				join(cwd, "src/TestModule.bas"),
 				`Attribute VB_Name = "TestModule"\nPublic Sub ShouldNotAppear()\nEnd Sub\n`,
 				"utf8"
 			);
 
-			// 3. Update with --release (dev-src should be skipped)
+			// 3. Update with --release ([dev-src] should be skipped, [src] should be imported)
 			const { stdout } = await execute(cwd, "update --release");
 
 			// 4. Export VBA only to reveal what is actually stored in the built file
@@ -207,6 +212,10 @@ describe("update", () => {
 			// 5. TestModule should still have the pre-update content because it was excluded
 			const testModuleContent = await readFile(join(cwd, "src/TestModule.bas"), "utf8");
 			expect(testModuleContent).not.toContain("ShouldNotAppear");
+
+			// 6. Validation should reflect the updated [src] content because it was included
+			const validationContent = await readFile(join(cwd, "src/Validation.bas"), "utf8");
+			expect(validationContent).toContain("GetReleaseMarker");
 			expect(stdout).toContain("Done.");
 		});
 	});
