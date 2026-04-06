@@ -185,7 +185,7 @@ Private Sub CaptureActiveCodePane( _
     ByRef EndLine As Long, _
     ByRef EndCol As Long _
 )
-    'On Error Resume Next
+    On Error GoTo ExitSub
 
     DebugLog.Log "CaptureActiveCodePane", "Checking VBE.ActiveCodePane"
 
@@ -207,6 +207,8 @@ Private Sub CaptureActiveCodePane( _
     ComponentName = ActivePane.CodeModule.Parent.Name
     ActivePane.GetSelection StartLine, StartCol, EndLine, EndCol
     DebugLog.Log "CaptureActiveCodePane", "Captured: '" & ComponentName & "' L" & StartLine & ":C" & StartCol & " to L" & EndLine & ":C" & EndCol
+
+ExitSub:
 End Sub
 
 ''
@@ -221,7 +223,7 @@ Private Sub RestoreActiveCodePane( _
     EndLine As Long, _
     EndCol As Long _
 )
-    'On Error Resume Next
+    On Error GoTo ExitSub
 
     If ComponentName = "" Then
         DebugLog.Log "RestoreActiveCodePane", "No component name captured ? nothing to restore"
@@ -244,6 +246,8 @@ Private Sub RestoreActiveCodePane( _
     DebugLog.Log "RestoreActiveCodePane", "Activating and setting selection L" & StartLine & ":C" & StartCol
     Set Application.VBE.ActiveCodePane = cp
     cp.SetSelection StartLine, StartCol, EndLine, EndCol
+
+ExitSub:
 End Sub
 
 Private Function ComponentIsBlank(Component As VBComponent) As Boolean

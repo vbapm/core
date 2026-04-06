@@ -200,6 +200,46 @@ Export a previously-built package:
 vba export --target xlsm
 ```
 
+Only extract the XML files (skip VBA source export):
+
+```txt
+vba export --xml-only
+```
+
+Only export the VBA source (skip XML extraction):
+
+```txt
+vba export --vba-only
+```
+
+### `update`
+
+`vba update` writes the current VBA source directly into an existing built target file (including one currently open in Excel), without going through a full build cycle.
+
+Update VBA source in the built target:
+
+```txt
+vba update
+```
+
+Update VBA in a specific target type:
+
+```txt
+vba update --target xlsm
+```
+
+Update excluding dev-src, dev-dependencies, and dev-references:
+
+```txt
+vba update --release
+```
+
+Update and leave the target open in Excel after updating:
+
+```txt
+vba update --open
+```
+
 ### `run`
 
 `vba run` is a useful utility function for running a public macro in the given workbook, passing up to 10 arguments, and if it returns a string value, outputing it to the console.

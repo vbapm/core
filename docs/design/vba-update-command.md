@@ -39,7 +39,7 @@ The key difference from `build`: `update` operates on `build/<target>` directly 
 | File | Change |
 |---|---|
 | `src/bin/vbapm-update.ts` | **New** — CLI entry point |
-| `src/actions/update-project.ts` | **New** — `syncProject()` action |
+| `src/actions/update-project.ts` | **New** — `updateProject()` action |
 | `src/bin/vbapm.ts` | **Modify** — register `update` in the `commands` map |
 | `run-scripts/run.ps1` | **Modify** — accept `keepOpen` parameter in `Dispose()` |
 
@@ -50,7 +50,7 @@ The key difference from `build`: `update` operates on `build/<target>` directly 
 Reuses `importTarget` (already exported from `src/targets/build-target.ts`) — that function does exactly: load build graph → stage → call `Build.ImportGraph`. The only difference is that we pass the live built file path directly instead of a staged copy.
 
 ```typescript
-export async function syncProject(options: SyncOptions = {}): Promise<string> {
+export async function updateProject(options: UpdateOptions = {}): Promise<string> {
   // [1/2] Load project
   const project = await loadProject();
   const { target } = getTarget(project, options.target);
@@ -59,7 +59,7 @@ export async function syncProject(options: SyncOptions = {}): Promise<string> {
   // Guard: built file must exist (update does not create it)
   const builtFile = join(project.paths.build, target.filename);
   if (!await pathExists(builtFile)) {
-    throw new CliError(ErrorCode.SyncTargetNotBuilt, `...`);
+    throw new CliError(ErrorCode.UpdateTargetNotBuilt, `...`);
   }
 
   // [2/2] Import VBA into target (live or on-disk)

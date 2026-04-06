@@ -12,6 +12,14 @@ Attribute VB_Name = "DebugLog"
 ' @module DebugLog
 '' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 
+Private Const DEBUG_MODE As Boolean = False
+
+#If Mac Then
+    Private Const PATH_SEPARATOR = "/"
+#Else
+    Private Const PATH_SEPARATOR = "\"
+#End If
+
 Private Function LogPath() As String
     Dim tmp As String
 
@@ -23,7 +31,7 @@ Private Function LogPath() As String
     If tmp = "" Then tmp = "C:\Temp"
 #End If
 
-    LogPath = tmp & Application.PathSeparator & "vbapm-debug.log"
+    LogPath = tmp & PATH_SEPARATOR & "vbapm-debug.log"
 End Function
 
 ''
@@ -32,6 +40,8 @@ End Function
 ' @param {String} Message  The message to log
 ''
 Public Sub Log(Source As String, Message As String)
+    If Not DEBUG_MODE Then Exit Sub
+
     Dim f As Integer
     f = FreeFile
 
@@ -44,6 +54,8 @@ End Sub
 ' Clear the log file (call once at the start of an operation).
 ''
 Public Sub Clear()
+    If Not DEBUG_MODE Then Exit Sub
+
     Dim f As Integer
     f = FreeFile
 
