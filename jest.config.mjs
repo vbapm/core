@@ -1,6 +1,6 @@
 export default {
 	testEnvironment: "node",
-	testPathIgnorePatterns: ["/node_modules/", "/lib/", "/worktrees/"],
+	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
 	// @decimalturn/toml-patch v1+ is ESM-only. Jest (running in CJS mode via ts-jest) skips
 	// transforming node_modules by default, which causes "Unexpected token export" errors.

@@ -128,17 +128,17 @@ function getSources() {
 	const sources: Sources = {
 		registry: {
 			"vba-blocks": {
-				resolve: jest.fn(_dependency => [registryRegistration]),
-				fetch: jest.fn(_registration => "registry path")
+				resolve: jest.fn(() => [registryRegistration]),
+				fetch: jest.fn(() => "registry path")
 			}
 		},
 		path: {
-			resolve: jest.fn(_dependency => [pathRegistration]),
-			fetch: jest.fn(_registration => "path")
+			resolve: jest.fn(() => [pathRegistration]),
+			fetch: jest.fn(() => "path")
 		},
 		git: {
-			resolve: jest.fn(_dependency => [gitRegistration]),
-			fetch: jest.fn(_registration => "git path")
+			resolve: jest.fn(() => [gitRegistration]),
+			fetch: jest.fn(() => "git path")
 		}
 	};
 
