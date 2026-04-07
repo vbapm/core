@@ -30,20 +30,20 @@ describe("formatXml – XML entity round-trip", () => {
 	test("preserves &quot; in attribute values without double-escaping", () => {
 		const xml = `<root val="A &quot; B"/>`;
 		const result = formatXml(xml);
-		expect(result).toBe(xml + "\n");
+		expect(result).toBe(xml + "\r\n");
 		expect(result).not.toContain("&amp;quot;");
 	});
 
 	test("preserves &lt; in attribute values", () => {
 		const xml = `<root val="A &lt; B"/>`;
 		const result = formatXml(xml);
-		expect(result).toBe(xml + "\n");
+		expect(result).toBe(xml + "\r\n");
 	});
 
 	test("preserves multiple entities in a single attribute value", () => {
 		const xml = `<root val="A &amp; B &lt; C &gt; D"/>`;
 		const result = formatXml(xml);
-		expect(result).toBe(xml + "\n");
+		expect(result).toBe(xml + "\r\n");
 	});
 
 	test("preserves whitespace-only text with xml:space=preserve", () => {

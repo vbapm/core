@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- XML formatting now uses CRLF line endings to match the OOXML standard ([#62]).
+
 ## [0.8.0] - 2026-04-05
 
 ### Added
@@ -67,3 +70,4 @@ Note: The online registry remains the vba-blocks.com registry.
 [#47]: https://github.com/vbapm/core/pull/47
 [#54]: https://github.com/vbapm/core/pull/54
 [#56]: https://github.com/vbapm/core/pull/56
+[#62]: https://github.com/vbapm/core/pull/62

@@ -20,6 +20,12 @@ export interface ConvertOptions {
 	// https://github.com/nashwaan/xml-js#options-for-converting-js-object--json--xml
 	compact?: boolean;
 	spaces?: number | string;
+	/**
+	 * The end-of-line sequence to use when formatting XML.
+	 * Defaults to "\r\n" to match Excel OOXML.
+	 * This property is not part of the standard js2xml options and is only used by our custom formatXml function.
+	 */
+	eol?: string;
 }
 
 // js2xml pre-escapes `"` → &quot; in attribute values before calling
@@ -50,7 +56,7 @@ export function convertXml(value: Xml, options?: ConvertOptions): string {
  *  - Elements whose only child is a text node are kept inline: <t>value</t>.
  *  - All other elements are block-formatted with increasing indentation.
  */
-function formatXmlString(xml: string, indent: string): string {
+function formatXmlString(xml: string, indent: string, eol = "\r\n"): string {
 	// Validate early: XML must start with a tag.
 	let start = 0;
 	while (start < xml.length && xml.charCodeAt(start) <= 32) start++;
@@ -72,7 +78,7 @@ function formatXmlString(xml: string, indent: string): string {
 			// Text node: copy content and advance to next tag.
 			const nextTag = xml.indexOf("<", pos);
 			const text = nextTag === -1 ? xml.slice(pos) : xml.slice(pos, nextTag);
-			if (text) parts.push(indent.repeat(depth), text, "\n");
+			if (text) parts.push(indent.repeat(depth), text, eol);
 			pos = nextTag === -1 ? N : nextTag;
 			continue;
 		}
@@ -83,19 +89,19 @@ function formatXmlString(xml: string, indent: string): string {
 			// Processing instruction / XML declaration: <?...?>
 			const end = xml.indexOf("?>", pos);
 			if (end === -1) throw new Error("Unterminated processing instruction");
-			parts.push(indent.repeat(depth), xml.slice(pos, end + 2), "\n");
+			parts.push(indent.repeat(depth), xml.slice(pos, end + 2), eol);
 			pos = end + 2;
 		} else if (c1 === "!" && xml[pos + 2] === "-" && xml[pos + 3] === "-") {
 			// Comment: <!--...-->
 			const end = xml.indexOf("-->", pos);
 			if (end === -1) throw new Error("Unterminated comment");
-			parts.push(indent.repeat(depth), xml.slice(pos, end + 3), "\n");
+			parts.push(indent.repeat(depth), xml.slice(pos, end + 3), eol);
 			pos = end + 3;
 		} else if (c1 === "!" && xml[pos + 2] === "[") {
 			// CDATA section: <![CDATA[...]]>
 			const end = xml.indexOf("]]>", pos);
 			if (end === -1) throw new Error("Unterminated CDATA section");
-			parts.push(indent.repeat(depth), xml.slice(pos, end + 3), "\n");
+			parts.push(indent.repeat(depth), xml.slice(pos, end + 3), eol);
 			pos = end + 3;
 		} else if (c1 === "/") {
 			// Closing tag: </name>
@@ -103,7 +109,7 @@ function formatXmlString(xml: string, indent: string): string {
 			if (depth < 0) throw new Error("Unexpected closing tag");
 			const end = xml.indexOf(">", pos);
 			if (end === -1) throw new Error("Unterminated closing tag");
-			parts.push(indent.repeat(depth), xml.slice(pos, end + 1), "\n");
+			parts.push(indent.repeat(depth), xml.slice(pos, end + 1), eol);
 			pos = end + 1;
 		} else {
 			// Opening or self-closing tag.
@@ -127,7 +133,7 @@ function formatXmlString(xml: string, indent: string): string {
 			const selfClosing = xml[j - 1] === "/";
 
 			if (selfClosing) {
-				parts.push(indent.repeat(depth), xml.slice(pos, tagEnd), "\n");
+				parts.push(indent.repeat(depth), xml.slice(pos, tagEnd), eol);
 				pos = tagEnd;
 			} else {
 				// Lookahead: if the very next tag is a closing tag, this element
@@ -144,12 +150,12 @@ function formatXmlString(xml: string, indent: string): string {
 						xml.slice(pos, tagEnd),
 						text,
 						xml.slice(nextLt, closeEnd + 1),
-						"\n"
+						eol
 					);
 					pos = closeEnd + 1;
 				} else {
 					// Block element: opening tag on its own line then recurse deeper.
-					parts.push(indent.repeat(depth), xml.slice(pos, tagEnd), "\n");
+					parts.push(indent.repeat(depth), xml.slice(pos, tagEnd), eol);
 					depth++;
 					pos = tagEnd;
 				}
@@ -171,7 +177,8 @@ export function formatXml(xml: string | Buffer, options: ConvertOptions = {}): s
 	}
 	const spaces = options.spaces ?? 2;
 	const indent = typeof spaces === "string" ? spaces : " ".repeat(spaces);
-	return formatXmlString(xml, indent);
+	const eol = options.eol ?? "\r\n";
+	return formatXmlString(xml, indent, eol);
 }
 
 const MAX_FORMAT_SIZE = 5 * 1024 * 1024; // 5 MB

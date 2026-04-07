@@ -3,10 +3,10 @@
 # Perform line ending conversions by default
 * text=auto
 
-# OXML files - Enforce LF for reduced file size (xml, rels)
-*.xml text eol=lf
-*.rels text eol=lf
-.rels text eol=lf
+# OXML files - Prevent LF normalization (xml, rels)
+*.xml -text diff
+*.rels -text diff
+.rels -text diff
 
 # VBA extensions - Prevent LF normalization (bas, cls, frm, vba, doccls)
 *.[bB][aA][sS]              -text diff
