@@ -29,11 +29,6 @@ export async function getTargetPath(target?: string): Promise<string> {
 }
 
 export async function openTarget(target: string): Promise<boolean> {
-	try {
-		const process = await open(target, { wait: true });
-		return process.exitCode === 0;
-	} catch (error: any) {
-		console.error(`Failed to open built target: ${error?.message || error}`);
-		throw error;
-	}
+	const process = await open(target, { wait: true });
+	return process.exitCode === 0;
 }
