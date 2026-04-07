@@ -20,3 +20,4 @@
 node_modules
 *.log
 *_LOCAL.md
+*.code-workspace
