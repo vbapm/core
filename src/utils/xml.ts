@@ -21,8 +21,8 @@ export interface ConvertOptions {
 	compact?: boolean;
 	spaces?: number | string;
 	/**
-	 * The end-of-line sequence to use when formatting XML. 
-	 * Defaults to "\r\n" to match Excel OOXML. 
+	 * The end-of-line sequence to use when formatting XML.
+	 * Defaults to "\r\n" to match Excel OOXML.
 	 * This property is not part of the standard js2xml options and is only used by our custom formatXml function.
 	 */
 	eol?: string;
