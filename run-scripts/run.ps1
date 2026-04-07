@@ -9,6 +9,8 @@ param(
     [string]$Command,
 
     [switch]$KeepOpen,
+    [switch]$Close,
+    [switch]$Save,
 
     [Parameter(Position=3, ValueFromRemainingArguments=$true)]
     [string[]]$MacroArgs
@@ -197,6 +199,50 @@ class Excel {
 }
 
 # -------
+# Close
+# -------
+
+function Close {
+    param(
+        [string]$AppName,
+        [string]$FilePath,
+        [bool]$Save
+    )
+
+    switch ($AppName) {
+        "excel" {
+            $fileBase = GetFileBase $FilePath
+
+            # Try to get a running Excel instance
+            $excelApp = $null
+            try {
+                $excelApp = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+            } catch {
+                # Excel is not running — file is already closed
+                PrintLn "{`"success`":true,`"messages`":[`"File is not open`"]}"
+                return
+            }
+
+            # Try to find the workbook by filename
+            $workbook = $null
+            try {
+                $workbook = $excelApp.Workbooks($fileBase)
+            } catch {
+                # Workbook is not open — nothing to close
+                PrintLn "{`"success`":true,`"messages`":[`"File is not open`"]}"
+                return
+            }
+
+            $workbook.Close($Save)
+            PrintLn "{`"success`":true}"
+        }
+        default {
+            Fail "ERROR #3: Unsupported App `"$AppName`""
+        }
+    }
+}
+
+# -------
 # Run
 # -------
 
@@ -232,19 +278,27 @@ function Run {
 
 $ErrorActionPreference = 'Stop'
 
-if (-not $AppName -or -not $File -or -not $Command) {
-    Fail "ERROR #1: Invalid Input (appname, file, and macro are required)"
+if (-not $AppName -or -not $File) {
+    Fail "ERROR #1: Invalid Input (appname and file are required)"
 }
 
-if ($MacroArgs.Count -gt 10) {
-    Fail "ERROR #2: Invalid Input (only 10 arguments are supported)"
-}
+if ($Close) {
+    Close $AppName $File $Save.IsPresent
+} else {
+    if (-not $Command) {
+        Fail "ERROR #1: Invalid Input (appname, file, and macro are required)"
+    }
 
-# Unescape arguments
-$UnescapedArgs = @()
-foreach ($arg in $MacroArgs) {
-    $UnescapedArgs += Unescape $arg
-}
+    if ($MacroArgs.Count -gt 10) {
+        Fail "ERROR #2: Invalid Input (only 10 arguments are supported)"
+    }
 
-Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
+    # Unescape arguments
+    $UnescapedArgs = @()
+    foreach ($arg in $MacroArgs) {
+        $UnescapedArgs += Unescape $arg
+    }
+
+    Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
+}
 exit 0

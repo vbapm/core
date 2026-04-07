@@ -24,42 +24,28 @@ export async function closeTarget(options: CloseOptions = {}): Promise<string> {
 	const resolvedFile = resolve(builtFile);
 	const save = !!options.save;
 
+	const script = join(env.scripts, env.isWindows ? "run.ps1" : "run.applescript");
+
+	if (!(await pathExists(script))) {
+		throw new CliError(
+			ErrorCode.RunScriptNotFound,
+			`Bridge script not found at "${script}". This is a fatal error and will require vbapm to be re-installed.`
+		);
+	}
+
+	let command: string;
 	if (env.isWindows) {
-		const script = join(env.scripts, "close.ps1");
-
-		if (!(await pathExists(script))) {
-			throw new CliError(
-				ErrorCode.CloseScriptNotFound,
-				`Close script not found at "${script}". This is a fatal error and will require vbapm to be re-installed.`
-			);
-		}
-
 		const saveFlag = save ? "-Save" : "";
-		const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" "${application}" "${resolvedFile}" ${saveFlag}`;
-
-		try {
-			await exec(command, { env: process.env });
-		} catch {
-			// Non-fatal: workbook may not be open or Excel may not be running
-		}
+		command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" -Close ${saveFlag} "${application}" "${resolvedFile}"`;
 	} else {
-		const script = join(env.scripts, "close.applescript");
-
-		if (!(await pathExists(script))) {
-			throw new CliError(
-				ErrorCode.CloseScriptNotFound,
-				`Close script not found at "${script}". This is a fatal error and will require vbapm to be re-installed.`
-			);
-		}
-
 		const saveArg = save ? "1" : "0";
-		const command = `osascript '${script}' '${application}' '${resolvedFile}' '${saveArg}'`;
+		command = `osascript '${script}' '${application}' '${resolvedFile}' 'close' '${saveArg}'`;
+	}
 
-		try {
-			await exec(command, { env: process.env });
-		} catch {
-			// Non-fatal: workbook may not be open or Excel may not be running
-		}
+	try {
+		await exec(command, { env: process.env });
+	} catch {
+		// Non-fatal: workbook may not be open or Excel may not be running
 	}
 
 	return builtFile;
