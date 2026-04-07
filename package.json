@@ -59,7 +59,7 @@
         "debug": "^4",
         "decompress": "^4",
         "editorconfig": "^3.0.0",
-        "env-paths": "^2",
+        "env-paths": "^4.0.0",
         "fs-extra": "^11",
         "isomorphic-git": "^1.37.1",
         "logic-solver": "^2",
