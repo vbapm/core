@@ -79,8 +79,10 @@ export default [
 		onwarn(warning, warn) {
 			// Ignore known errors
 			if (warning.code === "CIRCULAR_DEPENDENCY" && /glob/.test(warning.importer)) return;
-			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable\-stream/.test(warning.importer || ""))
-				return;
+			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable\-stream/.test(warning.importer || "")) return;
+			// semver's Range <-> Comparator mutual dependency is an internal cycle
+			// that cannot be avoided from outside the package; safe to ignore.			
+			if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some(id => /semver/.test(id))) return;
 			if (warning.code === "UNRESOLVED_IMPORT" && /^node:/.test(warning.source || "")) return;
 			if (warning.code === "EVAL" && /minisat/.test(warning.id)) return;
 
