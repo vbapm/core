@@ -5,7 +5,7 @@ export default {
 	// @decimalturn/toml-patch v1+ is ESM-only. Jest (running in CJS mode via ts-jest) skips
 	// transforming node_modules by default, which causes "Unexpected token export" errors.
 	// This pattern excludes toml-patch from that skip list so ts-jest can downcompile it to CJS.
-	transformIgnorePatterns: ["/node_modules/(?!@decimalturn/toml-patch/)"],
+	transformIgnorePatterns: ["/node_modules/(?!@decimalturn/toml-patch/|env-paths/|is-safe-filename/)"],	
 	// allowJs is required so ts-jest can process the plain .js ESM dist file of toml-patch.
 	transform: {
 		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: { allowJs: true } }]
