@@ -71,12 +71,34 @@ export async function initProject(options: InitOptions) {
 		await writeFile(
 			join(dir, ".editorconfig"),
 			dedent`
-        [*]
-        trim_trailing_whitespace = true
-        insert_final_newline = true
-        charset = utf-8
+        # EditorConfig is awesome: http://EditorConfig.org
+        # Template from: https://github.com/DecimalTurn/VBA-on-GitHub
 
-        [*.{bas,cls}]
+        # top-most EditorConfig file
+        root = true
+
+        # Properties for VBA, VB6 and twinBASIC file extensions
+        [*.{bas,cls,frm,vba,doccls,ctl,dsr,twin,tbform}]
+        indent_style = space
+        indent_size = 4
+        end_of_line = crlf
+        # Avoid line too long error (https://learn.microsoft.com/en-us/office/vba/language/reference/user-interface-help/line-too-long):
+        max_line_length = 1023
+        insert_final_newline = true
+        trim_trailing_whitespace = true
+
+        # The character set property isn't widely supported, but you can still add it. It just won't do anything if unsupported by your editor.
+        # Reference: https://github.com/editorconfig/editorconfig/issues/209#issuecomment-445241830
+        # Eg.:
+        # charset = windows-1252
+        # charset = us-ascii
+        
+        ###############################
+        
+        # Properties for Office OOXML files (e.g. .xml, .rels)
+        [{*.rels,.rels,*.xml}]
+        indent_style = space
+        indent_size = 2
         end_of_line = crlf
       `
 		);
