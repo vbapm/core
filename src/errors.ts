@@ -77,7 +77,9 @@ export enum ErrorCode {
 	RunMissingFile = "run-missing-file",
 	RunMissingMacro = "run-missing-macro",
 	RegistryCloneFailed = "registry-clone-failed",
-	InvalidVersion = "invalid-version"
+	InvalidVersion = "invalid-version",
+	OpenTargetNotBuilt = "open-target-not-built",
+	CloseScriptNotFound = "close-script-not-found"
 }
 
 export function manifestOk(value: any, message: string) {
