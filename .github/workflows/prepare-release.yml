@@ -118,6 +118,7 @@ jobs:
         id: release_notes
         run: |
           version="${{ steps.next_version.outputs.version }}"
+          tag="v$version"
           # Extract lines between the version header and the next ## header
           # Trim surrounding blank lines and normalize changelog issue refs from ([#123]) to (#123).
           awk "/^## \\[$version\\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md \
@@ -125,6 +126,11 @@ jobs:
             | sed 's/(\[#\([0-9]\+\)\])/(#\1)/g' > release-notes.md
           if [[ ! -s release-notes.md ]]; then
             echo "(No changelog entries found for $version)" > release-notes.md
+          fi
+          prev_tag=$(git tag --sort=-version:refname | head -1)
+          if [[ -n "$prev_tag" ]]; then
+            echo "" >> release-notes.md
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${prev_tag}...${tag}" >> release-notes.md
           fi
 
       - name: Commit changes
