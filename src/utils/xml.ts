@@ -20,6 +20,11 @@ export interface ConvertOptions {
 	// https://github.com/nashwaan/xml-js#options-for-converting-js-object--json--xml
 	compact?: boolean;
 	spaces?: number | string;
+	/**
+	 * The end-of-line sequence to use when formatting XML. 
+	 * Defaults to "\r\n" to match Excel OOXML. 
+	 * This property is not part of the standard js2xml options and is only used by our custom formatXml function.
+	 */
 	eol?: string;
 }
 
@@ -51,7 +56,7 @@ export function convertXml(value: Xml, options?: ConvertOptions): string {
  *  - Elements whose only child is a text node are kept inline: <t>value</t>.
  *  - All other elements are block-formatted with increasing indentation.
  */
-function formatXmlString(xml: string, indent: string, eol = "\n"): string {
+function formatXmlString(xml: string, indent: string, eol = "\r\n"): string {
 	// Validate early: XML must start with a tag.
 	let start = 0;
 	while (start < xml.length && xml.charCodeAt(start) <= 32) start++;
