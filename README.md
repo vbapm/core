@@ -240,6 +240,44 @@ Update and leave the target open in Excel after updating:
 vba update --open
 ```
 
+### `open`
+
+`vba open` opens the current built target file in Excel. This is a convenience shortcut when you want to start editing a target you've already built.
+
+Open the built target:
+
+```txt
+vba open
+```
+
+Open a specific target type:
+
+```txt
+vba open --target xlsm
+```
+
+### `close`
+
+`vba close` closes the built target file that is currently open in Excel. By default changes are **discarded** — pass `--save` to keep them.
+
+Close the built target (discard unsaved changes):
+
+```txt
+vba close
+```
+
+Close and save changes:
+
+```txt
+vba close --save
+```
+
+Close a specific target type:
+
+```txt
+vba close --target xlsm
+```
+
 ### `run`
 
 `vba run` is a useful utility function for running a public macro in the given workbook, passing up to 10 arguments, and if it returns a string value, outputing it to the console.
