@@ -9,7 +9,8 @@ const help = dedent`
 
   Options:
     --target=TYPE   Close built target of type TYPE
-    --save          Save changes before closing (default: discard)`;
+    --save          Save changes before closing
+    --force         Close even if there are unsaved changes (discards them)`;
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -19,7 +20,8 @@ export default async function (args: Args) {
 
 	const target = <string | undefined>args.target;
 	const save = !!args.save;
+	const force = !!args.force;
 
-	const path = await closeTarget({ target, save });
+	const path = await closeTarget({ target, save, force });
 	console.log(`Closed built target: ${path}`);
 }

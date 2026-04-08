@@ -43,6 +43,30 @@ on run argv
 				set output to "ERROR #3: Unsupported App"
 			end if
 
+		else if command is "check-saved" then
+			if appname is "excel" then
+				set workbook_name to name of (info for addin)
+
+				if application "Microsoft Excel" is not running then
+					set output to "{\"success\":true,\"saved\":true}"
+				else
+					tell application "Microsoft Excel"
+						if not (exists workbook workbook_name) then
+							set output to "{\"success\":true,\"saved\":true}"
+						else
+							set is_saved to saved of workbook workbook_name
+							if is_saved then
+								set output to "{\"success\":true,\"saved\":true}"
+							else
+								set output to "{\"success\":true,\"saved\":false}"
+							end if
+						end if
+					end tell
+				end if
+			else
+				set output to "ERROR #3: Unsupported App"
+			end if
+
 		else if (count of argv) >= 4 and (count of argv) <= 14 then
 			set keep_open to (item 4 of argv) is "1"
 

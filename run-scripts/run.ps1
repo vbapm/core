@@ -9,6 +9,7 @@ param(
     [string]$Command,
 
     [switch]$KeepOpen,
+    [switch]$CheckSaved,
     [switch]$Close,
     [switch]$Save,
 
@@ -243,6 +244,47 @@ function Close {
 }
 
 # -------
+# Check Saved
+# -------
+
+function CheckSaved {
+    param(
+        [string]$AppName,
+        [string]$FilePath
+    )
+
+    switch ($AppName) {
+        "excel" {
+            $fileBase = GetFileBase $FilePath
+
+            $excelApp = $null
+            try {
+                $excelApp = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+            } catch {
+                # Excel is not running — treat as already saved
+                PrintLn "{`"success`":true,`"saved`":true}"
+                return
+            }
+
+            $workbook = $null
+            try {
+                $workbook = $excelApp.Workbooks($fileBase)
+            } catch {
+                # Workbook is not open — treat as already saved
+                PrintLn "{`"success`":true,`"saved`":true}"
+                return
+            }
+
+            $isSaved = $workbook.Saved
+            PrintLn "{`"success`":true,`"saved`":$($isSaved.ToString().ToLower())}"
+        }
+        default {
+            Fail "ERROR #3: Unsupported App `"$AppName`""
+        }
+    }
+}
+
+# -------
 # Run
 # -------
 
@@ -282,7 +324,9 @@ if (-not $AppName -or -not $File) {
     Fail "ERROR #1: Invalid Input (appname and file are required)"
 }
 
-if ($Close) {
+if ($CheckSaved) {
+    CheckSaved $AppName $File
+} elseif ($Close) {
     Close $AppName $File $Save.IsPresent
 } else {
     if (-not $Command) {
