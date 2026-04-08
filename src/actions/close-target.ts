@@ -29,6 +29,13 @@ export async function closeTarget(options: CloseOptions = {}): Promise<string> {
 
 	const script = join(env.scripts, env.isWindows ? "run.ps1" : "run.applescript");
 
+	if (!(await pathExists(builtFile))) {
+		throw new CliError(
+			ErrorCode.OpenTargetNotBuilt,
+			`Built target not found at "${builtFile}".`
+		);
+	}
+
 	if (!(await pathExists(script))) {
 		throw new CliError(
 			ErrorCode.RunScriptNotFound,
