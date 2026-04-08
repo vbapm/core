@@ -7,6 +7,7 @@ import { loadProject } from "../project";
 import { getTarget } from "../targets";
 import { pathExists } from "../utils/fs";
 import { join, resolve } from "../utils/path";
+import { isTargetSaved } from "./check-saved";
 
 const exec = promisify(_exec);
 
@@ -37,25 +38,12 @@ export async function closeTarget(options: CloseOptions = {}): Promise<string> {
 
 	// If neither --save nor --force, check whether the workbook has unsaved changes
 	if (!save && !force) {
-		let checkCommand: string;
-		if (env.isWindows) {
-			checkCommand = `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" -CheckSaved "${application}" "${resolvedFile}"`;
-		} else {
-			checkCommand = `osascript '${script}' '${application}' '${resolvedFile}' 'check-saved'`;
-		}
-
-		try {
-			const { stdout } = await exec(checkCommand, { env: process.env });
-			const result = JSON.parse(stdout.trim()) as { success: boolean; saved?: boolean };
-			if (result.success && result.saved === false) {
-				throw new CliError(
-					ErrorCode.CloseTargetUnsavedChanges,
-					`The workbook "${target.filename}" has unsaved changes.\n\nUse --save to save before closing, or --force to discard changes.`
-				);
-			}
-		} catch (err) {
-			if (err instanceof CliError) throw err;
-			// If the check itself fails (Excel not running, etc.), proceed with close
+		const saved = await isTargetSaved(target, project);
+		if (saved === false) {
+			throw new CliError(
+				ErrorCode.CloseTargetUnsavedChanges,
+				`The workbook "${target.filename}" has unsaved changes.\n\nUse --save to save before closing, or --force to discard changes.`
+			);
 		}
 	}
 
