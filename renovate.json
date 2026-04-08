@@ -3,6 +3,8 @@
   "extends": [
     "config:recommended"
   ],
+  "minimumReleaseAge": "5 days",
+  "internalChecksFilter": "strict",
   "customManagers": [
     {
       "customType": "regex",
