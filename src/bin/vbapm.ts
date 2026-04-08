@@ -101,16 +101,17 @@ async function main() {
 	let [command] = args._;
 
 	if (!command) {
-		if (args.version) console.log(version);
-		else {
+		if (args.version) {
+			console.log(version);
+		} else {
 			console.log(help);
+			warnIfDualInstall();
 
 			if (updateAvailable()) {
 				env.reporter.log(Message.UpdateAvailable, updateAvailableMessage());
 			}
 		}
 
-		warnIfDualInstall();
 		return;
 	}
 
@@ -119,6 +120,7 @@ async function main() {
 
 		if (!command) {
 			console.log(help);
+			warnIfDualInstall();
 			return;
 		}
 
@@ -163,8 +165,6 @@ async function main() {
 	if (has_update_available) {
 		env.reporter.log(Message.UpdateAvailable, updateAvailableMessage());
 	}
-
-	warnIfDualInstall();
 }
 
 function warnIfDualInstall() {
