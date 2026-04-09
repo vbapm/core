@@ -63,11 +63,7 @@ export async function closeTarget(options: CloseOptions = {}): Promise<string> {
 		command = `osascript '${script}' '${application}' '${resolvedFile}' 'close' '${saveArg}'`;
 	}
 
-	try {
-		await exec(command, { env: process.env });
-	} catch {
-		// Non-fatal: workbook may not be open or Excel may not be running
-	}
+	await exec(command, { env: process.env });
 
 	return builtFile;
 }
