@@ -79,6 +79,7 @@ export enum ErrorCode {
 	RegistryCloneFailed = "registry-clone-failed",
 	InvalidVersion = "invalid-version",
 	OpenTargetNotBuilt = "open-target-not-built",
+	OpenTargetFailed = "open-target-failed",
 	CloseTargetUnsavedChanges = "close-target-unsaved-changes"
 }
 

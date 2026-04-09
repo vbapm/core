@@ -29,6 +29,20 @@ export async function getTargetPath(target?: string): Promise<string> {
 }
 
 export async function openTarget(target: string): Promise<boolean> {
-	const process = await open(target, { wait: true });
-	return process.exitCode === 0;
+	try {
+		const process = await open(target, { wait: true });
+		return process.exitCode === 0;
+	} catch (error) {
+		const reason =
+			error instanceof Error && error.message ? `\n\nReason: ${error.message}` : "";
+
+		throw new CliError(
+			ErrorCode.OpenTargetFailed,
+			dedent`
+        Failed to open target "${target}".
+
+        Verify that the file exists and that your system has an application associated with this file type.${reason}
+      `
+		);
+	}
 }
