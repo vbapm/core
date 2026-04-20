@@ -1,5 +1,5 @@
 import dedent from "@timhall/dedent";
-import { exec as _exec } from "child_process";
+import { execFile as _execFile } from "child_process";
 import { promisify } from "util";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
@@ -9,7 +9,7 @@ import { parallel } from "./parallel";
 import { join } from "./path";
 import { createStdoutFile } from "./stdout-file";
 
-const exec = promisify(_exec);
+const execFile = promisify(_execFile);
 
 const debug = env.debug("vbapm:run");
 const SPECIAL_FILE_STDOUT = env.isWindows ? "CON" : "/dev/stdout";
@@ -74,18 +74,25 @@ export async function run(
 	const parts = env.isWindows
 		? [application, file, macro, ...formatted_args]
 		: [application, file, macro, keepOpen ? "1" : "0", ...formatted_args];
-	const command = env.isWindows
-		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${
-				keepOpen ? "-KeepOpen " : ""
-			}${parts.map(part => `"${part}"`).join(" ")}`
-		: `osascript '${script}' ${parts.map(part => `'${part}'`).join(" ")}`;
+	const command = env.isWindows ? "powershell" : "osascript";
+	const commandArgs = env.isWindows
+		? [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				script,
+				...(keepOpen ? ["-KeepOpen"] : []),
+				...parts
+			]
+		: [script, ...parts];
 
 	debug("params:", { application, file, macro, args });
-	debug("command:", command);
+	debug("command:", command, commandArgs);
 
 	let result;
 	try {
-		const { stdout, stderr } = await exec(command, { env: process.env });
+		const { stdout, stderr } = await execFile(command, commandArgs, { env: process.env });
 		result = toResult(stdout, stderr);
 	} catch (err: any) {
 		result = toResult(err?.stdout, err?.stderr, err);
