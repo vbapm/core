@@ -17,6 +17,9 @@ on:
       - '.github/workflows/run-script-tests.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   # ------------------------------------------------------------------
   # Unit-level tests for the PowerShell helper functions in run.ps1

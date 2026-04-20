@@ -19,6 +19,9 @@ on:
       - '.github/workflows/dual-install-warning-test.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   dual-install-warning:
     strategy:
