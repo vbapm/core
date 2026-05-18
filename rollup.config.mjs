@@ -11,6 +11,22 @@ import path from "path";
 const mode = process.env.NODE_ENV || "production";
 const builtins = new Set(builtin);
 
+// Inline text template files (e.g. .gitignore, .gitattributes, .editorconfig) as string exports.
+function inlineTemplates() {
+	return {
+		name: "inline-templates",
+		transform(code, id) {
+			if (/\.(gitignore|gitattributes|editorconfig)$/.test(id)) {
+				return {
+					code: `export default ${JSON.stringify(code)};`,
+					map: { mappings: "" }
+				};
+			}
+			return null;
+		}
+	};
+}
+
 // Add shebang to CLI entry point and make it executable.
 // Needed for npm's "bin" field to work. The standalone build
 // ignores the shebang because it invokes lib/vbapm.js explicitly
@@ -70,6 +86,7 @@ export default [
 				include: "node_modules/**"
 			}),
 			json(),
+			inlineTemplates(),
 			typescript(),
 			mode === "production" && terser(),
 			debug(),
