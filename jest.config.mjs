@@ -8,6 +8,7 @@ export default {
 	transformIgnorePatterns: ["/node_modules/(?!@decimalturn/toml-patch/|env-paths/|is-safe-filename/)"],	
 	// allowJs is required so ts-jest can process the plain .js ESM dist file of toml-patch.
 	transform: {
+		"^.+\\.(gitignore|gitattributes|editorconfig)$": "<rootDir>/tests/jest-text-template-transform.cjs",
 		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: { allowJs: true } }]
 	},
 	moduleNameMapper: {
