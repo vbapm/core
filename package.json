@@ -33,6 +33,8 @@
     "scripts": {
         "format": "prettier --write \"**/*.{ts,js}\"",
         "format:check": "prettier --check \"**/*.{ts,js}\"",
+        "sync:config-templates": "node scripts/sync-templates.js",
+        "check:config-templates": "node scripts/sync-templates.js --check",
         "test": "jest --runInBand",
         "typecheck": "tsc",
         "deps": "npm i",
