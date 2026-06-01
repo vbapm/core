@@ -378,6 +378,7 @@ Scripting = { version = "1.0", guid = "{...}" }
 2. Run `npm run test:e2e`
    <br>It will run the end-to-end CLI scenarios in excel.e2e.ts, covering workflows like build, export, new, and version against fixtures.
    <br>To keep temporary e2e work folders for manual inspection, set `KEEP_E2E_TMP=1` before running (PowerShell: `$env:KEEP_E2E_TMP=1; npm run test:e2e`, cmd: `set KEEP_E2E_TMP=1 && npm run test:e2e`).
+   <br>To echo each e2e command output even on successful runs, use `--verbose` (PowerShell: `npm run test:e2e:background -- --verbose`) or set `E2E_VERBOSE=1` (PowerShell: `$env:E2E_VERBOSE=1; npm run test:e2e:background`).
 
 ### Install local version
 

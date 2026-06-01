@@ -14,6 +14,9 @@ const tmp_dir = join(__dirname, "../.tmp");
 ensureDirSync(tmp_dir);
 // To keep the tmp folder around for inspection, run `$env:KEEP_E2E_TMP=1` in PowerShell or `export KEEP_E2E_TMP=1` in bash before running the tests. The tmp folder is located at `tests/.tmp`.
 const keepTmp = /^(1|true|yes)$/i.test(process.env.KEEP_E2E_TMP || "");
+// To enable verbose logging of executed commands and their output, set the environment variable `E2E_VERBOSE` to `1`, `true`, or `yes`.
+const hasVerboseArg = process.argv.some(arg => arg === "--verbose" || arg === "-v");
+const isVerbose = /^(1|true|yes)$/i.test(process.env.E2E_VERBOSE || "") || hasVerboseArg;
 
 export async function tmp(id: string, action: (cwd: string) => void) {
 	const path = await tmpFolder({ dir: tmp_dir, prefix: `${id}-` });
@@ -62,7 +65,15 @@ export async function execute(
 	options?: { binDir?: string }
 ): Promise<{ stdout: string; stderr: string }> {
 	const bin = getVbaBin(options?.binDir);
-	const result = await exec(`${bin} ${command}`, { cwd, env: process.env });
+	const result = await exec(`"${bin}" ${command}`, { cwd, env: process.env });
+
+	if (isVerbose) {
+		const title = `[e2e] ${command} (${cwd})`;
+		process.stdout.write(`${"=".repeat(12)} ${title} ${"=".repeat(12)}\n`);
+		if (result.stdout?.length) process.stdout.write(result.stdout);
+		if (result.stderr?.length) process.stderr.write(result.stderr);
+		process.stdout.write(`${"=".repeat(12)} end ${title} ${"=".repeat(12)}\n`);
+	}
 
 	// Give Office time to clean up
 	await wait(500);

@@ -92,8 +92,11 @@ export class RegistrySource implements Source {
 
 			const comparison = await getChecksum(unverifiedFile, algorithm);
 			if (comparison !== hash) {
+				const expectedSignature = `${algorithm}-${hash}`;
+				const receivedSignature = `${algorithm}-${comparison}`;
+
 				debug(`Checksum failed for ${unverifiedFile}`);
-				debug(`Expected ${hash} (${algorithm}), received ${comparison}`);
+				debug(`Expected ${expectedSignature}, received ${receivedSignature}`);
 
 				throw new CliError(
 					ErrorCode.DependencyInvalidChecksum,
@@ -102,6 +105,9 @@ export class RegistrySource implements Source {
 
             The downloaded file signature for ${registration.id}
             does not match the signature in the registry.
+
+            Expected: ${expectedSignature}
+            Received: ${receivedSignature}
           `
 				);
 			}
