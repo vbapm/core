@@ -2,7 +2,7 @@ export default {
 	testEnvironment: "node",
 	testTimeout: 120000,
 	testMatch: ["**/tests/**/*.e2e.ts"],
-	testPathIgnorePatterns: ["/node_modules/", "/lib/", "/worktrees/"],
+	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
 	transformIgnorePatterns: ["/node_modules/(?!@decimalturn/toml-patch/|env-paths/|is-safe-filename/)"],
 	transform: {
