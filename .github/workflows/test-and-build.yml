@@ -29,6 +29,8 @@ jobs:
         run: npm install
         env:
           CI: true
+      - name: Check config templates sync
+        run: npm run check:config-templates
       - name: Format Check
         run: npx prettier --check "**/*.{ts,js}"
       - name: Typecheck

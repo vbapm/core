@@ -36,6 +36,18 @@ function shebang() {
 				}
 			}
 
+			const templates = [
+				"template.editorconfig",
+				"template.gitattributes",
+				"template.gitignore"
+			];
+			const templatesSourceDir = path.resolve("src", "actions", "templates");
+			const templatesTargetDir = path.resolve(options.dir, "templates");
+			fs.mkdirSync(templatesTargetDir, { recursive: true });
+			for (const templateFile of templates) {
+				fs.copyFileSync(path.join(templatesSourceDir, templateFile), path.join(templatesTargetDir, templateFile));
+			}
+
 			// editorconfig's one-ini parser may load this wasm file at runtime.
 			const wasmSource = path.resolve("node_modules", "@one-ini", "wasm", "one_ini_bg.wasm");
 			if (fs.existsSync(wasmSource)) {
