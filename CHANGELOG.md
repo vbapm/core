@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `vbapm init` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files.
+
 ### Fixed
 - XML formatting now uses CRLF line endings to match the OOXML standard ([#62]).
 
