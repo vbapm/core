@@ -101,14 +101,14 @@ on run argv
 				end if
 			end if
 
+		else if (count of argv) > 14 then
+			set output to "ERROR #2: Invalid Input (only 10 arguments are supported)"
+		else
+			set output to "ERROR #4: Invalid Input (minimum of 4 arguments required for macro execution)"
 		end if
 
 	else
-		if (count of argv) < 3 then
-			set output to "ERROR #1: Invalid Input (appname, file, and command are required)"
-		else
-			set output to "ERROR #2: Invalid Input (only 10 arguments are supported)"
-		end if
+		set output to "ERROR #1: Invalid Input (appname, file, and command are required)"
 	end if
 
 	return output
