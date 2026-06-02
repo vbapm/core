@@ -1,13 +1,9 @@
-import { exec as _exec } from "child_process";
-import { promisify } from "util";
-import { extensionToApplication } from "../addin";
-import { env } from "../env";
+import { addins, extensionToApplication } from "../addin";
 import { Target } from "../manifest/target";
 import { Project } from "../project";
 import { pathExists } from "../utils/fs";
 import { join, resolve } from "../utils/path";
-
-const exec = promisify(_exec);
+import { run } from "../utils/run";
 
 /**
  * Checks whether the built target workbook has been saved in the running Excel instance.
@@ -15,27 +11,25 @@ const exec = promisify(_exec);
  * Returns:
  *   true  — workbook is saved (or Excel is not running / workbook is not open)
  *   false — workbook has unsaved changes
- *   null  — could not determine (script missing, unexpected error)
+ *   null  — could not determine (addin missing, unexpected error)
  */
 export async function isTargetSaved(target: Target, project: Project): Promise<boolean | null> {
 	const application = extensionToApplication(target.type);
+	const addin = addins[application];
 	const resolvedFile = resolve(join(project.paths.build, target.filename));
-	const script = join(env.scripts, env.isWindows ? "run.ps1" : "run.applescript");
 
-	if (!(await pathExists(script))) return null;
-
-	let command: string;
-	if (env.isWindows) {
-		command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" -CheckSaved "${application}" "${resolvedFile}"`;
-	} else {
-		command = `osascript '${script}' '${application}' '${resolvedFile}' 'check-saved'`;
-	}
+	if (!(await pathExists(addin))) return null;
 
 	try {
-		const { stdout } = await exec(command, { env: process.env });
-		const result = JSON.parse(stdout.trim()) as { success: boolean; saved?: boolean };
-		if (result.success && typeof result.saved === "boolean") {
-			return result.saved;
+		const result = await run(application, addin, "Build.CheckFileSaved", [
+			JSON.stringify({
+				file: resolvedFile
+			})
+		]);
+		// CheckFileSaved returns "saved:true" or "saved:false" in messages[0]
+		const savedMessage = result.messages.find(m => m.startsWith("saved:"));
+		if (savedMessage) {
+			return savedMessage === "saved:true";
 		}
 		return null;
 	} catch {

@@ -9,9 +9,6 @@ param(
     [string]$Command,
 
     [switch]$KeepOpen,
-    [switch]$CheckSaved,
-    [switch]$Close,
-    [switch]$Save,
 
     [Parameter(Position=3, ValueFromRemainingArguments=$true)]
     [string[]]$MacroArgs
@@ -200,91 +197,6 @@ class Excel {
 }
 
 # -------
-# Close
-# -------
-
-function Close {
-    param(
-        [string]$AppName,
-        [string]$FilePath,
-        [bool]$Save
-    )
-
-    switch ($AppName) {
-        "excel" {
-            $fileBase = GetFileBase $FilePath
-
-            # Try to get a running Excel instance
-            $excelApp = $null
-            try {
-                $excelApp = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
-            } catch {
-                # Excel is not running — file is already closed
-                PrintLn "{`"success`":true,`"messages`":[`"File is not open`"]}"
-                return
-            }
-
-            # Try to find the workbook by filename
-            $workbook = $null
-            try {
-                $workbook = $excelApp.Workbooks($fileBase)
-            } catch {
-                # Workbook is not open — nothing to close
-                PrintLn "{`"success`":true,`"messages`":[`"File is not open`"]}"
-                return
-            }
-
-            $workbook.Close($Save)
-            PrintLn "{`"success`":true}"
-        }
-        default {
-            Fail "ERROR #3: Unsupported App `"$AppName`""
-        }
-    }
-}
-
-# -------
-# Check Saved
-# -------
-
-function CheckSaved {
-    param(
-        [string]$AppName,
-        [string]$FilePath
-    )
-
-    switch ($AppName) {
-        "excel" {
-            $fileBase = GetFileBase $FilePath
-
-            $excelApp = $null
-            try {
-                $excelApp = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
-            } catch {
-                # Excel is not running — treat as already saved
-                PrintLn "{`"success`":true,`"saved`":true}"
-                return
-            }
-
-            $workbook = $null
-            try {
-                $workbook = $excelApp.Workbooks($fileBase)
-            } catch {
-                # Workbook is not open — treat as already saved
-                PrintLn "{`"success`":true,`"saved`":true}"
-                return
-            }
-
-            $isSaved = $workbook.Saved
-            PrintLn "{`"success`":true,`"saved`":$($isSaved.ToString().ToLower())}"
-        }
-        default {
-            Fail "ERROR #3: Unsupported App `"$AppName`""
-        }
-    }
-}
-
-# -------
 # Run
 # -------
 
@@ -320,22 +232,13 @@ function Run {
 
 $ErrorActionPreference = 'Stop'
 
-if (-not $AppName -or -not $File) {
-    Fail "ERROR #1: Invalid Input (appname and file are required)"
+if (-not $AppName -or -not $File -or -not $Command) {
+    Fail "ERROR #1: Invalid Input (appname, file, and macro are required)"
 }
 
-if ($CheckSaved) {
-    CheckSaved $AppName $File
-} elseif ($Close) {
-    Close $AppName $File $Save.IsPresent
-} else {
-    if (-not $Command) {
-        Fail "ERROR #1: Invalid Input (appname, file, and macro are required)"
-    }
-
-    if ($MacroArgs.Count -gt 10) {
-        Fail "ERROR #2: Invalid Input (only 10 arguments are supported)"
-    }
+if ($MacroArgs.Count -gt 10) {
+    Fail "ERROR #2: Invalid Input (only 10 arguments are supported)"
+}
 
     # Unescape arguments
     $UnescapedArgs = @()
@@ -344,5 +247,5 @@ if ($CheckSaved) {
     }
 
     Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
-}
+
 exit 0
