@@ -33,8 +33,7 @@ export async function openTarget(target: string): Promise<boolean> {
 		const childProcess = await open(target, { wait: true });
 		return childProcess.exitCode === 0;
 	} catch (error) {
-		const reason =
-			error instanceof Error && error.message ? `\n\nReason: ${error.message}` : "";
+		const reason = error instanceof Error && error.message ? `\n\nReason: ${error.message}` : "";
 
 		throw new CliError(
 			ErrorCode.OpenTargetFailed,
