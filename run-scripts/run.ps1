@@ -240,12 +240,11 @@ if ($MacroArgs.Count -gt 10) {
     Fail "ERROR #2: Invalid Input (only 10 arguments are supported)"
 }
 
-    # Unescape arguments
-    $UnescapedArgs = @()
-    foreach ($arg in $MacroArgs) {
-        $UnescapedArgs += Unescape $arg
-    }
+# Unescape arguments
+$UnescapedArgs = @()
+foreach ($arg in $MacroArgs) {
+	$UnescapedArgs += Unescape $arg
+}
 
-    Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
-
+Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
 exit 0

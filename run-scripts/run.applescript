@@ -2,7 +2,7 @@
 --
 -- appname (e.g. "excel")
 -- addin: posix full path to addin (e.g. "...")
--- command: macro to execute (e.g. "Build.ImportGraph", "Build.CloseFile")
+-- command: macro to execute in addin (e.g. "Build.ImportGraph", "Build.CloseFile")
 -- For macros: arg 4 is keep_open: "1" to leave open after macro, "0" to close
 -- ...args: arguments to pass to macro (up to 10)
 
@@ -46,10 +46,12 @@ on run argv
 			end if
 		end if
 
-	else if (count of argv) > 14 then
-		set output to "ERROR #2: Invalid Input (only 10 arguments are supported)"
 	else
-		set output to "ERROR #1: Invalid Input (minimum of 4 arguments required)"
+		if (count of argv) < 4 then
+			set output to "ERROR #1: Invalid Input (appname, file, macro, and keep_open are required)"
+		else
+			set output to "ERROR #2: Invalid Input (only 10 arguments are supported)"
+		end if
 	end if
 
 	return output
