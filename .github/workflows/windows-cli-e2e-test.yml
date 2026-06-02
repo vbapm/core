@@ -22,6 +22,17 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      
+      - name: Configure Git
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          $autocrlf = git config --get core.autocrlf
+          $eol = git config --get core.eol
+          Write-Output "core.autocrlf: $autocrlf"
+          Write-Output "core.eol: $eol"
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
