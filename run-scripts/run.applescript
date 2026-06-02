@@ -45,7 +45,6 @@ on run argv
 				tell application "Microsoft Excel" to quit
 			end if
 		end if
-
 	else
 		if (count of argv) < 4 then
 			set output to "ERROR #1: Invalid Input (appname, file, macro, and keep_open are required)"
