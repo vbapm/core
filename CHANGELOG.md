@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `vbapm init` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files.
+- New `open` command to open the current built target file in Excel ([#63]).
+- New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
 
 ### Fixed
 - XML formatting now uses CRLF line endings to match the OOXML standard ([#62]).
@@ -73,4 +75,5 @@ Note: The online registry remains the vba-blocks.com registry.
 [#47]: https://github.com/vbapm/core/pull/47
 [#54]: https://github.com/vbapm/core/pull/54
 [#56]: https://github.com/vbapm/core/pull/56
+[#63]: https://github.com/vbapm/core/pull/63
 [#62]: https://github.com/vbapm/core/pull/62

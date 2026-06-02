@@ -1,8 +1,8 @@
 import dedent from "@timhall/dedent";
 import { Args } from "mri";
-import open from "open";
 import time from "pretty-hrtime";
 import { buildProject } from "../actions/build-project";
+import { openTarget } from "../actions/open-target";
 
 const help = dedent`
   Build project from manifest (after backing up any existing built targets).
@@ -30,12 +30,6 @@ export default async function (args: Args) {
 
 	if (!!args.open) {
 		console.log(`Opening built target: ${path}`);
-
-		try {
-			const result = await open(path, { wait: true });
-		} catch (error: any) {
-			console.error(`Failed to open built target: ${error?.message || error}`);
-			throw error;
-		}
+		await openTarget(path);
 	}
 }

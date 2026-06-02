@@ -70,7 +70,11 @@ export function checkDualInstall(): string | undefined {
 	let hasNpm = false;
 	try {
 		// Ask npm where its global prefix is, then check for vbapm there
-		const npmPrefix = execSync("npm prefix -g", { encoding: "utf8", timeout: 5000 }).trim();
+		const npmPrefix = execSync("npm prefix -g", {
+			encoding: "utf8",
+			timeout: 5000,
+			stdio: ["ignore", "pipe", "ignore"]
+		}).trim();
 		const npmVbapm = join(npmPrefix, "node_modules", "vbapm", "package.json");
 		hasNpm = existsSync(npmVbapm);
 	} catch {
