@@ -105,12 +105,13 @@ async function main() {
 			console.log(version);
 		} else {
 			console.log(help);
-			warnIfDualInstall();
 
 			if (updateAvailable()) {
 				env.reporter.log(Message.UpdateAvailable, updateAvailableMessage());
 			}
 		}
+
+		warnIfDualInstall();
 
 		return;
 	}
