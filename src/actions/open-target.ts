@@ -30,8 +30,8 @@ export async function getTargetPath(target?: string): Promise<string> {
 
 export async function openTarget(target: string): Promise<boolean> {
 	try {
-		const process = await open(target, { wait: true });
-		return process.exitCode === 0;
+		const childProcess = await open(target, { wait: true });
+		return childProcess.exitCode === 0;
 	} catch (error) {
 		const reason =
 			error instanceof Error && error.message ? `\n\nReason: ${error.message}` : "";
