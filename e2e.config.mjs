@@ -6,7 +6,6 @@ export default {
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
 	transformIgnorePatterns: ["/node_modules/(?!@decimalturn/toml-patch/|env-paths/|is-safe-filename/)"],
 	transform: {
-		"^.+\\.(gitignore|gitattributes|editorconfig)$": "<rootDir>/tests/jest-text-template-transform.cjs",
 		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: "tests/tsconfig.json", diagnostics: false }]
 	},
 	moduleNameMapper: {
