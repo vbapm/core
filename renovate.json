@@ -5,6 +5,16 @@
   ],
   "minimumReleaseAge": "5 days",
   "internalChecksFilter": "strict",
+  "schedule": ["before 9am on Wednesday"],
+  "packageRules": [
+    {
+      "description": "Group all non-major updates into a single weekly PR",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchPackageNames": ["*", "!pnpm"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",
