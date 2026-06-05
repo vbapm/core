@@ -123,8 +123,10 @@ function execPowershell(
 	return new Promise((resolve, reject) => {
 		const args = [
 			"-NoProfile",
-			"-ExecutionPolicy", "Bypass",
-			"-File", script,
+			"-ExecutionPolicy",
+			"Bypass",
+			"-File",
+			script,
 			...(keepOpen ? ["-KeepOpen"] : []),
 			...parts
 		];
