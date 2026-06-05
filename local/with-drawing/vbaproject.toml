@@ -1,9 +1,0 @@
-[project]
-name = "with-drawing"
-version = "0.0.0"
-authors = []
-license = "UNLICENSED"
-target = "xlsm"
-
-[src]
-Generator = "src/Generator.bas"
