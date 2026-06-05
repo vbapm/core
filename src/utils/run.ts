@@ -111,22 +111,29 @@ export async function run(
  *       https://github.com/nodejs/node/issues/56645
  *       Possibly a Fix PR: https://github.com/nodejs/node/pull/61999
  */
-function execSpawn(command: string, options: { env: typeof process.env }): Promise<{ stdout: string; stderr: string }> {
+function execSpawn(
+	command: string,
+	options: { env: typeof process.env }
+): Promise<{ stdout: string; stderr: string }> {
 	return new Promise((resolve, reject) => {
 		const child = spawn("cmd.exe", ["/d", "/s", "/c", command], {
 			...options,
 			windowsHide: true,
-			stdio: ["ignore", "pipe", "pipe"],
+			stdio: ["ignore", "pipe", "pipe"]
 		});
 
 		let stdout = "";
 		let stderr = "";
 
-		child.stdout?.on("data", (data: Buffer) => { stdout += data.toString(); });
-		child.stderr?.on("data", (data: Buffer) => { stderr += data.toString(); });
+		child.stdout?.on("data", (data: Buffer) => {
+			stdout += data.toString();
+		});
+		child.stderr?.on("data", (data: Buffer) => {
+			stderr += data.toString();
+		});
 
-		child.on("error", (err) => reject(err));
-		child.on("close", (code) => {
+		child.on("error", err => reject(err));
+		child.on("close", code => {
 			if (code === 0) {
 				resolve({ stdout, stderr });
 			} else {
