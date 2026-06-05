@@ -198,8 +198,10 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 		// Look up which rId had this as its original target
 		const matchingRel = worksheetRels.find(r => r.target.endsWith(currentFilename));
 		if (!matchingRel) continue;
-		const desired = `/xl/${ridToDesiredTarget.get(matchingRel.id)}`;
-		if (desired && el.attributes.PartName !== desired) {
+		const desiredTarget = ridToDesiredTarget.get(matchingRel.id);
+		if (desiredTarget === undefined) continue;
+		const desired = `/xl/${desiredTarget}`;
+		if (el.attributes.PartName !== desired) {
 			el.attributes.PartName = desired;
 			ctChanged = true;
 		}
