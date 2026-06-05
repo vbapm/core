@@ -85,9 +85,9 @@ export async function run(
 
 	let result;
 	try {
-		// Use execSpawn on Windows to work around Node.js libuv assertion bug (see execSpawn JSDoc)
+		// Use execPowershell on Windows to work around Node.js libuv assertion bug (see execPowershell JSDoc)
 		const { stdout, stderr } = env.isWindows
-			? await execSpawn(command, { env: process.env })
+			? await execPowershell(script, keepOpen, parts, { env: process.env })
 			: await exec(command, { env: process.env });
 		result = toResult(stdout, stderr);
 	} catch (err: any) {
@@ -107,16 +107,29 @@ export async function run(
  * Uses spawn instead of exec to avoid UV_HANDLE_CLOSING race condition
  * in child_process pipe management.
  *
+ * Unlike the original exec() which goes through cmd.exe, this spawns
+ * powershell.exe directly with an args array to avoid shell quote issues.
+ *
  * TODO: Remove this workaround once the upstream fix lands.
  *       https://github.com/nodejs/node/issues/56645
  *       Possibly a Fix PR: https://github.com/nodejs/node/pull/61999
  */
-function execSpawn(
-	command: string,
+function execPowershell(
+	script: string,
+	keepOpen: boolean,
+	parts: string[],
 	options: { env: typeof process.env }
 ): Promise<{ stdout: string; stderr: string }> {
 	return new Promise((resolve, reject) => {
-		const child = spawn("cmd.exe", ["/d", "/s", "/c", command], {
+		const args = [
+			"-NoProfile",
+			"-ExecutionPolicy", "Bypass",
+			"-File", script,
+			...(keepOpen ? ["-KeepOpen"] : []),
+			...parts
+		];
+
+		const child = spawn("powershell.exe", args, {
 			...options,
 			windowsHide: true,
 			stdio: ["ignore", "pipe", "pipe"]
