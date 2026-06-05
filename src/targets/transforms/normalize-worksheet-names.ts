@@ -136,6 +136,20 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 			await move(from, to);
 			debug(`Renamed: ${from} → ${to}`);
 		}
+
+		// Also rename the sidecar worksheet .rels file if present.
+		// OOXML convention: xl/worksheets/_rels/<sheetFile>.rels
+		const fromRels = join(from, "..", "_rels", `${basename(from)}.rels`);
+		const toRels = join(to, "..", "_rels", `${basename(to)}.rels`);
+		if (await pathExists(fromRels)) {
+			if (await pathExists(toRels)) {
+				await remove(fromRels);
+				debug(`Removed stale sidecar duplicate: ${fromRels}`);
+			} else {
+				await move(fromRels, toRels);
+				debug(`Renamed sidecar: ${basename(fromRels)} → ${basename(toRels)}`);
+			}
+		}
 	}
 
 	// --- 4. Rewrite workbook.xml.rels ---

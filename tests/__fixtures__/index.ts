@@ -16,6 +16,7 @@ export const invalidManifest = join(projects, "invalid-manifest");
 export const unresolvable = join(projects, "unresolvable");
 export const single = join(projects, "single");
 export const targetless = join(projects, "targetless");
+export const withDrawing = join(projects, "with-drawing");
 
 export const staging = join(cache, "staging");
 export const standardImport = join(staging, "standard", "import");
