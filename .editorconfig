@@ -23,4 +23,7 @@ end_of_line = crlf
 max_line_length = 1023
 insert_final_newline = true
 trim_trailing_whitespace = true
-charset = latin1
+# We would like to use CP1252 for VBA files, but the editorconfig extension does not support it.
+# Also, latin1 is supported, but doesn't match some of the encoding for €, ‰ and some other characters that are encoded in CP152 of the form 1XXXXXXX.
+# This can lead to loss of information. See https://github.com/editorconfig/editorconfig-vscode/issues/474
+charset = utf-8
