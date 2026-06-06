@@ -31,17 +31,19 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Enable pnpm
+        run: corepack enable pnpm
       - name: Install
-        run: npm install
+        run: pnpm install --frozen-lockfile
         env:
           CI: true
       - name: Check config templates sync
-        run: npm run check:config-templates
+        run: pnpm run check:config-templates
       - name: Format Check
-        run: npx prettier --check "**/*.{ts,js}"
+        run: pnpm run format:check
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
       - name: Test
-        run: npm test
+        run: pnpm test
       - name: Build
-        run: npm run build:dev
+        run: pnpm run build:dev

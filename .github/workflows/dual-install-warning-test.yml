@@ -38,10 +38,13 @@ jobs:
         with:
           node-version: 24.x
 
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
       - name: Install dependencies and build
         run: |
-          npm install
-          npm run build:lib
+          pnpm install --frozen-lockfile
+          pnpm run build:lib
 
       # ---------------------------------------------------------------
       # Simulate standalone CLI install (%APPDATA%\vbapm\bin\)

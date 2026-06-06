@@ -34,19 +34,19 @@ jobs:
           node-version: 24.x
           registry-url: 'https://registry.npmjs.org/'
 
-      - name: Upgrade npm (required for trusted publishing)
-        run: npm install -g npm@latest
+      - name: Enable pnpm
+        run: corepack enable pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         env:
           CI: true
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
 
       - name: Build
-        run: npm run build:lib
+        run: pnpm run build:lib
 
       - name: Determine npm tag
         id: npm-tag
@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: Publish to npm
-        run: npm publish --provenance --tag ${{ steps.npm-tag.outputs.tag }}
+        run: pnpm publish --provenance --tag ${{ steps.npm-tag.outputs.tag }}
 
       - name: Check git status
         run: git status && git diff
