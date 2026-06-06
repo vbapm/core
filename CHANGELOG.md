@@ -11,9 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vbapm init` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files.
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
+- Excel XML export: renames worksheet XML files to stable, identity-based names (`sht{codeName}.xml`) so that reordering sheets produces clean diffs with only ordering metadata changed ([#57]).
 
 ### Fixed
 - XML formatting now uses CRLF line endings to match the OOXML standard ([#62]).
+- Opening workbooks now matches by full path to avoid picking up same-named files from different directories.
+- Minor XML export bug related to empty `dc:creator` element.
 
 ### Changed
 - Switched package manager from npm to pnpm v11.
