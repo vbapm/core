@@ -48,8 +48,10 @@ jobs:
         with:
           node-version: 24.x
 
-      - name: Enable pnpm
-        run: corepack enable pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
 
       - name: Install Node dependencies and build
         run: |

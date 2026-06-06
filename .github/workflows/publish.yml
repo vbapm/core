@@ -34,8 +34,10 @@ jobs:
           node-version: 24.x
           registry-url: 'https://registry.npmjs.org/'
 
-      - name: Enable pnpm
-        run: corepack enable pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
 
       - name: Install
         run: pnpm install --frozen-lockfile
