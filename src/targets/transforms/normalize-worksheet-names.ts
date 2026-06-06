@@ -183,8 +183,6 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 	const types = findElementByName(ctXml.elements, "Types");
 	if (!types || !types.elements) return;
 
-	// Build set of desired absolute PartNames for worksheets
-	const desiredParts = new Set([...ridToDesiredTarget.values()].map(t => `/xl/${t}`));
 	const oldParts = new Set(worksheetRels.map(r => `/xl/${r.target}`));
 
 	let ctChanged = false;
