@@ -8,9 +8,9 @@ Run all commands from the worktree root:
 
 ```powershell
 cd worktrees/<branch-name>
-npm install
-npm run build:cli
-npm run build:addins
+pnpm install
+pnpm run build:cli
+pnpm run build:addins
 ```
 
 Why this is required:
@@ -25,8 +25,8 @@ Always run tests from inside the worktree directory itself:
 
 ```powershell
 cd worktrees/<branch-name>
-npm run dev
-npm run test:e2e:background
+pnpm run dev
+pnpm run test:e2e:background
 ```
 
 Important notes:
@@ -37,5 +37,5 @@ Important notes:
 For background test commands where location must be preserved, use `Push-Location`:
 
 ```powershell
-Push-Location worktrees/<branch-name>; npm run test:e2e:updateSnapshots 2>&1 | Tee-Object "$env:TEMP\e2e.log"; Pop-Location
+Push-Location worktrees/<branch-name>; pnpm run test:e2e:updateSnapshots 2>&1 | Tee-Object "$env:TEMP\e2e.log"; Pop-Location
 ```

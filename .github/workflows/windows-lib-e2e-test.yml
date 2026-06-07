@@ -48,11 +48,16 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
       - name: Install Node dependencies and build
         run: |
-          npm install
-          npm run build:lib
-          npm run build:addins
+          pnpm install --frozen-lockfile
+          pnpm run build:lib
+          pnpm run build:addins
 
       - name: Install globally from local build
         shell: pwsh
@@ -102,4 +107,4 @@ jobs:
       - name: Run e2e tests
         shell: pwsh
         run: |
-          npm run test:e2e
+          pnpm run test:e2e

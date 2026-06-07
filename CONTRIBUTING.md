@@ -4,10 +4,57 @@ Thanks for contributing to vbapm.
 
 ## Development Setup
 
-1. Run `npm install`
-2. Run `npm run format`
-3. Run `npm run build:cli`
-4. Run `npm run build:addins`
+### Branch Strategy
+
+The default branch is `main`. Make sure your feature branches branch out from it.
+
+### Initialize Submodules
+
+The repository uses Git submodules. After cloning, ensure they are synced and initialized:
+
+```powershell
+git submodule update --init --recursive
+```
+
+This will pull the following submodules:
+
+| Submodule | Path |
+|-----------|------|
+| `installer` | `installer/` |
+| `VBA-on-GitHub` | `src/actions/templates/VBA-on-GitHub/` |
+
+### Install and Build
+
+1. Run `pnpm install`
+2. Run `pnpm run format`
+3. Run `pnpm run build:cli` — builds the CLI/library into `lib/` and ensures the vendored Node runtime is available.
+4. Run `pnpm run build:addins` — creates `addins\build\vbapm.xlam` which performs workbook/VBA operations from inside Office.
+
+### Development Checks
+
+Run all checks in one command:
+
+```powershell
+pnpm run dev
+```
+
+This runs type checking, builds, unit tests (TypeScript and JavaScript) and the official TOML spec test suite. Integration tests (e2e) are not included — see the next section.
+
+## Integration Tests (e2e)
+
+The e2e tests exercise the full pipeline — from the CLI binary through the Excel addin — against real Excel instances. They validate end-to-end scenarios like project export, import, build and dependency resolution.
+
+### Why `:background`?
+
+The e2e tests interact with Excel via the COM automation API (through the vbapm.xlam addin). Without the `:background` option, Excel opens visibly — you'll see workbook windows flash open and close as each test runs. This is expected behavior but can interfere with any work you have open in Excel.
+
+The `:background` variant (`pnpm run test:e2e:background`) sets `VBA_BACKGROUND_BUILD=1`, which creates a new hidden Excel instance via COM (`Excel.Visible = false`) instead of attaching to an already-running visible instance. This prevents the window flashing and keeps your existing Excel work undisturbed.
+
+### Performance
+
+A full e2e test run takes roughly **60-90 seconds** to complete. If you're using the background variant, don't worry if nothing appears in the terminal for a while — that's normal. The tests are running; they just don't pollute your terminal with intermediate output.
+
+To inspect temporary test folders after a run, set `KEEP_E2E_TMP=1` before running the tests.
 
 ## Local CLI Installation with `devinstall.ps1`
 
@@ -18,8 +65,8 @@ To test `vba` / `vbapm` as an installed command (rather than via `bin/vba`), use
 Build the CLI and optionally the add-in before installing:
 
 ```powershell
-npm run build:cli
-npm run build:addins   # optional — needed only if you use add-in commands
+pnpm run build:cli
+pnpm run build:addins   # optional — needed only if you use add-in commands
 ```
 
 ### Install
@@ -49,7 +96,7 @@ vba --help
 Rebuild and re-run the installer to pick up changes:
 
 ```powershell
-npm run build:cli
+pnpm run build:cli
 .\installer\devinstall.ps1
 ```
 
@@ -63,21 +110,58 @@ Remove-Item "$env:APPDATA\vbapm" -Recurse -Force
 
 > **Note:** The `devinstall.ps1` script requires an unrestricted or bypassed execution policy. Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` if you see a PowerShell execution policy error.
 
-## Testing
-
-1. Run unit tests with `npm test`
-2. Run end-to-end tests with `npm run test:e2e` or `npm run test:e2e:background`
-3. To keep temporary e2e folders for inspection, set `KEEP_E2E_TMP=1` before running tests
-
 ## Verbose e2e Logs
 
 e2e command output can be echoed even when tests succeed.
 
 Use one of these options:
 
-- Pass Jest verbose through npm args:
-  - PowerShell: `npm run test:e2e:background -- --verbose`
+- Pass Jest verbose through pnpm args:
+  - PowerShell: `pnpm run test:e2e:background -- --verbose`
 - Set the environment variable used by the e2e helper:
-  - PowerShell: `$env:E2E_VERBOSE=1; npm run test:e2e:background`
+  - PowerShell: `$env:E2E_VERBOSE=1; pnpm run test:e2e:background`
 
 This prints each invoked e2e command plus its stdout and stderr, which helps compare local runs with CI logs.
+
+## Working with Git Worktrees
+
+When working with multiple branches in parallel, you can create a worktree under `worktrees/`. The following setup steps are required before running tests in a worktree.
+
+### 1. Install `node_modules`
+
+Worktrees share the git repository but each needs its own `node_modules`. Run from inside the worktree:
+
+```powershell
+cd worktrees/<branch-name>
+pnpm install
+```
+
+### 2. Build the CLI (`lib/`)
+
+The e2e tests invoke the local `bin/vba` binary which requires `lib/` to be built:
+
+```powershell
+pnpm run build:cli
+```
+
+### 3. Build the addin (`addins/build/vbapm.xlam`)
+
+The e2e tests rely on the Excel addin to import/export VBA code. It must be built once per worktree:
+
+```powershell
+pnpm run build:addins
+```
+
+### 4. Running tests from a worktree
+
+The root `jest.config.mjs` and `e2e.config.mjs` use `testPathIgnorePatterns: ["<rootDir>/worktrees/"]`. Because `<rootDir>` resolves to the worktree root when Jest is invoked from inside it, the pattern matches nothing — so tests are correctly discovered.
+
+Always `cd` into the worktree before running `pnpm test` or `pnpm run test:e2e:*`. Use `Push-Location` for background terminal commands so the current working directory is preserved:
+
+```powershell
+Push-Location worktrees/<branch-name>; pnpm run test:e2e:updateSnapshots 2>&1 | Tee-Object "$env:TEMP\e2e.log"; Pop-Location
+```
+
+### 5. Snapshot files
+
+Snapshot files live under `tests/__snapshots__/` which is tracked by git inside the worktree. Each worktree has its own independent snapshot state — run `pnpm run test:e2e:updateSnapshots` from the worktree to baseline them after making changes.

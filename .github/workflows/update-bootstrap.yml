@@ -31,14 +31,19 @@ jobs:
         with:
           node-version: 24.x
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build toolchain, add-in, and bootstrap
         run: |
-          npm run build
-          npm run build:addins
-          npm run build:bootstrap
+          pnpm run build
+          pnpm run build:addins
+          pnpm run build:bootstrap
 
       - name: Commit updated bootstrap artifacts
         shell: pwsh

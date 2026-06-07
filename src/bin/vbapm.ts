@@ -94,10 +94,23 @@ process.on("unhandledRejection", handleError);
 process.on("uncaughtException", handleError);
 
 main()
-	.then(() => process.exit(0))
+	.then(command => {
+		// Work around Node.js v23+ libuv assertion crash on Windows
+		// (nodejs/node#56645). The export command, especially to an
+		// empty project, can complete so fast that V8's wasm task
+		// runner still has a pending delayed task at process exit,
+		// triggering: ASSERT(!(handle->flags & UV_HANDLE_CLOSING)).
+		// A brief delay lets the event loop drain before exit.
+		// TODO: Remove once nodejs/node#61999 is merged and released.
+		if (command === "export" && process.platform === "win32") {
+			setTimeout(() => process.exit(0), 200);
+		} else {
+			process.exit(0);
+		}
+	})
 	.catch(handleError);
 
-async function main() {
+async function main(): Promise<string | undefined> {
 	let [command] = args._;
 
 	if (!command) {
@@ -113,7 +126,7 @@ async function main() {
 
 		warnIfDualInstall();
 
-		return;
+		return undefined;
 	}
 
 	if (command === "help") {
@@ -122,7 +135,7 @@ async function main() {
 		if (!command) {
 			console.log(help);
 			warnIfDualInstall();
-			return;
+			return undefined;
 		}
 
 		args._ = [command];
@@ -166,6 +179,8 @@ async function main() {
 	if (has_update_available) {
 		env.reporter.log(Message.UpdateAvailable, updateAvailableMessage());
 	}
+
+	return command;
 }
 
 function warnIfDualInstall() {

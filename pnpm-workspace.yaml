@@ -1,0 +1,4 @@
+allowBuilds:
+  aws-sdk: false
+  unrs-resolver: true
+minimumReleaseAge: 3
