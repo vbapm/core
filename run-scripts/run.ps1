@@ -141,6 +141,7 @@ class Excel {
 	hidden [void] OpenWorkbook([string]$Path) {
 		$fileName = GetFileName $Path
 		$fileBase = GetFileBase $Path
+		$fullPath = [System.IO.Path]::GetFullPath($Path)
 
 		# Check add-ins first
 		try {
@@ -158,7 +159,7 @@ class Excel {
         # a same-named file from a different directory.
         try {
             foreach ($wb in $this.App.Workbooks) {
-                if ($wb.FullName -eq $Path) {
+                if ($wb.FullName -eq $fullPath) {
                     $this.Workbook = $wb
                     $this.WorkbookWasOpen = $true
                     return
@@ -170,7 +171,7 @@ class Excel {
 
 		# Open the workbook
 		try {
-			$this.Workbook = $this.App.Workbooks.Open($Path)
+			$this.Workbook = $this.App.Workbooks.Open($fullPath)
 			# Workbooks.Open() can flip Excel back to visible; re-enforce
 			# invisible mode if we created this instance for automation.
 			# Also apply workbook-level performance flags now that a workbook is open.
