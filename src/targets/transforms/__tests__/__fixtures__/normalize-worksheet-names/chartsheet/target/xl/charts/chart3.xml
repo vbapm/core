@@ -12,9 +12,6 @@
     </mc:Fallback>
   </mc:AlternateContent>
   <c:chart>
-    <c:title>
-      <c:overlay val="0"/>
-    </c:title>
     <c:autoTitleDeleted val="0"/>
     <c:plotArea>
       <c:layout/>
@@ -27,11 +24,11 @@
           <c:order val="0"/>
           <c:tx>
             <c:strRef>
-              <c:f>Sheet1!$A$2</c:f>
+              <c:f>Sheet1!$B$1</c:f>
               <c:strCache>
                 <c:ptCount val="1"/>
                 <c:pt idx="0">
-                  <c:v>A</c:v>
+                  <c:v>Value</c:v>
                 </c:pt>
               </c:strCache>
             </c:strRef>
@@ -39,11 +36,11 @@
           <c:invertIfNegative val="0"/>
           <c:cat>
             <c:strRef>
-              <c:f>Sheet1!$B$1</c:f>
+              <c:f>Sheet1!$A$2</c:f>
               <c:strCache>
                 <c:ptCount val="1"/>
                 <c:pt idx="0">
-                  <c:v>Value</c:v>
+                  <c:v>A</c:v>
                 </c:pt>
               </c:strCache>
             </c:strRef>
@@ -62,7 +59,7 @@
           </c:val>
           <c:extLst>
             <c:ext uri="{C3380CC4-5D6E-409C-BE32-E72D297353CC}" xmlns:c16="http://schemas.microsoft.com/office/drawing/2014/chart">
-              <c16:uniqueId val="{00000000-2B1A-4599-8525-306F90472FCC}"/>
+              <c16:uniqueId val="{00000000-375B-4F99-A4AA-EA3B5DB258D3}"/>
             </c:ext>
           </c:extLst>
         </c:ser>
@@ -75,11 +72,11 @@
           <c:showBubbleSize val="0"/>
         </c:dLbls>
         <c:gapWidth val="150"/>
-        <c:axId val="1818203951"/>
-        <c:axId val="1818203471"/>
+        <c:axId val="1818125631"/>
+        <c:axId val="1818126111"/>
       </c:barChart>
       <c:catAx>
-        <c:axId val="1818203951"/>
+        <c:axId val="1818125631"/>
         <c:scaling>
           <c:orientation val="minMax"/>
         </c:scaling>
@@ -89,7 +86,7 @@
         <c:majorTickMark val="out"/>
         <c:minorTickMark val="none"/>
         <c:tickLblPos val="nextTo"/>
-        <c:crossAx val="1818203471"/>
+        <c:crossAx val="1818126111"/>
         <c:crosses val="autoZero"/>
         <c:auto val="1"/>
         <c:lblAlgn val="ctr"/>
@@ -97,7 +94,7 @@
         <c:noMultiLvlLbl val="0"/>
       </c:catAx>
       <c:valAx>
-        <c:axId val="1818203471"/>
+        <c:axId val="1818126111"/>
         <c:scaling>
           <c:orientation val="minMax"/>
         </c:scaling>
@@ -108,7 +105,7 @@
         <c:majorTickMark val="out"/>
         <c:minorTickMark val="none"/>
         <c:tickLblPos val="nextTo"/>
-        <c:crossAx val="1818203951"/>
+        <c:crossAx val="1818125631"/>
         <c:crosses val="autoZero"/>
         <c:crossBetween val="between"/>
       </c:valAx>

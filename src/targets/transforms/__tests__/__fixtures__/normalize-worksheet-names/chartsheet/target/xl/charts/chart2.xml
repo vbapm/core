@@ -12,32 +12,15 @@
     </mc:Fallback>
   </mc:AlternateContent>
   <c:chart>
-    <c:title>
-      <c:overlay val="0"/>
-    </c:title>
     <c:autoTitleDeleted val="0"/>
     <c:plotArea>
       <c:layout/>
-      <c:barChart>
-        <c:barDir val="col"/>
-        <c:grouping val="clustered"/>
-        <c:varyColors val="0"/>
+      <c:pieChart>
+        <c:varyColors val="1"/>
         <c:ser>
           <c:idx val="0"/>
           <c:order val="0"/>
           <c:tx>
-            <c:strRef>
-              <c:f>Sheet1!$A$2</c:f>
-              <c:strCache>
-                <c:ptCount val="1"/>
-                <c:pt idx="0">
-                  <c:v>A</c:v>
-                </c:pt>
-              </c:strCache>
-            </c:strRef>
-          </c:tx>
-          <c:invertIfNegative val="0"/>
-          <c:cat>
             <c:strRef>
               <c:f>Sheet1!$B$1</c:f>
               <c:strCache>
@@ -47,22 +30,39 @@
                 </c:pt>
               </c:strCache>
             </c:strRef>
+          </c:tx>
+          <c:cat>
+            <c:strRef>
+              <c:f>Sheet1!$A$2:$A$3</c:f>
+              <c:strCache>
+                <c:ptCount val="2"/>
+                <c:pt idx="0">
+                  <c:v>A</c:v>
+                </c:pt>
+                <c:pt idx="1">
+                  <c:v>B</c:v>
+                </c:pt>
+              </c:strCache>
+            </c:strRef>
           </c:cat>
           <c:val>
             <c:numRef>
-              <c:f>Sheet1!$B$2</c:f>
+              <c:f>Sheet1!$B$2:$B$3</c:f>
               <c:numCache>
                 <c:formatCode>General</c:formatCode>
-                <c:ptCount val="1"/>
+                <c:ptCount val="2"/>
                 <c:pt idx="0">
                   <c:v>10</c:v>
+                </c:pt>
+                <c:pt idx="1">
+                  <c:v>20</c:v>
                 </c:pt>
               </c:numCache>
             </c:numRef>
           </c:val>
           <c:extLst>
             <c:ext uri="{C3380CC4-5D6E-409C-BE32-E72D297353CC}" xmlns:c16="http://schemas.microsoft.com/office/drawing/2014/chart">
-              <c16:uniqueId val="{00000000-2B1A-4599-8525-306F90472FCC}"/>
+              <c16:uniqueId val="{00000000-4DAC-4491-BD8C-E3DF5D71EF9F}"/>
             </c:ext>
           </c:extLst>
         </c:ser>
@@ -73,45 +73,10 @@
           <c:showSerName val="0"/>
           <c:showPercent val="0"/>
           <c:showBubbleSize val="0"/>
+          <c:showLeaderLines val="1"/>
         </c:dLbls>
-        <c:gapWidth val="150"/>
-        <c:axId val="1818203951"/>
-        <c:axId val="1818203471"/>
-      </c:barChart>
-      <c:catAx>
-        <c:axId val="1818203951"/>
-        <c:scaling>
-          <c:orientation val="minMax"/>
-        </c:scaling>
-        <c:delete val="0"/>
-        <c:axPos val="b"/>
-        <c:numFmt formatCode="General" sourceLinked="1"/>
-        <c:majorTickMark val="out"/>
-        <c:minorTickMark val="none"/>
-        <c:tickLblPos val="nextTo"/>
-        <c:crossAx val="1818203471"/>
-        <c:crosses val="autoZero"/>
-        <c:auto val="1"/>
-        <c:lblAlgn val="ctr"/>
-        <c:lblOffset val="100"/>
-        <c:noMultiLvlLbl val="0"/>
-      </c:catAx>
-      <c:valAx>
-        <c:axId val="1818203471"/>
-        <c:scaling>
-          <c:orientation val="minMax"/>
-        </c:scaling>
-        <c:delete val="0"/>
-        <c:axPos val="l"/>
-        <c:majorGridlines/>
-        <c:numFmt formatCode="General" sourceLinked="1"/>
-        <c:majorTickMark val="out"/>
-        <c:minorTickMark val="none"/>
-        <c:tickLblPos val="nextTo"/>
-        <c:crossAx val="1818203951"/>
-        <c:crosses val="autoZero"/>
-        <c:crossBetween val="between"/>
-      </c:valAx>
+        <c:firstSliceAng val="0"/>
+      </c:pieChart>
     </c:plotArea>
     <c:legend>
       <c:legendPos val="r"/>
