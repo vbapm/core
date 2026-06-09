@@ -1,0 +1,9 @@
+[project]
+name = "chartsheet"
+version = "0.0.0"
+authors = []
+license = "UNLICENSED"
+target = "xlsm"
+
+[src]
+ChartSheetGenerator = "src/ChartSheetGenerator.bas"
