@@ -115,3 +115,39 @@ To see what changed:
 ```powershell
 git diff --submodule
 ```
+
+#### "New commits" change (submodule is ahead of parent)
+
+If `git status` shows `modified: <submodule> (new commits)`, it means the submodule is checked out to a commit **newer** than what the parent repo references. This can happen after running `git submodule update --remote` or committing directly inside the submodule.
+
+**To reset a single submodule** back to what the parent expects:
+
+```powershell
+git submodule update --force <submodule-path>
+```
+
+For example, to reset only the `installer` submodule:
+
+```powershell
+git submodule update --force installer
+```
+
+**To reset all submodules** at once:
+
+```powershell
+git submodule update --force --recursive
+```
+
+**To identify the difference** between what the parent expects and what's checked out:
+
+```powershell
+git diff --submodule <submodule-path>
+```
+
+For example:
+
+```powershell
+git diff --submodule installer
+```
+
+This shows the commits that were added (or removed) relative to the parent's expected commit.
