@@ -34,5 +34,5 @@ export default async function (args: Args) {
 	const git = "git" in args ? <boolean>args.git : true;
 	const configTemplates = "conf" in args ? <boolean>args.conf : true;
 
-	await createProject({ name, target, from, pkg, git, conf: configTemplates });
+	await createProject({ name, target, from, pkg, git, configTemplates });
 }
