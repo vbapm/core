@@ -38,7 +38,7 @@ export async function exportTarget(
 	options: ExportOptions = {}
 ) {
 	const { project, dependencies, blankTarget } = info;
-const { xmlOnly = false, vbaOnly = false, skipSheetNameNormalization = false } = options;
+	const { xmlOnly = false, vbaOnly = false, skipSheetNameNormalization = false } = options;
 
 	// Extract target to staging
 	let extracted: string;
