@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `vbapm init` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files.
+- `vbapm init` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
 - Excel XML export: renames worksheet XML files to stable, identity-based names (`sht{codeName}.xml`) so that reordering sheets produces clean diffs with only ordering metadata changed ([#57]).
@@ -83,3 +83,5 @@ Note: The online registry remains the vba-blocks.com registry.
 [#56]: https://github.com/vbapm/core/pull/56
 [#63]: https://github.com/vbapm/core/pull/63
 [#62]: https://github.com/vbapm/core/pull/62
+[#64]: https://github.com/vbapm/core/pull/64
+[#98]: https://github.com/vbapm/core/pull/98
