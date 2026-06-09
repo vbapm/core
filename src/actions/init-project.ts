@@ -34,7 +34,15 @@ export interface InitOptions {
 }
 
 export async function initProject(options: InitOptions) {
-	let { name, dir = env.cwd, target: targetType, from, pkg: asPackage, git, configTemplates } = options;
+	let {
+		name,
+		dir = env.cwd,
+		target: targetType,
+		from,
+		pkg: asPackage,
+		git,
+		configTemplates
+	} = options;
 
 	if (await pathExists(join(dir, "vbaproject.toml"))) {
 		throw new CliError(
