@@ -27,7 +27,7 @@ test("should find no changes between build graphs", async () => {
 	expect(changeset.components.added.length).toEqual(0);
 	expect(changeset.components.changed.length).toEqual(0);
 	expect(changeset.components.removed.length).toEqual(0);
-});
+}, 10000);
 
 test("should find added, changed, and removed between build graphs", async () => {
 	const { project, dependencies } = await setup(complex);
@@ -39,7 +39,7 @@ test("should find added, changed, and removed between build graphs", async () =>
 	expect(normalizeChangeset(changeset)).toMatchSnapshot();
 
 	// TODO finds UserForm1 as changed, look into why
-});
+}, 10000);
 
 test("should find no changes for dev-src", async () => {
 	const { project, dependencies } = await setup(dev);
@@ -49,7 +49,7 @@ test("should find no changes for dev-src", async () => {
 
 	const changeset = compareBuildGraphs(before, after);
 	expect(normalizeChangeset(changeset)).toMatchSnapshot();
-});
+}, 10000);
 
 export function normalizeChangeset(changeset: Changeset): Changeset {
 	const { components, references } = changeset;

@@ -1,0 +1,9 @@
+[project]
+name = "with-drawing"
+version = "0.0.0"
+authors = ["Tim Hall"]
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[src]
+ThisWorkbook = "src/ThisWorkbook.cls"
+Sheet1 = "src/Sheet1.cls"

@@ -17,6 +17,7 @@ export interface ExportOptions {
 	addin?: string;
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
+	skipSheetNameNormalization?: boolean;
 }
 
 export async function exportProject(options: ExportOptions = {}) {

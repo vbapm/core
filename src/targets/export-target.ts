@@ -15,10 +15,12 @@ import { dirname, join } from "../utils/path";
 import { unzip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 import { filterTarget, mapTarget } from "./transform-target";
+import { normalizeWorksheetNames } from "./transforms/normalize-worksheet-names";
 
 export interface ExportOptions {
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
+	skipSheetNameNormalization?: boolean;
 }
 
 /**
@@ -36,12 +38,15 @@ export async function exportTarget(
 	options: ExportOptions = {}
 ) {
 	const { project, dependencies, blankTarget } = info;
-	const { xmlOnly = false, vbaOnly = false } = options;
+	const { xmlOnly = false, vbaOnly = false, skipSheetNameNormalization = false } = options;
 
 	// Extract target to staging
 	let extracted: string;
 	if (!blankTarget && !vbaOnly) {
 		extracted = await extractTarget(project, target, staging);
+		if (!skipSheetNameNormalization) {
+			await normalizeWorksheetNames(extracted);
+		}
 	}
 
 	if (!xmlOnly) {

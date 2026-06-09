@@ -1,7 +1,7 @@
-import { copy, readFile, writeFile } from "fs-extra";
+import { copy, pathExists, readFile, writeFile } from "fs-extra";
 import { join } from "path";
 import { promisify } from "util";
-import { dev, empty, json, single, standard, targetless } from "./__fixtures__";
+import { dev, empty, json, single, standard, targetless, withDrawing } from "./__fixtures__";
 import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
 
 const exec = promisify(require("child_process").exec);
@@ -372,3 +372,20 @@ async function validateBuild(cwd: string, target: string): Promise<RunResult> {
 	const file = join(cwd, "build", target);
 	return await run("excel", file, "Validation.Validate");
 }
+
+describe("normalize-worksheet-names", () => {
+	test("renames worksheet sidecar .rels file alongside worksheet XML", async () => {
+		await setup(withDrawing, "normalize-sidecar-rels", async cwd => {
+			// Build creates the xlsm from targets/xlsm OOXML (which contains a drawing)
+			await execute(cwd, "build");
+
+			// Export runs normalizeWorksheetNames: sheet1.xml → shtSheet1.xml
+			// The sidecar _rels/sheet1.xml.rels must also be renamed → shtSheet1.xml.rels
+			await execute(cwd, "export --target xlsm");
+
+			const relsDir = join(cwd, "targets/xlsm/xl/worksheets/_rels");
+			expect(await pathExists(join(relsDir, "shtSheet1.xml.rels"))).toBe(true);
+			expect(await pathExists(join(relsDir, "sheet1.xml.rels"))).toBe(false);
+		});
+	});
+});
