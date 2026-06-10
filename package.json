@@ -120,7 +120,7 @@
             "scripts.build:lib": "Core build: rollup bundle + .d.ts generation (used by both npm and standalone channels)",
             "scripts.build:cli": "Standalone CLI build: rollup bundle (no sourcemaps, no .d.ts) + fetch vendored Node binary",
             "scripts.build:dev": "Allows to quickly rebuild the project in development mode with environment variables set for easier debugging of the js/ts code",
-            "scripts.build:addins": "Builds the add-ins by running a custom build script in the addins directory",
+            "scripts.build:addins": "Builds the vbapm.xlam add-ins by running a custom build script in the addins directory",
             "scripts.build:bootstrap": "Update the bootstrap file (used to build the addin) by using the latest addin build (inception!)",
             "scripts.clean": "Removes generated files from lib, dist, and addins/build directories",
             "devDependencies.cross-env": "Used to set environment variables in a cross-platform-compatible way for build scripts",

@@ -38,7 +38,33 @@ Run all checks in one command:
 pnpm run dev
 ```
 
-This runs type checking, builds, unit tests (TypeScript and JavaScript) and the official TOML spec test suite. Integration tests (e2e) are not included — see the next section.
+This runs type checking, formatting checks, unit tests and a CLI build. Integration tests (e2e) are not included — see the next section.
+
+The `dev` command is composed of:
+
+- `pnpm run deps` — install dependencies
+- `pnpm run typecheck` — TypeScript type checking
+- `pnpm run format:check` — check code formatting
+- `pnpm run test` — run unit tests
+- `pnpm run build:cli` — build the CLI
+
+> **Note:** `build:addins` is not included in `dev`. Run it separately before e2e tests or whenever the VBA addin source changes.
+
+### Test Commands
+
+- **Unit tests:** `pnpm run test`
+- **E2E tests (visible Excel):** `pnpm run test:e2e`
+- **E2E tests (hidden Excel):** `pnpm run test:e2e:background`
+
+To run a specific test, use the `--testNamePattern` flag:
+
+```powershell
+pnpm run test -- --testNamePattern="build standard project"
+```
+
+## Committing
+
+Before committing, ensure all tests pass and formatting is correct (`pnpm run format:check`). Write commit messages in the [conventional commit](https://www.conventionalcommits.org/) format.
 
 ## Integration Tests (e2e)
 
