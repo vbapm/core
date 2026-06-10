@@ -237,6 +237,9 @@ Fetching dependencies
 
 exports[`new should create blank package 1`] = `
 Object {
+  ".editorconfig": "# EditorConfig is awesome: http://EditorConfig.org{LF}# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# top-most EditorConfig file{LF}root = true{LF}{LF}# Properties for VBA, VB6 ...",
+  ".gitattributes": "# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# Don't perform any line ending conversions by default{LF}{LF}# VBA extensions - Prevent LF normalization (bas, cls, frm, vba, docc...",
+  ".gitignore": "# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# Hidden metadata files created by macOS (Desktop Services Store){LF}.DS_Store{LF}{LF}# Office temporary files{LF}~$*{LF}{LF}# Acce...",
   "vbaproject.toml":
   "[package]
 name = \\"blank-package\\"
@@ -329,6 +332,9 @@ target = \\"xlsm\\"
 
 exports[`version should update by increment and preid 1`] = `
 Object {
+  ".editorconfig": "# EditorConfig is awesome: http://EditorConfig.org{LF}# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# top-most EditorConfig file{LF}root = true{LF}{LF}# Properties for VBA, VB6 ...",
+  ".gitattributes": "# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# Don't perform any line ending conversions by default{LF}{LF}# VBA extensions - Prevent LF normalization (bas, cls, frm, vba, docc...",
+  ".gitignore": "# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# Hidden metadata files created by macOS (Desktop Services Store){LF}.DS_Store{LF}{LF}# Office temporary files{LF}~$*{LF}{LF}# Acce...",
   "vbaproject.toml":
   "[package]
 name = \\"blank-package\\"
@@ -343,6 +349,9 @@ license = \\"UNLICENSED\\"
 
 exports[`version should update to explicit version 1`] = `
 Object {
+  ".editorconfig": "# EditorConfig is awesome: http://EditorConfig.org{LF}# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# top-most EditorConfig file{LF}root = true{LF}{LF}# Properties for VBA, VB6 ...",
+  ".gitattributes": "# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# Don't perform any line ending conversions by default{LF}{LF}# VBA extensions - Prevent LF normalization (bas, cls, frm, vba, docc...",
+  ".gitignore": "# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# Hidden metadata files created by macOS (Desktop Services Store){LF}.DS_Store{LF}{LF}# Office temporary files{LF}~$*{LF}{LF}# Acce...",
   "vbaproject.toml":
   "[package]
 name = \\"blank-package\\"

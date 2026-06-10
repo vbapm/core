@@ -1,3 +1,41 @@
+/**
+ * End-to-end tests for the `vba` CLI.
+ *
+ * ## Summary
+ *
+ * This file exercises the full lifecycle of an Excel VBA project by running the
+ * actual `vba` CLI binary against real Excel via COM automation. Each
+ * test spins up a copy of a pre-built fixture project in a temp directory,
+ * runs one or more CLI commands, and asserts the resulting filesystem state or
+ * CLI output against Jest snapshots.
+ *
+ *
+ * ## File and fixture layout
+ *
+ * ### Test helpers
+ * `tests/__helpers__/execute.ts` — core test utilities: `setup()`, `tmp()`,
+ * `execute()`, `readdir()`, and `run()` (used to invoke macros inside a built
+ * workbook).
+ *
+ * ### Fixture projects
+ * Each fixture is a pre-built vbapm project directory located under
+ * `tests/__fixtures__/projects/`. They are imported via
+ * `tests/__fixtures__/index.ts`
+ *
+ * ### CLI binary
+ * The `vba` binary is resolved from `bin/vba` at the repo root, unless the
+ * `VBA_BIN_DIR` environment variable is set (see `getVbaBin()` in
+ * `tests/__helpers__/execute.ts`).
+ *
+ * ### Snapshots
+ * Jest snapshots are stored under `tests/__snapshots__/excel.e2e.ts.snap`.
+ *
+ * ### Temporary directories
+ * Each test is set up in a temporary directory under `tests/.tmp/`. The
+ * directory is cleaned up after the test unless the `KEEP_E2E_TMP` environment
+ * variable is set to true (or `1` or `yes`).
+ */
+
 import { copy, pathExists, readFile, writeFile } from "fs-extra";
 import { join } from "path";
 import { promisify } from "util";

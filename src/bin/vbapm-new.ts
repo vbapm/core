@@ -8,11 +8,12 @@ const help = dedent`
   Usage: vbapm new <name> [options]
 
   Options:
-    <name>          Project/package name (optionally, with extension)
-    --target=TYPE   Add target of type TYPE to project (e.g. xlsm)
-    --from=PATH     Create target and src from workbook/document
-    --package       Create as package
-    --no-git        Skip initializing git repository
+    <name>                  Project/package name (optionally, with extension)
+    --target=TYPE           Add target of type TYPE to project (e.g. xlsm)
+    --from=PATH             Create target and src from workbook/document
+    --package               Create as package
+    --no-git                Skip initializing git repository
+    --no-conf               Skip copying .gitignore, .gitattributes, .editorconfig
 
   Examples:
   vbapm new analysis.xlsm
@@ -31,6 +32,7 @@ export default async function (args: Args) {
 	const from = <string | undefined>args.from;
 	const pkg = !!args.package;
 	const git = "git" in args ? <boolean>args.git : true;
+	const configTemplates = "conf" in args ? <boolean>args.conf : true;
 
-	await createProject({ name, target, from, pkg, git });
+	await createProject({ name, target, from, pkg, git, configTemplates });
 }

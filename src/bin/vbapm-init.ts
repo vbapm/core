@@ -8,11 +8,12 @@ const help = dedent`
   Usage: vbapm init [options]
 
   Options:
-    --target=TYPE   Add target of type TYPE to project (e.g. xlsm)
-    --from=PATH     Create target and src from workbook/document
-    --name=NAME     Set project name (default = --from or directory name)
-    --package       Initialize as package
-    --no-git        Skip initializing git repository
+    --target=TYPE           Add target of type TYPE to project (e.g. xlsm)
+    --from=PATH             Create target and src from workbook/document
+    --name=NAME             Set project name (default = --from or directory name)
+    --package               Initialize as package
+    --no-git                Skip initializing git repository
+    --no-conf               Skip copying .gitignore, .gitattributes, .editorconfig
 
   Examples:
   vbapm init --target xlsm
@@ -30,6 +31,7 @@ export default async function (args: Args) {
 	const name = <string | undefined>args.name;
 	const pkg = !!args.package;
 	const git = "git" in args ? <boolean>args.git : true;
+	const configTemplates = "conf" in args ? <boolean>args.conf : true;
 
-	await initProject({ target, from, name, pkg, git });
+	await initProject({ target, from, name, pkg, git, configTemplates });
 }

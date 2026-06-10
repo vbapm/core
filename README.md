@@ -100,6 +100,13 @@ Create a blank package for sharing as a library between projects:
 vba new json-converter --package
 ```
 
+By default, `vba new` initializes a git repository and creates `.gitignore`, `.gitattributes` and `.editorconfig` template files. Use `--no-git` to skip git init and `--no-conf` to skip the template files:
+
+```txt
+vba new project-name.xlsm --no-git
+vba new project-name.xlsm --no-conf
+```
+
 ### `init`
 
 Create a blank/generated vbapm project in the current folder
@@ -120,6 +127,13 @@ Create a blank package:
 
 ```txt
 vba init --package
+```
+
+By default, `vba init` initializes a git repository and creates `.gitignore`, `.gitattributes` and `.editorconfig` template files. Use `--no-git` to skip git init and `--no-conf` to skip the template files:
+
+```txt
+vba init --target xlsm --no-git
+vba init --target xlsm --no-conf
 ```
 
 ### `add`

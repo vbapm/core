@@ -11,6 +11,7 @@ export interface CreateOptions {
 	from?: string;
 	pkg: boolean;
 	git: boolean;
+	configTemplates: boolean;
 }
 
 export async function createProject(options: CreateOptions) {
@@ -25,7 +26,7 @@ export async function createProject(options: CreateOptions) {
 		);
 	}
 
-	let { name, target, from, pkg, git } = options;
+	let { name, target, from, pkg, git, configTemplates } = options;
 
 	// Load target from extension (if given)
 	if (!target && !from && name.includes(".")) {
@@ -55,5 +56,5 @@ export async function createProject(options: CreateOptions) {
 	}
 
 	await ensureDir(dir);
-	await initProject({ name, dir, target, from, pkg, git });
+	await initProject({ name, dir, target, from, pkg, git, configTemplates });
 }
