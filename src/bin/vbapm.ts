@@ -97,16 +97,20 @@ main()
 	.then(command => {
 		// Work around Node.js v23+ libuv assertion crash on Windows
 		// (nodejs/node#56645). The export command, especially to an
-		// empty project, can complete so fast that V8's wasm task
-		// runner still has a pending delayed task at process exit,
-		// triggering: ASSERT(!(handle->flags & UV_HANDLE_CLOSING)).
-		// A brief delay lets the event loop drain before exit.
+		// empty project, can complete before V8's wasm task runner
+		// has drained its pending delayed tasks. Calling
+		// process.exit(0) fires while the handle is still closing:
+		//   ASSERT(!(handle->flags & UV_HANDLE_CLOSING))
+		// On the export path we omit process.exit entirely, letting
+		// the event loop drain naturally so no pending task is
+		// interrupted. All other commands exit immediately via
+		// process.exit(0) as before.
 		// TODO: Remove once nodejs/node#61999 is merged and released.
 		if (command === "export" && process.platform === "win32") {
-			setTimeout(() => process.exit(0), 200);
-		} else {
-			process.exit(0);
+			// Let the event loop drain naturally — no process.exit()
+			return;
 		}
+		process.exit(0);
 	})
 	.catch(handleError);
 
