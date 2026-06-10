@@ -20,7 +20,7 @@
  * ### Fixture projects
  * Each fixture is a pre-built vbapm project directory located under
  * `tests/__fixtures__/projects/`. They are imported via
- * `tests/__fixtures__/index.ts` 
+ * `tests/__fixtures__/index.ts`
  *
  * ### CLI binary
  * The `vba` binary is resolved from `bin/vba` at the repo root, unless the
