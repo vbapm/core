@@ -16,6 +16,13 @@
       "matchPackageNames": ["!pnpm"],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-minor-patch"
+    },
+		{
+      "description": "Auto-merge packageManager minor/patch updates",
+      "matchManagers": ["pnpm"],
+      "matchDepTypes": ["packageManager"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
     }
   ],
   "customManagers": [
