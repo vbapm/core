@@ -1,6 +1,8 @@
 # vbapm
 
-A package manager and build tool for VBA.
+A package manager and build tool for VBA. It lets you version-control your VBA source code and Excel XML structure as plain text files, then build them back into a working workbook or add-in.
+
+Support for other MS Office file format is planed.
 
 ## Installation
 
@@ -55,6 +57,83 @@ For more recent versions of Office for Mac, you will need to trust access to the
 If you run into any issues during installation, please see the [known issues](https://github.com/vbapm/installer#known-issues) for the installer or [create a new issue](https://github.com/vbapm/installer/issues/new) with details about what's happening.
 
 :rocket: You're ready to go! Open a new command-line session (cmd / terminal) and try `vba --help`
+
+> **macOS users:** You must enable "Trust access to the VBA project object model" in Excel → Preferences → Security for vbapm to work.
+
+## Getting Started
+
+### Initialize a project from an existing workbook
+
+If you already have an `.xlsm` or `.xlam` file and want to start managing it with vbapm, use the `--from` flag:
+
+```txt
+vba new my-project --from "C:\path\to\existing.xlsm"
+```
+
+If you want to start in the current directory instead of creating a new one:
+
+```txt
+vba init
+```
+
+```txt
+
+This creates a new directory `my-project/` containing:
+
+```
+my-project/
+├── vbaproject.toml          # Project manifest (name, target type, sources)
+├── src/                     # Extracted VBA source files
+│   ├── Module1.bas          #   Standard modules → .bas
+│   ├── Sheet1.cls           #   Document modules → .cls
+│   ├── ThisWorkbook.cls     #   Workbook module → .cls
+│   ├── MyClass.cls          #   Class modules → .cls
+│   └── UserForm1.frm        #   UserForms → .frm
+├── target/                  # Extracted Excel XML structure
+│   ├── [Content_Types].xml
+│   └── xl/
+│       ├── workbook.xml
+│       ├── worksheets/
+│       ├── styles.xml
+│       └── ...
+├── build/                   # Copy of the original .xlsm
+│   └── my-project.xlsm
+└── .git/, .gitignore, ...   # Git version control (by default)
+```
+
+vbapm automates two extraction steps:
+
+1. **VBA source code** — The vbapm add-in runs a macro that exports every `VBComponent` in the workbook as its native file type, along with a `project.json` listing non-built-in references.
+
+2. **XML structure** — The workbook is unzipped and its internal XML (sheets, styles, ribbon, etc.) is extracted to `target/`.
+
+> Use `vba init --from existing.xlsm` instead of `vba new` if you want to initialize in the *current* directory rather than creating a new one.
+
+### The basic workflow
+
+Once your project is initialized, the day-to-day loop is:
+
+1. **Edit** your source files in `src/` and register new ones with [`vba add`](#add)
+2. **Build** the workbook with [`vba build`](#build)
+3. **Test** your macros in Excel, or use [`vba run`](#run) from the command line
+4. **Export** changes back to source with [`vba export`](#export), then `git diff` and commit
+
+### Putting it together
+
+```txt
+# Start with a new project from an existing file
+vba new expense-tracker --from C:\workbooks\budget-2025.xlsm
+cd expense-tracker
+
+# Make edits to src/ files, then rebuild
+vba build --open
+
+# After tweaking in Excel, capture the changes
+vba export
+
+# Commit your work
+git add . && git commit -m "Add expense tracker project"
+```
 
 ### Programmatic Usage
 
@@ -294,7 +373,21 @@ vba close --target xlsm
 
 ### `run`
 
-`vba run` is a useful utility function for running a public macro in the given workbook, passing up to 10 arguments, and if it returns a string value, outputing it to the console.
+`vba run` opens the built workbook in Excel, runs a public VBA function, captures its return value and prints it to stdout.
+
+#### Syntax
+
+```txt
+vba run <Module.Function> [<arg1> <arg2> ...] [--file PATH] [--target TYPE]
+```
+
+#### VBA code conventions
+
+The `vba run` command calls a **public function** (not a `Sub`). The function:
+- Must be `Public`
+- Must return a `String` (or a type that VBA can coerce to a string)
+- Can accept up to 10 arguments (passed positionally from the CLI)
+- Arguments arrive as `Variant` on the VBA side
 
 ```vb
 ' (Module: Messages.bas)
@@ -307,6 +400,93 @@ End Function
 vba run Messages.SayHi Tim
 Howdy Tim!
 ```
+
+#### Passing arguments
+
+Arguments are passed positionally and arrive as `Variant` in VBA:
+
+```txt
+# Single argument
+vba run ExcelManipulator.WriteCell "Sheet1,5,3,Hello World"
+
+# Multiple arguments
+vba run Math.Add 3 7
+
+# Quoted strings with spaces
+vba run Messages.SayHi "Tim Hall"
+```
+
+#### Return value
+
+If the VBA function returns a string, it is printed to stdout. This is how you receive data back from Excel.
+
+If the function returns a JSON string matching `{"success": true/false, "messages": [...], "errors": [...]}` it is parsed as a structured result.
+
+#### Targeting options
+
+Run against the built project (default — run from project directory):
+
+```txt
+vba run ExcelManipulator.AddSheet "MyNewSheet"
+```
+
+Run against a specific file:
+
+```txt
+vba run Messages.SayHi Tim --file "C:\path\to\workbook.xlsm"
+```
+
+Run against a specific target type (if project has multiple targets):
+
+```txt
+vba run MyModule.MyFunction arg1 --target xlsm
+```
+
+#### Practical workflow for Excel manipulation
+
+```
+vba add ExcelManipulator
+# → edit src/ExcelManipulator.bas with your VBA functions
+vba build
+vba run ExcelManipulator.AddSheet "Report"
+vba run ExcelManipulator.WriteCell "Report,1,1,Title"
+vba run ExcelManipulator.GetCell "Report,1,1"
+# → output: "Title"
+```
+
+Example VBA module for cell manipulation:
+
+```vb
+Public Function AddSheet(SheetName As Variant) As String
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets.Add
+    ws.Name = CStr(SheetName)
+    AddSheet = "Created sheet: " & SheetName
+End Function
+
+Public Function WriteCell(Args As Variant) As String
+    Dim parts() As String
+    parts = Split(CStr(Args), ",")
+    ThisWorkbook.Sheets(parts(0)).Cells(CLng(parts(1)), CLng(parts(2))).Value = parts(3)
+    WriteCell = "Wrote '" & parts(3) & "' to " & parts(0) & "!" & parts(1) & "," & parts(2)
+End Function
+
+Public Function GetCell(Args As Variant) As String
+    Dim parts() As String
+    parts = Split(CStr(Args), ",")
+    GetCell = CStr(ThisWorkbook.Sheets(parts(0)).Cells(CLng(parts(1)), CLng(parts(2))).Value)
+End Function
+```
+
+> For complex operations, consider encoding data as JSON strings in arguments and parsing with a VBA JSON library.
+
+## Tips
+
+- **Build before running** — `vba run` targets the built workbook in `build/`, not the source files.
+- **Export after manipulation** — Changes made by macros (new sheets, cell values) live in the built workbook. Run `vba export` to persist them back to source.
+- **Close before rebuilding** — If a workbook is open in Excel, close it with `vba close --save` before running `vba build` again.
+- **Run from the project root** — Commands expect `vbaproject.toml` in the current directory, unless you use `--file` to target a specific workbook.
+- **Quote arguments with spaces** — Shell escaping is handled by vbapm, but wrap arguments containing spaces in quotes.
 
 ## Manifest (vbaproject.toml)
 
