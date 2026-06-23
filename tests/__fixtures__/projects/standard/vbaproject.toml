@@ -11,6 +11,7 @@ Sheet2 = "src/Sheet2.cls"
 Sheet3 = "src/Sheet3.cls"
 Validation = "src/Validation.bas"
 Class1 = "src/Class1.cls"
+Accents = "src/Accents.bas"
 
 # TODO Windows-only
 # UserForm1 = { path = "src/UserForm1.frm", binary = "src/UserForm1.frx" }

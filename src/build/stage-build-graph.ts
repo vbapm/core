@@ -2,11 +2,16 @@ import { writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
 import { BuildGraph, ImportGraph } from "./build-graph";
+import { Codepage, encodeForCodepage, getSystemCodepage } from "./encoding-sniffer";
 
 export async function stageBuildGraph(graph: BuildGraph, staging: string): Promise<ImportGraph> {
+	// VBA's Component.Import reads files in the system ANSI codepage,
+	// so stage source files in that encoding.
+	const codepage = getSystemCodepage();
+
 	const components = await parallel(graph.components, async component => {
 		const path = join(staging, component.filename);
-		await writeFile(path, component.code);
+		await writeFile(path, encodeForCodepage(component.code, codepage));
 
 		if (component.binaryPath) {
 			const binaryPath = join(staging, basename(component.binaryPath));
