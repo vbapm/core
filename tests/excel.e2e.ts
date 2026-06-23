@@ -199,32 +199,6 @@ describe("export", () => {
 			});
 		});
 	});
-
-	test("export preserves French accented characters in VBA source", async () => {
-		await setup(empty, "export-accents", async cwd => {
-			await setup(standard, "export-standard-accents", async built => {
-				// 1. Build standard project (now includes Accents.bas with French accents)
-				await execute(built, "build");
-
-				// 2. Copy built xlsm into empty project
-				await copy(join(built, "build/standard.xlsm"), join(cwd, "build/empty.xlsm"));
-
-				// 3. Export to extract VBA source
-				await execute(cwd, "export --target xlsm");
-
-				// 4. Read the exported Accents.bas and verify French characters
-				const accentsContent = await readFile(join(cwd, "src/Accents.bas"), "utf8");
-
-				// Verify French accented characters are preserved (no replacement chars)
-				expect(accentsContent).not.toContain("\uFFFD");
-				expect(accentsContent).toContain("é è ê ë à â ä ù û ü ç");
-				expect(accentsContent).toContain("É È Ê Ë À Â Ä Ù Û Ü Ç");
-				expect(accentsContent).toContain("Voilà les accents français");
-				expect(accentsContent).toContain("Élève très appliqué");
-				expect(accentsContent).toContain("caractères accentués");
-			});
-		});
-	});
 });
 
 describe("update", () => {

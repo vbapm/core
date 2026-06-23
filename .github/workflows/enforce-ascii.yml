@@ -24,5 +24,6 @@ jobs:
       - name: Check for non-ASCII characters
         run: |
           python "${{ github.workspace }}/.github/workflows/enforce-ascii/enforce_ascii.py" \
-            --extensions ".bas,.frm,.cls"
+            --extensions ".bas,.frm,.cls" \
+            --exclude-dirs "tests/__fixtures__/multilingual"
         shell: bash
