@@ -1,9 +1,9 @@
 Attribute VB_Name = "Witaj"
 Option Explicit
 
-' Polski : ą ć ę A� A� A3 A� Ao A1 Ą Ć �~ A� Af A� A� A1 A�
-' �Oesky : ě A! �? A� A3 A1 A! A� A� Ě A� �O A~ A1 A? A� A? A�
+' Polski : ą ć ę ł ń ó ś ź ż Ą Ć Ę Ł Ń Ó Ś Ź Ż
+' Česky : ě š č ř ž ý á í é Ě Š Č Ř Ž Ý Á Í É
 
 Public Function Hello() As String
-    Hello = "Witaj A�wiecie! ą ć ę A� A� A3 A� Ao A1"
+    Hello = "Witaj świecie! ą ć ę ł ń ó ś ź ż"
 End Function

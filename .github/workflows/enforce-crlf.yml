@@ -18,4 +18,4 @@ jobs:
         with:
           extensions: .bas, .frm, .cls
           do-checkout: true
-          do-push: true
+          fail-on-lf: true

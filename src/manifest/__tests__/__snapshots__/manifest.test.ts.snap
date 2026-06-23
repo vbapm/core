@@ -51,7 +51,7 @@ Object {
     Object {
       "name": "Class1",
       "path": "src/Class1.cls",
-    }
+    },
   ],
   "target": Object {
     "filename": "standard.xlsm",
