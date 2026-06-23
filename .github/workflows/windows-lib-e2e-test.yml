@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup VBA runtime
-        uses: DecimalTurn/setup-vba@main
+        uses: DecimalTurn/setup-vba@abad6bed4025d3d709cbd9c9281f856d298bd68d # v0.1.2
         with:
           office-apps: Excel
 
