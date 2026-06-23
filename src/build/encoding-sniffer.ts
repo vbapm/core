@@ -41,6 +41,7 @@ export enum Codepage {
 
 	Windows932 = 932, // Japanese (CP932, not Shift_JIS — see codepageToLabel)
 	Windows936 = 936, // Simplified Chinese (GBK)
+	Windows950 = 950, // Traditional Chinese (Big5)
 
 	UTF8 = 65001
 }
@@ -76,7 +77,8 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	// Windows codepage maps them to \ and ~ respectively.
 	// VBA on Japanese Windows uses CP932.
 	[Codepage.Windows932]: "cp932",
-	[Codepage.Windows936]: "gbk"
+	[Codepage.Windows936]: "gbk",
+	[Codepage.Windows950]: "big5"
 };
 
 /**
@@ -135,6 +137,7 @@ export function sniffEncoding(buffer: Buffer): SniffResult {
 const ACP_TO_CODEPAGE: Record<string, Codepage> = {
 	"932": Codepage.Windows932,
 	"936": Codepage.Windows936,
+	"950": Codepage.Windows950,
 	"1250": Codepage.Windows1250,
 	"1251": Codepage.Windows1251,
 	"1252": Codepage.Windows1252,

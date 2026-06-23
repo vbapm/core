@@ -255,6 +255,10 @@ describe("codepageToLabel", () => {
 	test("Windows936 → gbk", () => {
 		expect(codepageToLabel(Codepage.Windows936)).toBe("gbk");
 	});
+
+	test("Windows950 → big5", () => {
+		expect(codepageToLabel(Codepage.Windows950)).toBe("big5");
+	});
 });
 
 // ── getSystemCodepage ────────────────────────────────────────────
