@@ -131,16 +131,41 @@ export function sniffEncoding(buffer: Buffer): SniffResult {
 	return { encoding: "windows-1252", hasBom: false };
 }
 
+/** Known ACP → Codepage mapping for getSystemCodepage. */
+const ACP_TO_CODEPAGE: Record<string, Codepage> = {
+	"932": Codepage.Windows932,
+	"936": Codepage.Windows936,
+	"1250": Codepage.Windows1250,
+	"1251": Codepage.Windows1251,
+	"1252": Codepage.Windows1252,
+	"1253": Codepage.Windows1253,
+	"1254": Codepage.Windows1254,
+	"1255": Codepage.Windows1255,
+	"1256": Codepage.Windows1256,
+	"1257": Codepage.Windows1257,
+	"1258": Codepage.Windows1258
+};
+
 /**
- * Return the local system ANSI codepage.
- *
- * When vbapm has just exported files from VBA (via `Component.Export`),
- * those files are guaranteed to be in this codepage. Pass this to the
- * Component constructor to skip the sniffing step entirely.
+ * Return the local system ANSI codepage by reading the ACP value
+ * from the Windows registry. Falls back to {@link Codepage.Windows1252}
+ * if the registry cannot be read.
  */
 export function getSystemCodepage(): Codepage {
-	// VBA's `Component.Export` always writes in the system ANSI codepage.
-	// On Western Windows machines this is windows-1252.
+	try {
+		const { execSync } = require("child_process");
+		const result = execSync(
+			'reg query "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage" /v ACP',
+			{ encoding: "utf8", timeout: 5000 }
+		);
+		const match = result.match(/ACP\s+REG_SZ\s+(\d+)/);
+		if (match) {
+			return ACP_TO_CODEPAGE[match[1]] ?? Codepage.Windows1252;
+		}
+	} catch {
+		// Registry not readable (non-Windows or insufficient permissions)
+	}
+
 	return Codepage.Windows1252;
 }
 
@@ -166,8 +191,9 @@ export function decodeBuffer(buffer: Buffer, result?: SniffResult): string {
 		return buffer.subarray(bomOffset).toString("utf8");
 	}
 
-	// windows-1252 (no BOM possible for legacy codepages)
-	return new TextDecoder("windows-1252").decode(buffer);
+	// Fallback: use the system ANSI codepage (not hardcoded windows-1252)
+	const label = codepageToLabel(getSystemCodepage());
+	return new TextDecoder(label).decode(buffer);
 }
 
 /**

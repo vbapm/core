@@ -260,8 +260,11 @@ describe("codepageToLabel", () => {
 // ── getSystemCodepage ────────────────────────────────────────────
 
 describe("getSystemCodepage", () => {
-	test("returns Windows1252 (Western Windows default)", () => {
-		expect(getSystemCodepage()).toBe(Codepage.Windows1252);
+	test("returns a known Codepage (reads ACP from registry)", () => {
+		const cp = getSystemCodepage();
+		// Should return a known value; Windows1252 is the default fallback.
+		expect(Object.values(Codepage)).toContain(cp);
+		expect(cp).not.toBe(Codepage.Unknown);
 	});
 });
 
