@@ -42,6 +42,21 @@ const isMultilingualTest =
 const describeML = isMultilingualTest ? describe : describe.skip;
 
 /**
+ * Read a file using iconv-lite with the system ANSI codepage.
+ * After vba export, the src/ file is still in the system codepage
+ * (applyChangeset skips writing unchanged components), so reading
+ * as UTF-8 would produce replacement characters.
+ */
+async function readExportedFile(dir: string, filename: string): Promise<string> {
+	const { getSystemCodepage, codepageToLabel } = await import(
+		"../src/build/encoding-sniffer"
+	);
+	const iconv = require("iconv-lite");
+	const buffer = await readFile(join(dir, "src", filename));
+	return iconv.decode(buffer, codepageToLabel(getSystemCodepage()));
+}
+
+/**
  * Read the system ANSI codepage from the Windows registry.
  * Returns the codepage number as a string (e.g. "1252"), or undefined
  * if it cannot be read.
@@ -77,7 +92,7 @@ async function verifyAccents(
 	filename: string,
 	expectedStrings: string[]
 ): Promise<void> {
-	const content = await readFile(join(dir, "src", filename), "utf8");
+	const content = await readExportedFile(dir, filename);
 
 	// No replacement characters
 	expect(content).not.toContain("\uFFFD");
