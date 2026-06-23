@@ -6,6 +6,7 @@ import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
+import { Codepage } from "./encoding-sniffer";
 import { byComponentName, Component } from "./component";
 
 export async function loadFromProject(
@@ -31,7 +32,7 @@ export async function loadFromProject(
 	for (const manifest of manifests) {
 		for (const source of manifest.src) {
 			loadingComponents.push(
-				Component.load(source.path, { binary_path: source.binary }).then(component => {
+				Component.load(source.path, Codepage.Unknown, { binary_path: source.binary }).then(component => {
 					if (manifest !== project.manifest) {
 						fromDependencies.components.set(component, manifest.name);
 					}
@@ -55,7 +56,7 @@ export async function loadFromProject(
 
 	if (!options.release) {
 		for (const source of project.manifest.devSrc) {
-			loadingComponents.push(Component.load(source.path, { binary_path: source.binary }));
+			loadingComponents.push(Component.load(source.path, Codepage.Unknown, { binary_path: source.binary }));
 		}
 		for (const reference of project.manifest.devReferences) {
 			const nameGuid = `${reference.name}_${reference.guid}`;
