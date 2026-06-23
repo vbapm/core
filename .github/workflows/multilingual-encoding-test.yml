@@ -1,0 +1,59 @@
+name: Multilingual Encoding Test
+
+on:
+  push:
+    branches:
+      - main*
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  multilingual:
+    runs-on: windows-2025
+
+    steps:
+      - name: Configure Git
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup VBA runtime
+        uses: DecimalTurn/setup-vba@main
+        with:
+          office-apps: Excel
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Install Node dependencies and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build:cli
+          pnpm run build:addins
+
+      - name: Run multilingual encoding tests
+        shell: pwsh
+        run: |
+          # The loop script iterates over codepages (1252, 1251, 1250),
+          # sets each in the registry, and runs the mlang Jest suite.
+          # Excel is killed between iterations so new processes pick up
+          # the changed ACP codepage.
+          ./tests/mlang-loop.ps1
