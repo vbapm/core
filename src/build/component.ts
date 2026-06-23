@@ -46,7 +46,8 @@ export class Component {
 				this.code = decodeBuffer(code, result);
 				this.encoding = result;
 			} else {
-				this.code = new TextDecoder(codepageToLabel(codepage)).decode(code);
+				const iconv = require("iconv-lite");
+				this.code = iconv.decode(code, codepageToLabel(codepage));
 			}
 		} else {
 			this.code = code as string;
