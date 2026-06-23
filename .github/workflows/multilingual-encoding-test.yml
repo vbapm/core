@@ -28,6 +28,16 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Verify fixture encoding after checkout
+        shell: pwsh
+        run: |
+          @("cp1252","cp1251","cp1250","cp932","cp936") | ForEach-Object {
+            $file = "tests/__fixtures__/multilingual/$_/src/Hello.bas"
+            $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $file).Path)
+            $hex = ($bytes | ForEach-Object { '{0:X2}' -f $_ }) -join ' '
+            Write-Output "$_ ($($bytes.Length) bytes): $hex"
+          }
+
       - name: Setup VBA runtime
         uses: DecimalTurn/setup-vba@abad6bed4025d3d709cbd9c9281f856d298bd68d # v0.1.2
         with:
