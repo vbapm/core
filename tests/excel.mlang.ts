@@ -36,8 +36,7 @@ import { join } from "path";
 import { execute, setup } from "./__helpers__/execute";
 
 const isMultilingualTest =
-	/^(1|true|yes)$/i.test(process.env.E2E_ML || "") ||
-	/^(1|true|yes)$/i.test(process.env.CI || "");
+	/^(1|true|yes)$/i.test(process.env.E2E_ML || "") || /^(1|true|yes)$/i.test(process.env.CI || "");
 
 // Only run on CI or when explicitly enabled
 const describeML = isMultilingualTest ? describe : describe.skip;
@@ -51,7 +50,7 @@ function getSystemAnsiCodepage(): string | undefined {
 	try {
 		const { execSync } = require("child_process");
 		const result = execSync(
-			'powershell -Command "(Get-ItemProperty \'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage\').ACP"',
+			"powershell -Command \"(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage').ACP\"",
 			{ encoding: "utf8", timeout: 5000 }
 		);
 		return result.trim();
@@ -123,40 +122,25 @@ const FIXTURES: MultilingualFixture[] = [
 		codepage: "1251",
 		dir: join(fixturesDir, "cp1251"),
 		filename: "Hello.bas",
-		expectedStrings: [
-			"Привет мир",
-			"А Б В Г Д Е"
-		]
+		expectedStrings: ["Привет мир", "А Б В Г Д Е"]
 	},
 	{
 		codepage: "1250",
 		dir: join(fixturesDir, "cp1250"),
 		filename: "Hello.bas",
-		expectedStrings: [
-			"ą ć ę ł ń ó ś ź ż",
-			"Ą Ć Ę Ł Ń Ó Ś Ź Ż",
-			"Witaj świecie"
-		]
+		expectedStrings: ["ą ć ę ł ń ó ś ź ż", "Ą Ć Ę Ł Ń Ó Ś Ź Ż", "Witaj świecie"]
 	},
 	{
 		codepage: "932",
 		dir: join(fixturesDir, "cp932"),
 		filename: "Hello.bas",
-		expectedStrings: [
-			"こんにちは世界",
-			"日本語",
-			"漢字"
-		]
+		expectedStrings: ["こんにちは世界", "日本語", "漢字"]
 	},
 	{
 		codepage: "936",
 		dir: join(fixturesDir, "cp936"),
 		filename: "Hello.bas",
-		expectedStrings: [
-			"你好世界",
-			"简体中文",
-			"汉字"
-		]
+		expectedStrings: ["你好世界", "简体中文", "汉字"]
 	}
 ];
 
@@ -175,7 +159,7 @@ describeML("multilingual encoding", () => {
 	if (!matchingFixture) {
 		test.skip(
 			`no fixture for system codepage ${currentCodepage} ` +
-			`(available: ${FIXTURES.map(f => f.codepage).join(", ")})`,
+				`(available: ${FIXTURES.map(f => f.codepage).join(", ")})`,
 			() => {}
 		);
 		return;
@@ -183,7 +167,7 @@ describeML("multilingual encoding", () => {
 
 	test(
 		`roundtrip preserves ${matchingFixture.codepage} characters ` +
-		`(${matchingFixture.dir.split("/").pop()})`,
+			`(${matchingFixture.dir.split("/").pop()})`,
 		async () => {
 			await setup(matchingFixture.dir, `ml-${matchingFixture.codepage}`, async cwd => {
 				// Ensure Excel is closed before changing codepage

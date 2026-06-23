@@ -14,17 +14,17 @@ function cp1252(text: string): Buffer {
 	const MAP: Record<string, number> = {
 		"€": 0x80,
 		"‚": 0x82,
-		"ƒ": 0x83,
+		ƒ: 0x83,
 		"„": 0x84,
 		"…": 0x85,
 		"†": 0x86,
 		"‡": 0x87,
-		"ˆ": 0x88,
+		ˆ: 0x88,
 		"‰": 0x89,
-		"Š": 0x8a,
+		Š: 0x8a,
 		"‹": 0x8b,
-		"Œ": 0x8c,
-		"Ž": 0x8e,
+		Œ: 0x8c,
+		Ž: 0x8e,
 		"‘": 0x91,
 		"’": 0x92,
 		"“": 0x93,
@@ -34,37 +34,37 @@ function cp1252(text: string): Buffer {
 		"—": 0x97,
 		"˜": 0x98,
 		"™": 0x99,
-		"š": 0x9a,
+		š: 0x9a,
 		"›": 0x9b,
-		"œ": 0x9c,
-		"ž": 0x9e,
-		"Ÿ": 0x9f,
-		"é": 0xe9,
-		"è": 0xe8,
-		"ê": 0xea,
-		"ë": 0xeb,
-		"à": 0xe0,
-		"â": 0xe2,
-		"ä": 0xe4,
-		"ù": 0xf9,
-		"û": 0xfb,
-		"ü": 0xfc,
-		"ç": 0xe7,
-		"É": 0xc9,
-		"È": 0xc8,
-		"Ê": 0xca,
-		"Ë": 0xcb,
-		"À": 0xc0,
-		"Â": 0xc2,
-		"Ä": 0xc4,
-		"Ù": 0xd9,
-		"Û": 0xdb,
-		"Ü": 0xdc,
-		"Ç": 0xc7,
-		"ô": 0xf4,
-		"î": 0xee,
-		"ï": 0xef,
-		"ñ": 0xf1
+		œ: 0x9c,
+		ž: 0x9e,
+		Ÿ: 0x9f,
+		é: 0xe9,
+		è: 0xe8,
+		ê: 0xea,
+		ë: 0xeb,
+		à: 0xe0,
+		â: 0xe2,
+		ä: 0xe4,
+		ù: 0xf9,
+		û: 0xfb,
+		ü: 0xfc,
+		ç: 0xe7,
+		É: 0xc9,
+		È: 0xc8,
+		Ê: 0xca,
+		Ë: 0xcb,
+		À: 0xc0,
+		Â: 0xc2,
+		Ä: 0xc4,
+		Ù: 0xd9,
+		Û: 0xdb,
+		Ü: 0xdc,
+		Ç: 0xc7,
+		ô: 0xf4,
+		î: 0xee,
+		ï: 0xef,
+		ñ: 0xf1
 	};
 
 	const bytes: number[] = [];
@@ -102,18 +102,12 @@ describe("sniffEncoding", () => {
 	});
 
 	test("UTF-16 LE BOM → utf16le with BOM", () => {
-		const buf = Buffer.concat([
-			Buffer.from([0xff, 0xfe]),
-			Buffer.from("test", "utf16le")
-		]);
+		const buf = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("test", "utf16le")]);
 		expect(sniffEncoding(buf)).toEqual({ encoding: "utf16le", hasBom: true });
 	});
 
 	test("UTF-16 BE BOM → utf16be with BOM", () => {
-		const buf = Buffer.concat([
-			Buffer.from([0xfe, 0xff]),
-			Buffer.from("test", "utf16le").swap16()
-		]);
+		const buf = Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from("test", "utf16le").swap16()]);
 		expect(sniffEncoding(buf)).toEqual({ encoding: "utf16be", hasBom: true });
 	});
 
@@ -166,10 +160,7 @@ describe("decodeBuffer", () => {
 	});
 
 	test("UTF-8 with BOM → BOM stripped", () => {
-		const buf = Buffer.concat([
-			Buffer.from([0xef, 0xbb, 0xbf]),
-			Buffer.from("Bonjour", "utf8")
-		]);
+		const buf = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from("Bonjour", "utf8")]);
 		expect(decodeBuffer(buf)).toBe("Bonjour");
 	});
 
@@ -179,10 +170,7 @@ describe("decodeBuffer", () => {
 	});
 
 	test("UTF-16 LE with BOM → BOM stripped, correct text", () => {
-		const buf = Buffer.concat([
-			Buffer.from([0xff, 0xfe]),
-			Buffer.from("Hello", "utf16le")
-		]);
+		const buf = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("Hello", "utf16le")]);
 		expect(decodeBuffer(buf)).toBe("Hello");
 	});
 
@@ -194,9 +182,9 @@ describe("decodeBuffer", () => {
 	});
 
 	test("CP1252 VBA module-like content → correct", () => {
-		const buf = cp1252("' Module de démonstration\nMsgBox \"Voilà !\"");
+		const buf = cp1252('\' Module de démonstration\nMsgBox "Voilà !"');
 		const result = decodeBuffer(buf);
-		expect(result).toBe("' Module de démonstration\nMsgBox \"Voilà !\"");
+		expect(result).toBe('\' Module de démonstration\nMsgBox "Voilà !"');
 		expect(result).not.toContain("\uFFFD");
 	});
 
@@ -296,11 +284,11 @@ describe("sniff → decode roundtrip", () => {
 
 	test("no replacement characters in CP1252 VBA source", () => {
 		const vba = [
-			"Attribute VB_Name = \"ModuleAccents\"",
+			'Attribute VB_Name = "ModuleAccents"',
 			"",
 			"' Démonstration",
 			"Public Sub Test()",
-			"    MsgBox \"Voilà !\"",
+			'    MsgBox "Voilà !"',
 			"End Sub"
 		].join("\n");
 		const buf = cp1252(vba);

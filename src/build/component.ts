@@ -2,7 +2,13 @@ import { CliError, ErrorCode } from "../errors";
 import { readFile } from "../utils/fs";
 import { extname } from "../utils/path";
 import { BY_LINE } from "../utils/text";
-import { Codepage, codepageToLabel, decodeBuffer, SniffResult, sniffEncoding } from "./encoding-sniffer";
+import {
+	Codepage,
+	codepageToLabel,
+	decodeBuffer,
+	SniffResult,
+	sniffEncoding
+} from "./encoding-sniffer";
 
 export type ComponentType = "module" | "class" | "form" | "document";
 

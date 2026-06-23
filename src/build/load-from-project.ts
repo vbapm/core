@@ -32,13 +32,15 @@ export async function loadFromProject(
 	for (const manifest of manifests) {
 		for (const source of manifest.src) {
 			loadingComponents.push(
-				Component.load(source.path, Codepage.Unknown, { binary_path: source.binary }).then(component => {
-					if (manifest !== project.manifest) {
-						fromDependencies.components.set(component, manifest.name);
-					}
+				Component.load(source.path, Codepage.Unknown, { binary_path: source.binary }).then(
+					component => {
+						if (manifest !== project.manifest) {
+							fromDependencies.components.set(component, manifest.name);
+						}
 
-					return component;
-				})
+						return component;
+					}
+				)
 			);
 		}
 		for (const reference of manifest.references) {
@@ -56,7 +58,9 @@ export async function loadFromProject(
 
 	if (!options.release) {
 		for (const source of project.manifest.devSrc) {
-			loadingComponents.push(Component.load(source.path, Codepage.Unknown, { binary_path: source.binary }));
+			loadingComponents.push(
+				Component.load(source.path, Codepage.Unknown, { binary_path: source.binary })
+			);
 		}
 		for (const reference of project.manifest.devReferences) {
 			const nameGuid = `${reference.name}_${reference.guid}`;

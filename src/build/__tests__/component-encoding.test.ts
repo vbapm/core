@@ -5,14 +5,34 @@ import { Component } from "../component";
 
 function cp1252(text: string): Buffer {
 	const MAP: Record<string, number> = {
-		"é": 0xe9, "è": 0xe8, "ê": 0xea, "ë": 0xeb,
-		"à": 0xe0, "â": 0xe2, "ä": 0xe4,
-		"ù": 0xf9, "û": 0xfb, "ü": 0xfc,
-		"ç": 0xe7, "ô": 0xf4, "î": 0xee, "ï": 0xef,
-		"É": 0xc9, "È": 0xc8, "Ê": 0xca, "Ë": 0xcb,
-		"À": 0xc0, "Â": 0xc2, "Ä": 0xc4,
-		"Ù": 0xd9, "Û": 0xdb, "Ü": 0xdc,
-		"Ç": 0xc7, "œ": 0x9c, "Œ": 0x8c, "€": 0x80,
+		é: 0xe9,
+		è: 0xe8,
+		ê: 0xea,
+		ë: 0xeb,
+		à: 0xe0,
+		â: 0xe2,
+		ä: 0xe4,
+		ù: 0xf9,
+		û: 0xfb,
+		ü: 0xfc,
+		ç: 0xe7,
+		ô: 0xf4,
+		î: 0xee,
+		ï: 0xef,
+		É: 0xc9,
+		È: 0xc8,
+		Ê: 0xca,
+		Ë: 0xcb,
+		À: 0xc0,
+		Â: 0xc2,
+		Ä: 0xc4,
+		Ù: 0xd9,
+		Û: 0xdb,
+		Ü: 0xdc,
+		Ç: 0xc7,
+		œ: 0x9c,
+		Œ: 0x8c,
+		"€": 0x80
 	};
 
 	const bytes: number[] = [];
@@ -25,17 +45,13 @@ function cp1252(text: string): Buffer {
 }
 
 function makeVbaModule(name: string, body: string): string {
-	return [
-		`Attribute VB_Name = "${name}"`,
-		"",
-		body
-	].join("\n");
+	return [`Attribute VB_Name = "${name}"`, "", body].join("\n");
 }
 
 // ── tests ────────────────────────────────────────────────────────
 
 describe("Component encoding", () => {
-	const vbaBody = "' Démonstration\nPublic Sub Test()\n    MsgBox \"Voilà !\"\nEnd Sub\n";
+	const vbaBody = '\' Démonstration\nPublic Sub Test()\n    MsgBox "Voilà !"\nEnd Sub\n';
 
 	test("CP1252 buffer + Codepage.Windows1252 → correct accents", () => {
 		const source = makeVbaModule("ModuleAccents", vbaBody);
@@ -91,10 +107,10 @@ describe("Component encoding", () => {
 	test("class component with CP1252 accents + known codepage", () => {
 		const source = [
 			"VERSION 1.0 CLASS",
-			"Attribute VB_Name = \"ClasseRésumé\"",
+			'Attribute VB_Name = "ClasseRésumé"',
 			"",
 			"Public Property Get Résultat() As String",
-			"    Résultat = \"Opération réussie\"",
+			'    Résultat = "Opération réussie"',
 			"End Property"
 		].join("\n");
 		const buf = cp1252(source);
@@ -108,7 +124,7 @@ describe("Component encoding", () => {
 	test("form component with CP1252 + Unknown codepage → correct .frm", () => {
 		const source = [
 			"VERSION 5.00",
-			"Attribute VB_Name = \"UserForm1\"",
+			'Attribute VB_Name = "UserForm1"',
 			"",
 			"' Formulaire de démarrage"
 		].join("\n");
