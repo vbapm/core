@@ -1,13 +1,13 @@
 Attribute VB_Name = "Accents"
 Option Explicit
 
-' Module de test pour les caractères accentués français
-' é è ê ë à â ä ù û ü ç É È Ê Ë À Â Ä Ù Û Ü Ç
+' Module de test pour les caractÃ¨res accentuÃ©s franÃ§ais
+' Ã© Ã¨ Ãª Ã« Ã  Ã¢ Ã¤ Ã¹ Ã» Ã¼ Ã§ Ã‰ Ãˆ ÃŠ Ã‹ Ã€ Ã‚ Ã„ Ã™ Ã› Ãœ Ã‡
 
 Public Function MessageAccents() As String
-    MessageAccents = "Voilà les accents français : é è ê à ç ù"
+    MessageAccents = "VoilÃ  les accents franÃ§ais : Ã© Ã¨ Ãª Ã  Ã§ Ã¹"
 End Function
 
 Public Function MessageAccentsMajuscules() As String
-    MessageAccentsMajuscules = "Élève très appliqué"
+    MessageAccentsMajuscules = "Ã‰lÃ¨ve trÃ¨s appliquÃ©"
 End Function
