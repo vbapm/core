@@ -51,11 +51,7 @@ Object {
     Object {
       "name": "Class1",
       "path": "src/Class1.cls",
-    },
-    Object {
-      "name": "Accents",
-      "path": "src/Accents.bas",
-    },
+    }
   ],
   "target": Object {
     "filename": "standard.xlsm",
