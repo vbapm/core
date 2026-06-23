@@ -48,9 +48,7 @@ const describeML = isMultilingualTest ? describe : describe.skip;
  * as UTF-8 would produce replacement characters.
  */
 async function readExportedFile(dir: string, filename: string): Promise<string> {
-	const { getSystemCodepage, codepageToLabel } = await import(
-		"../src/build/encoding-sniffer"
-	);
+	const { getSystemCodepage, codepageToLabel } = await import("../src/build/encoding-sniffer");
 	const iconv = require("iconv-lite");
 	const buffer = await readFile(join(dir, "src", filename));
 	return iconv.decode(buffer, codepageToLabel(getSystemCodepage()));
