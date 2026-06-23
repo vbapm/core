@@ -1,0 +1,6 @@
+[project]
+name = "multilingual-cp932"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[src]
+Hello = "src/Hello.bas"

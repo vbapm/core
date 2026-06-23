@@ -259,6 +259,10 @@ describe("codepageToLabel", () => {
 	test("UTF8 → utf-8", () => {
 		expect(codepageToLabel(Codepage.UTF8)).toBe("utf-8");
 	});
+
+	test("Windows932 → cp932", () => {
+		expect(codepageToLabel(Codepage.Windows932)).toBe("cp932");
+	});
 });
 
 // ── getSystemCodepage ────────────────────────────────────────────

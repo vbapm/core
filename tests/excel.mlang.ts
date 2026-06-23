@@ -137,6 +137,16 @@ const FIXTURES: MultilingualFixture[] = [
 			"Ą Ć Ę Ł Ń Ó Ś Ź Ż",
 			"Witaj świecie"
 		]
+	},
+	{
+		codepage: "932",
+		dir: join(fixturesDir, "cp932"),
+		filename: "Hello.bas",
+		expectedStrings: [
+			"こんにちは世界",
+			"日本語",
+			"漢字"
+		]
 	}
 ];
 

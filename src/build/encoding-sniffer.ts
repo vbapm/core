@@ -39,6 +39,8 @@ export enum Codepage {
 	Windows1257 = 1257, // Baltic
 	Windows1258 = 1258, // Vietnamese
 
+	Windows932 = 932, // Japanese (CP932, not Shift_JIS — see codepageToLabel)
+
 	UTF8 = 65001
 }
 
@@ -67,7 +69,12 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	[Codepage.Windows1255]: "windows-1255",
 	[Codepage.Windows1256]: "windows-1256",
 	[Codepage.Windows1257]: "windows-1257",
-	[Codepage.Windows1258]: "windows-1258"
+	[Codepage.Windows1258]: "windows-1258",
+	// Use "cp932" (Windows-31J), not "shift_jis".  The IANA
+	// Shift_JIS encoding maps 0x5C → ¥ and 0x7E → ‾, while the
+	// Windows codepage maps them to \ and ~ respectively.
+	// VBA on Japanese Windows uses CP932.
+	[Codepage.Windows932]: "cp932"
 };
 
 /**
@@ -173,6 +180,17 @@ export function decodeBuffer(buffer: Buffer, result?: SniffResult): string {
 export function encodeForCodepage(text: string, codepage: Codepage): Buffer {
 	if (codepage === Codepage.Windows1252) {
 		return encodeAsWindows1252(text);
+	}
+
+	// For codepages we can encode natively, do so.
+	// Otherwise fall back to UTF-8 with BOM (VBA reads these correctly).
+	const label = codepageToLabel(codepage);
+	if (label && label !== "utf-8") {
+		try {
+			return Buffer.from(text, label as any);
+		} catch {
+			// encoding not supported by Buffer.from, fall through
+		}
 	}
 
 	// UTF-8 with BOM — VBA can read UTF-8 files that have a BOM
