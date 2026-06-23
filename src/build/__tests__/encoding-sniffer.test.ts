@@ -263,6 +263,10 @@ describe("codepageToLabel", () => {
 	test("Windows932 → cp932", () => {
 		expect(codepageToLabel(Codepage.Windows932)).toBe("cp932");
 	});
+
+	test("Windows936 → gbk", () => {
+		expect(codepageToLabel(Codepage.Windows936)).toBe("gbk");
+	});
 });
 
 // ── getSystemCodepage ────────────────────────────────────────────

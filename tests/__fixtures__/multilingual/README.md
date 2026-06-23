@@ -11,7 +11,8 @@ export roundtrip.
 | `cp1252/` | 1252 | Western European (French, German, Spanish) |
 | `cp1251/` | 1251 | Cyrillic (Russian) |
 | `cp1250/` | 1250 | Central European (Polish, Czech) |
-| `cp932/`  | 932  | Japanese (Shift-JIS) |
+| `cp932/`  | 932  | Japanese (CP932) |
+| `cp936/`  | 936  | Simplified Chinese (GBK) |
 
 ## How it works
 

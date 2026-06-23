@@ -147,6 +147,16 @@ const FIXTURES: MultilingualFixture[] = [
 			"日本語",
 			"漢字"
 		]
+	},
+	{
+		codepage: "936",
+		dir: join(fixturesDir, "cp936"),
+		filename: "Hello.bas",
+		expectedStrings: [
+			"你好世界",
+			"简体中文",
+			"汉字"
+		]
 	}
 ];
 

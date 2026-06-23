@@ -40,6 +40,7 @@ export enum Codepage {
 	Windows1258 = 1258, // Vietnamese
 
 	Windows932 = 932, // Japanese (CP932, not Shift_JIS — see codepageToLabel)
+	Windows936 = 936, // Simplified Chinese (GBK)
 
 	UTF8 = 65001
 }
@@ -74,7 +75,8 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	// Shift_JIS encoding maps 0x5C → ¥ and 0x7E → ‾, while the
 	// Windows codepage maps them to \ and ~ respectively.
 	// VBA on Japanese Windows uses CP932.
-	[Codepage.Windows932]: "cp932"
+	[Codepage.Windows932]: "cp932",
+	[Codepage.Windows936]: "gbk"
 };
 
 /**
