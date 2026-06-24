@@ -41,7 +41,9 @@ export enum Codepage {
 
 	Windows932 = 932, // Japanese (CP932, not Shift_JIS — see codepageToLabel)
 	Windows936 = 936, // Simplified Chinese (GBK)
-	Windows950 = 950, // Traditional Chinese (Big5)
+	Windows874 = 874,  // Thai
+	Windows949 = 949,  // Korean (Unified Hangul Code)
+	Windows950 = 950,  // Traditional Chinese (Big5)
 
 	UTF8 = 65001
 }
@@ -78,6 +80,8 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	// VBA on Japanese Windows uses CP932.
 	[Codepage.Windows932]: "cp932",
 	[Codepage.Windows936]: "gbk",
+	[Codepage.Windows874]: "windows-874",
+	[Codepage.Windows949]: "ks_c_5601-1987",
 	[Codepage.Windows950]: "big5"
 };
 
@@ -136,7 +140,9 @@ export function sniffEncoding(buffer: Buffer): SniffResult {
 /** Known ACP → Codepage mapping for getSystemCodepage. */
 const ACP_TO_CODEPAGE: Record<string, Codepage> = {
 	"932": Codepage.Windows932,
+	"874": Codepage.Windows874,
 	"936": Codepage.Windows936,
+	"949": Codepage.Windows949,
 	"950": Codepage.Windows950,
 	"1250": Codepage.Windows1250,
 	"1251": Codepage.Windows1251,

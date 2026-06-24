@@ -256,6 +256,14 @@ describe("codepageToLabel", () => {
 		expect(codepageToLabel(Codepage.Windows936)).toBe("gbk");
 	});
 
+	test("Windows874 → windows-874", () => {
+		expect(codepageToLabel(Codepage.Windows874)).toBe("windows-874");
+	});
+
+	test("Windows949 → ks_c_5601-1987", () => {
+		expect(codepageToLabel(Codepage.Windows949)).toBe("ks_c_5601-1987");
+	});
+
 	test("Windows950 → big5", () => {
 		expect(codepageToLabel(Codepage.Windows950)).toBe("big5");
 	});
