@@ -39,11 +39,11 @@ export enum Codepage {
 	Windows1257 = 1257, // Baltic
 	Windows1258 = 1258, // Vietnamese
 
-	Windows932 = 932,  // Japanese (Windows-31J, not Shift_JIS — see codepageToLabel)
-	Windows936 = 936,  // Simplified Chinese (GBK)
-	Windows874 = 874,  // Thai
-	Windows949 = 949,  // Korean (Unified Hangul Code - ks_c_5601-1987)
-	Windows950 = 950,  // Traditional Chinese (Big5)
+	Windows932 = 932, // Japanese (Windows-31J, not Shift_JIS — see codepageToLabel)
+	Windows936 = 936, // Simplified Chinese (GBK)
+	Windows874 = 874, // Thai
+	Windows949 = 949, // Korean (Unified Hangul Code - ks_c_5601-1987)
+	Windows950 = 950, // Traditional Chinese (Big5)
 
 	UTF8 = 65001
 }
@@ -74,7 +74,7 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	[Codepage.Windows1256]: "windows-1256", // Arabic
 	[Codepage.Windows1257]: "windows-1257", // Baltic
 	[Codepage.Windows1258]: "windows-1258", // Vietnamese
-	// For Japanese, use "windows-932" (Windows-31J), not "shift_jis".  
+	// For Japanese, use "windows-932" (Windows-31J), not "shift_jis".
 	// The IANA Shift_JIS differs from the Windows codepage.
 	// Namely, 0x5C → ¥ and 0x7E → ‾, while the
 	// Windows codepage maps them to \ and ~ respectively.
@@ -83,7 +83,7 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	[Codepage.Windows936]: "windows-936", // Simplified Chinese (GBK)
 	[Codepage.Windows874]: "windows-874", // Thai
 	[Codepage.Windows949]: "windows-949", // Korean (ks_c_5601-1987)
-	[Codepage.Windows950]: "windows-950", // Traditional Chinese (Big5)
+	[Codepage.Windows950]: "windows-950" // Traditional Chinese (Big5)
 };
 
 /**
