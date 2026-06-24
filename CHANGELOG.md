@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Multilingual support: Encoding detection and conversion for VBA source files across Windows ANSI codepages (CP874, CP932, CP936, CP949, CP950, CP1250–CP1258). Supported via `iconv-lite`. ([#103])
 - `vbapm init` and and `vbapm new` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
