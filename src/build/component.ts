@@ -9,6 +9,7 @@ import {
 	SniffResult,
 	sniffEncoding
 } from "./encoding-sniffer";
+import * as iconv from "iconv-lite";
 
 export type ComponentType = "module" | "class" | "form" | "document";
 
@@ -46,7 +47,6 @@ export class Component {
 				this.code = decodeBuffer(code, result);
 				this.encoding = result;
 			} else {
-				const iconv = require("iconv-lite");
 				this.code = iconv.decode(code, codepageToLabel(codepage));
 			}
 		} else {

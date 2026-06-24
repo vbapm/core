@@ -14,6 +14,8 @@
  * 5. Fall back to windows-1252 (most common ANSI codepage)
  */
 
+import * as iconv from "iconv-lite";
+
 /**
  * Known codepage for a VBA source buffer.
  *
@@ -203,7 +205,7 @@ export function decodeBuffer(buffer: Buffer, result?: SniffResult): string {
 
 	// Fallback: use the system ANSI codepage via iconv-lite
 	const label = codepageToLabel(getSystemCodepage());
-	const iconv = require("iconv-lite");
+	;
 	return iconv.decode(buffer, label);
 }
 
@@ -217,7 +219,7 @@ export function encodeForCodepage(text: string, codepage: Codepage): Buffer {
 	if (!label) {
 		throw new Error(`Cannot encode: no label for codepage ${codepage} (${Codepage[codepage]})`);
 	}
-	const iconv = require("iconv-lite");
+	;
 	return iconv.encode(text, label);
 }
 
