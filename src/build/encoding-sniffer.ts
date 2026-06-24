@@ -39,10 +39,10 @@ export enum Codepage {
 	Windows1257 = 1257, // Baltic
 	Windows1258 = 1258, // Vietnamese
 
-	Windows932 = 932, // Japanese (CP932, not Shift_JIS — see codepageToLabel)
-	Windows936 = 936, // Simplified Chinese (GBK)
+	Windows932 = 932,  // Japanese (Windows-31J, not Shift_JIS — see codepageToLabel)
+	Windows936 = 936,  // Simplified Chinese (GBK)
 	Windows874 = 874,  // Thai
-	Windows949 = 949,  // Korean (Unified Hangul Code)
+	Windows949 = 949,  // Korean (Unified Hangul Code - ks_c_5601-1987)
 	Windows950 = 950,  // Traditional Chinese (Big5)
 
 	UTF8 = 65001
@@ -65,24 +65,25 @@ export function codepageToLabel(codepage: Codepage): string {
 
 const CODEPAGE_LABELS: Record<number, string> = {
 	[Codepage.UTF8]: "utf-8",
-	[Codepage.Windows1250]: "windows-1250",
-	[Codepage.Windows1251]: "windows-1251",
-	[Codepage.Windows1252]: "windows-1252",
-	[Codepage.Windows1253]: "windows-1253",
-	[Codepage.Windows1254]: "windows-1254",
-	[Codepage.Windows1255]: "windows-1255",
-	[Codepage.Windows1256]: "windows-1256",
-	[Codepage.Windows1257]: "windows-1257",
-	[Codepage.Windows1258]: "windows-1258",
-	// Use "cp932" (Windows-31J), not "shift_jis".  The IANA
-	// Shift_JIS encoding maps 0x5C → ¥ and 0x7E → ‾, while the
+	[Codepage.Windows1250]: "windows-1250", // Central European
+	[Codepage.Windows1251]: "windows-1251", // Cyrillic
+	[Codepage.Windows1252]: "windows-1252", // Western European (includes English, Spanish, French, Portuguese, German except ẞ, Italian and more)
+	[Codepage.Windows1253]: "windows-1253", // Greek
+	[Codepage.Windows1254]: "windows-1254", // Turkish
+	[Codepage.Windows1255]: "windows-1255", // Hebrew
+	[Codepage.Windows1256]: "windows-1256", // Arabic
+	[Codepage.Windows1257]: "windows-1257", // Baltic
+	[Codepage.Windows1258]: "windows-1258", // Vietnamese
+	// For Japanese, use "windows-932" (Windows-31J), not "shift_jis".  
+	// The IANA Shift_JIS differs from the Windows codepage.
+	// Namely, 0x5C → ¥ and 0x7E → ‾, while the
 	// Windows codepage maps them to \ and ~ respectively.
-	// VBA on Japanese Windows uses CP932.
-	[Codepage.Windows932]: "cp932",
-	[Codepage.Windows936]: "gbk",
-	[Codepage.Windows874]: "windows-874",
-	[Codepage.Windows949]: "ks_c_5601-1987",
-	[Codepage.Windows950]: "big5"
+	// READ MORE: https://en.wikipedia.org/wiki/Code_page_932_(Microsoft_Windows)#Differences_from_standard_Shift_JIS
+	[Codepage.Windows932]: "windows-932", // Japanese (Windows-31J, not Shift_JIS)
+	[Codepage.Windows936]: "windows-936", // Simplified Chinese (GBK)
+	[Codepage.Windows874]: "windows-874", // Thai
+	[Codepage.Windows949]: "windows-949", // Korean (ks_c_5601-1987)
+	[Codepage.Windows950]: "windows-950", // Traditional Chinese (Big5)
 };
 
 /**

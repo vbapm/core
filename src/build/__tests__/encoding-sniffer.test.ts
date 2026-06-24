@@ -248,24 +248,24 @@ describe("codepageToLabel", () => {
 		expect(codepageToLabel(Codepage.UTF8)).toBe("utf-8");
 	});
 
-	test("Windows932 → cp932", () => {
-		expect(codepageToLabel(Codepage.Windows932)).toBe("cp932");
+	test("Windows932 → windows-932", () => {
+		expect(codepageToLabel(Codepage.Windows932)).toBe("windows-932");
 	});
 
-	test("Windows936 → gbk", () => {
-		expect(codepageToLabel(Codepage.Windows936)).toBe("gbk");
+	test("Windows936 → windows-936", () => {
+		expect(codepageToLabel(Codepage.Windows936)).toBe("windows-936");
 	});
 
 	test("Windows874 → windows-874", () => {
 		expect(codepageToLabel(Codepage.Windows874)).toBe("windows-874");
 	});
 
-	test("Windows949 → ks_c_5601-1987", () => {
-		expect(codepageToLabel(Codepage.Windows949)).toBe("ks_c_5601-1987");
+	test("Windows949 → windows-949", () => {
+		expect(codepageToLabel(Codepage.Windows949)).toBe("windows-949");
 	});
 
-	test("Windows950 → big5", () => {
-		expect(codepageToLabel(Codepage.Windows950)).toBe("big5");
+	test("Windows950 → windows-950", () => {
+		expect(codepageToLabel(Codepage.Windows950)).toBe("windows-950");
 	});
 });
 
