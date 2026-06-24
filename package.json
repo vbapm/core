@@ -88,7 +88,6 @@
         "@rollup/plugin-typescript": "^12.1.2",
         "@types/archiver": "^7.0.0",
         "@types/fs-extra": "^11",
-        "@types/iconv-lite": "^0.0.1",
         "@types/jest": "^30",
         "@types/node": "^24.0.0",
         "@types/node-fetch": "^2.6.13",

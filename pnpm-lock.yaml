@@ -105,9 +105,6 @@ importers:
       '@types/fs-extra':
         specifier: ^11
         version: 11.0.4
-      '@types/iconv-lite':
-        specifier: ^0.0.1
-        version: 0.0.1
       '@types/jest':
         specifier: ^30
         version: 30.0.0
@@ -722,10 +719,6 @@ packages:
 
   '@types/fs-extra@11.0.4':
     resolution: {integrity: sha512-yTbItCNreRooED33qjunPthRcSjERP1r4MqCZc7wv0u2sUkzTFp45tgUfS5+r7FrZPdmCCNflLhVSP/o+SemsQ==}
-
-  '@types/iconv-lite@0.0.1':
-    resolution: {integrity: sha512-SsRBQxGw7/2/NxYJfBdiUx5a7Ms/voaUhOO9u2y9FTeTNBO1PXohzE4i3JfD8q2Te42HLTn5pyZtDf8j1bPKgQ==}
-    deprecated: This is a stub types definition for iconv-lite (https://github.com/ashtuchkin/iconv-lite). iconv-lite provides its own type definitions, so you don\'t need @types/iconv-lite installed!
 
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
@@ -3295,10 +3288,6 @@ snapshots:
   '@types/fs-extra@11.0.4':
     dependencies:
       '@types/jsonfile': 6.1.4
-      '@types/node': 24.13.2
-
-  '@types/iconv-lite@0.0.1':
-    dependencies:
       '@types/node': 24.13.2
 
   '@types/istanbul-lib-coverage@2.0.6': {}
