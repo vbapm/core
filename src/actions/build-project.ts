@@ -45,5 +45,5 @@ export async function buildProject(options: BuildOptions = {}): Promise<string> 
 		await writeLockfile(project.paths.root, project);
 	}
 
-	return join(project.paths.dir, "build", target.filename);
+	return join(project.paths.build, target.filename);
 }

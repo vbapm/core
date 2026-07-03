@@ -51,11 +51,13 @@ export async function loadProject(dir: string = env.cwd): Promise<Project> {
 		? lockfile!.packages
 		: await resolve(config, workspace, lockfile ? lockfile.packages : []);
 
+	const buildDir = manifest.buildDir || "build";
+
 	const paths = {
 		root: workspace.paths.root,
 		dir,
-		build: join(dir, "build"),
-		backup: join(dir, "build", ".backup"),
+		build: join(dir, buildDir),
+		backup: join(dir, buildDir, ".backup"),
 		staging: await tmpFolder({ dir: env.staging })
 	};
 
@@ -140,6 +142,8 @@ export async function initProject(
 
 	const workspace = await loadWorkspace(manifest, dir);
 
+	const buildDir = manifest.buildDir || "build";
+
 	const project: Project = {
 		manifest,
 		workspace,
@@ -148,8 +152,8 @@ export async function initProject(
 		paths: {
 			root: workspace.paths.root,
 			dir,
-			build: join(dir, "build"),
-			backup: join(dir, "build", ".backup"),
+			build: join(dir, buildDir),
+			backup: join(dir, buildDir, ".backup"),
 			staging: await tmpFolder({ dir: env.staging })
 		},
 		hasDirtyLockfile: true

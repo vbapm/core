@@ -19,7 +19,7 @@ export async function runMacro(options: RunOptions): Promise<RunResult> {
 		const project = await loadProject();
 		const { target } = getTarget(project, targetType);
 
-		file = join(project.paths.dir, "build", target.filename);
+		file = join(project.paths.build, target.filename);
 	}
 
 	if (!file) {

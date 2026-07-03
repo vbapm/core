@@ -2,6 +2,7 @@
 
 exports[`loads and parses manifest 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [
     Object {
       "name": "json",
@@ -67,6 +68,7 @@ Object {
 
 exports[`loads valid [dev-dependencies] 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [
     Object {
@@ -124,6 +126,7 @@ Object {
 
 exports[`loads valid [dev-references] 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [
@@ -153,6 +156,7 @@ Object {
 
 exports[`loads valid [dev-src] 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [],
@@ -188,6 +192,7 @@ Object {
 
 exports[`loads valid dependencies 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [
     Object {
       "name": "a",
@@ -245,6 +250,7 @@ Object {
 
 exports[`loads valid package metadata 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [],
@@ -267,6 +273,7 @@ Object {
 
 exports[`loads valid references 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [],
@@ -296,6 +303,7 @@ Object {
 
 exports[`loads valid sources 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [],
@@ -331,6 +339,7 @@ Object {
 
 exports[`loads valid target 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [],
@@ -358,6 +367,7 @@ Object {
 
 exports[`loads valid target 2`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [],
   "devDependencies": Array [],
   "devReferences": Array [],

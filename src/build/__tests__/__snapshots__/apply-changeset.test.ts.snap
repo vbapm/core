@@ -2,6 +2,7 @@
 
 exports[`should apply changeset for project 1`] = `
 Object {
+  "buildDir": undefined,
   "dependencies": Array [
     Object {
       "name": "web",

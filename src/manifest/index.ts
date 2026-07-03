@@ -58,6 +58,7 @@ export interface Manifest extends Snapshot {
 	devDependencies: Dependency[];
 	devReferences: Reference[];
 	target?: Target;
+	buildDir?: string;
 }
 
 const EXAMPLE = `Example vbaproject.toml for a package (e.g. library to be shared):
@@ -86,6 +87,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let publish: boolean | undefined;
 	let target: Target | undefined;
 	let srcEncoding: string | undefined;
+	let buildDir: string | undefined;
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
@@ -96,6 +98,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: projectPublish,
 			target: projectTarget,
 			"src-encoding": projectSrcEncoding,
+			"build-dir": projectBuildDir,
 			...projectMetadata
 		} = value.project;
 
@@ -111,6 +114,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		manifestOk(value.project.target, `[project] target is a required field. \n\n${EXAMPLE}`);
 
 		target = parseTarget(projectTarget, name, dir);
+		buildDir = projectBuildDir;
 	} else {
 		const {
 			name: packageName,
@@ -119,6 +123,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: packagePublish,
 			target: packageTarget,
 			"src-encoding": packageSrcEncoding,
+			"build-dir": packageBuildDir,
 			...packageMetadata
 		} = value.package;
 
@@ -135,6 +140,12 @@ export function parseManifest(value: any, dir: string): Manifest {
 		manifestOk(authors, `[package] authors is a required field. \n\n${EXAMPLE}`);
 
 		target = packageTarget && parseTarget(packageTarget, name, dir);
+		buildDir = packageBuildDir;
+	}
+
+	// Normalize build-dir: strip trailing slashes, default to undefined
+	if (typeof buildDir === "string") {
+		buildDir = normalize(buildDir);
 	}
 
 	const src = parseSrc(value.src || {}, dir);
@@ -157,7 +168,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 		devSrc,
 		devDependencies,
 		devReferences,
-		target
+		target,
+		buildDir
 	};
 }
 
@@ -239,6 +251,10 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 
 	if (manifest.target) {
 		value[type].target = formatTarget(manifest.target, manifest.name, dir);
+	}
+
+	if (manifest.buildDir != null && manifest.buildDir !== "build") {
+		values["build-dir"] = manifest.buildDir;
 	}
 
 	value.src = formatSrc(manifest.src, dir);
