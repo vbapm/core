@@ -5,6 +5,8 @@ import { join, relative, sanitize } from "../utils/path";
 
 /*
   # Target
+  # Indicates what format is targeted for the build ouput and where the input 
+  # source files are located.
 
   target: type | { type, name?, path? }
 
@@ -14,9 +16,21 @@ import { join, relative, sanitize } from "../utils/path";
 export type TargetType = "xlsx" | "xlsm" | "xlam";
 
 export interface Target {
+	/**
+	 * The name of the target file (without extension). If not specified, the package name will be used.
+	 */
 	name: string;
+	/**
+	 * The type of the target file. Must be one of "xlsx", "xlsm", or "xlam".
+	 */
 	type: TargetType;
+	/**
+	 * The path to directory with the input files used to build the target. If not specified, the default path "target" will be used.
+	 */
 	path: string;
+	/**
+	 * The filename of the target file (with extension). This is derived from the name and type.
+	 */
 	filename: string;
 	/** Encoding for the target (e.g. "windows-1252", "cp932"). Defaults to system codepage. */
 	encoding?: string;
