@@ -94,7 +94,7 @@ my-project/
 │       ├── worksheets/
 │       ├── styles.xml
 │       └── ...
-├── build/                   # Copy of the original .xlsm
+├── build/                   # Built workbook (customizable via build-dir in vbaproject.toml)
 │   └── my-project.xlsm
 └── .git/, .gitignore, ...   # Git version control (by default)
 ```
@@ -249,7 +249,9 @@ vba add TestHelpers --dev
 
 ### `build`
 
-Build an Excel workbook from the project's source. The built file is located in the `build/` folder and if a previously built file is found it is moved to `/.backup` to protect against losing any previously saved work.
+Build an Excel workbook from the project's source. The built file is written to the directory specified by `build-dir` in `vbaproject.toml` (defaults to `build/`). If a previously built file is found it is moved to `/.backup` to protect against losing any previously saved work.
+
+To output the built file in the project root instead, set `build-dir = "."` in `vbaproject.toml`.
 
 Build a project:
 
@@ -530,6 +532,13 @@ target = "xlsm"
 Example 2:
 ```toml
 target = { type = "xlam", path = "targets/xlam" }
+```
+
+#### [build-dir]
+`build-dir` specifies where the built `.xlsm` / `.xlam` file is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
+
+```toml
+build-dir = "."    # output to project root instead of build/
 ```
 
 ### [src]

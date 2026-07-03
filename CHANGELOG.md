@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extract warns when transcoding to a non-UTF encoding could lose characters.
   - When extracting from an existing workbook with `vbapm init --from`, encoding is auto-detected and written to `vbaproject.toml`.
 - `vbapm init` and and `vbapm new` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
+- `build-dir` field in `vbaproject.toml` to specify where the built `.xlsm`/`.xlam` is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
+- `vbapm init --from workbook.xlsm` automatically sets `build-dir = "."` when the workbook is at the project root.
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
 - Excel XML export: renames worksheet XML files to stable, identity-based names (`sht{codeName}.xml`) so that reordering sheets produces clean diffs with only ordering metadata changed ([#57]).
