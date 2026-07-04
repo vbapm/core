@@ -173,7 +173,7 @@ function toLockfileManifest(
 	packages: DependencyGraph,
 	dir: string
 ): LockfileManifest {
-	const { name, version } = manifest;
+	const { name } = manifest;
 
 	// Convert dependencies and dev-dependencies to ids
 	const all_dependencies = manifest.dependencies.concat(manifest.devDependencies);

@@ -2,7 +2,7 @@ const { promisify } = require("util");
 const { join, dirname, basename } = require("path");
 const { get: httpsGet } = require("https");
 const { createWriteStream } = require("fs");
-const { ensureDir, pathExists, remove, writeFile, readFile, copy } = require("fs-extra");
+const { ensureDir, pathExists, remove, writeFile, readFile } = require("fs-extra");
 const tmpDir = promisify(require("tmp").dir);
 const decompress = require("decompress");
 
@@ -20,9 +20,6 @@ main().catch(err => {
 	console.error(err);
 	process.exit(1);
 });
-
-const root = join(__dirname, "..");
-const lib = join(root, "lib");
 
 async function main() {
 	await downloadNode();
@@ -56,11 +53,11 @@ async function downloadNode() {
 	await ensureDir(vendor);
 	await Promise.all([
 		decompress(join(dir, windows), vendor, {
-			filter: file => /node\.exe$/.test(file.path),
+			filter: file => file.path.endsWith("node.exe"),
 			map: filename
 		}),
 		decompress(join(dir, mac), vendor, {
-			filter: file => /node$/.test(file.path),
+			filter: file => file.path.endsWith("node"),
 			map: filename
 		})
 	]);

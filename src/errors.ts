@@ -98,7 +98,7 @@ export function manifestOk(value: any, message: string) {
 
 // Utils
 
-const MESSAGE_REGEXP = /(^(.|\n)*?(?=\n\s*at\s.*\:\d*\:\d*))/;
+const MESSAGE_REGEXP = /(^(.|\n)*?(?=\n\s*at\s.*:\d*:\d*))/;
 const ERROR_TEXT = "Error: ";
 
 export function cleanError(error: string | Error): { message: string; stack: string } {

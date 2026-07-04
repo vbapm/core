@@ -71,8 +71,6 @@ export async function addTarget(type: TargetType, info: ProjectInfo, options: Ad
 		}
 
 		await writeManifest(project.manifest, project.paths.dir);
-	} catch (err) {
-		throw err;
 	} finally {
 		// Finally, cleanup staging
 		await remove(staging);

@@ -15,4 +15,3 @@ export declare function setupWorkspace(cwd: string): Promise<{
 	config: import("../../src/config").Config;
 }>;
 export declare function reset(): void;
-export {};

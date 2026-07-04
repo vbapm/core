@@ -1,0 +1,26 @@
+# lefthook.yml
+# See https://github.com/evilmartians/lefthook for documentation
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{ts,js}"
+      run: pnpm oxfmt --check {staged_files}
+      stage_fixed: false
+    lint:
+      glob: "*.ts"
+      run: pnpm oxlint --deny-warnings {staged_files}
+
+#       run: bundle exec rubocop --force-exclusion -- {all_files}
+#
+#     - name: govet
+#       files: git ls-files -m
+#       glob: "*.go"
+#       run: go vet -- {files}
+#
+#     - script: "hello.js"
+#       runner: node
+#
+#     - script: "hello.go"
+#       runner: go run

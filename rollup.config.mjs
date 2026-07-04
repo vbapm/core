@@ -31,7 +31,7 @@ function shebang() {
 					const filePath = path.resolve(options.dir, fileName);
 					try {
 						fs.chmodSync(filePath, 0o755);
-					} catch (e) {
+					} catch {
 						// Ignore chmod errors on Windows
 					}
 				}
@@ -95,11 +95,11 @@ export default [
 		onwarn(warning, warn) {
 			// Ignore known errors
 			if (warning.code === "CIRCULAR_DEPENDENCY" && /glob/.test(warning.importer)) return;
-			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable\-stream/.test(warning.importer || "")) return;
+			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable-stream/.test(warning.importer || "")) return;
 			// semver's Range <-> Comparator mutual dependency is an internal cycle
 			// that cannot be avoided from outside the package; safe to ignore.			
 			if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some(id => /semver/.test(id))) return;
-			if (warning.code === "UNRESOLVED_IMPORT" && /^node:/.test(warning.source || "")) return;
+			if (warning.code === "UNRESOLVED_IMPORT" && (warning.source || "").startsWith("node:")) return;
 			if (warning.code === "EVAL" && /minisat/.test(warning.id)) return;
 
 			warn(warning);
@@ -107,50 +107,8 @@ export default [
 	}
 ];
 
-// Deprecated
-// Explicitly export modern API from readable-stream
-// (exclude fallback API)
-function readableStream() {
-	const isReadable = /readable\-stream[\\,\/]readable\.js/;
-	const isPassthrough = /readable\-stream[\\,\/]passthrough\.js/;
-	const isDuplex = /readable\-stream[\\,\/]duplex\.js/;
-
-	return {
-		name: "readable-stream",
-		load(id) {
-			if (isReadable.test(id)) {
-				return {
-					code: `
-            const Stream = require('stream');
-
-            exports = module.exports = Stream.Readable;
-            exports.Readable = Stream.Readable;
-            exports.Writable = Stream.Writable;
-            exports.Duplex = Stream.Duplex;
-            exports.Transform = Stream.Transform;
-            exports.PassThrough = Stream.PassThrough;
-            exports.Stream = Stream;
-          `
-				};
-			}
-			if (isPassthrough.test(id)) {
-				return {
-					code: `module.exports = require('stream').PassThrough;`
-				};
-			}
-			if (isDuplex.test(id)) {
-				return {
-					code: `module.exports = require('stream').Duplex;`
-				};
-			}
-
-			return null;
-		}
-	};
-}
-
 function debug() {
-	const isBrowser = /debug[\\,\/]src[\\,\/]browser\.js/;
+	const isBrowser = /debug[/,\\]src[/,\\]browser\.js/;
 
 	return {
 		name: "debug",

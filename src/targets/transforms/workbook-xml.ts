@@ -5,7 +5,7 @@ import { env } from "../../env";
 import { UnzipFile } from "../../utils/zip";
 
 const debug = env.debug("vbapm:target.transforms.workbook-xml");
-const WORKBOOK_XML = /xl[\/,\\]workbook\.xml/i;
+const WORKBOOK_XML = /xl[/,\\]workbook\.xml/i;
 
 export default function transformWorkbookXml(file: UnzipFile): UnzipFile {
 	if (!WORKBOOK_XML.test(file.path)) return file;

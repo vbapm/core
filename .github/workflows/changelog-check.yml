@@ -23,6 +23,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Skip changelog requirement for dev PRs
+          pr_title="${{ github.event.pull_request.title }}"
+          if [[ "${pr_title}" == dev:* ]]; then
+            echo "PR title starts with 'dev:' — skipping changelog check."
+            exit 0
+          fi
+
           base_sha="${{ github.event.pull_request.base.sha }}"
           head_sha="${{ github.event.pull_request.head.sha }}"
 
