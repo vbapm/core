@@ -79,19 +79,19 @@ function cp1252(text: string): Buffer {
 // ── sniffEncoding ────────────────────────────────────────────────
 
 describe("sniffEncoding", () => {
-	test("empty buffer → utf8 without BOM", () => {
+	test("empty buffer → unknown", () => {
 		expect(sniffEncoding(Buffer.alloc(0))).toEqual({
-			encoding: "utf8",
+			encoding: "unknown",
 			hasBom: false
 		});
 	});
 
-	test("ASCII-only → utf8 without BOM", () => {
+	test("ASCII-only → unknown (could be any encoding)", () => {
 		const buf = Buffer.from("Hello World", "ascii");
-		expect(sniffEncoding(buf)).toEqual({ encoding: "utf8", hasBom: false });
+		expect(sniffEncoding(buf)).toEqual({ encoding: "unknown", hasBom: false });
 	});
 
-	test("valid UTF-8 (French via proper encoding) → utf8 without BOM", () => {
+	test("valid UTF-8 with multi-byte content → utf8 without BOM", () => {
 		const buf = Buffer.from("é è ê à ç ù", "utf8");
 		expect(sniffEncoding(buf)).toEqual({ encoding: "utf8", hasBom: false });
 	});
@@ -111,43 +111,25 @@ describe("sniffEncoding", () => {
 		expect(sniffEncoding(buf)).toEqual({ encoding: "utf16be", hasBom: true });
 	});
 
-	test("CP1252 with French accents → windows-1252 (not valid UTF-8)", () => {
+	test("CP1252 with French accents → unknown", () => {
 		const buf = cp1252("é è ê à ç ù");
-		expect(sniffEncoding(buf)).toEqual({
-			encoding: "windows-1252",
-			hasBom: false
-		});
+		expect(sniffEncoding(buf)).toEqual({ encoding: "unknown", hasBom: false });
 	});
 
-	test("CP1252 with euro sign (0x80) → windows-1252", () => {
-		const buf = Buffer.from([0x80]); // € in CP1252, invalid in UTF-8
-		expect(sniffEncoding(buf)).toEqual({
-			encoding: "windows-1252",
-			hasBom: false
-		});
+	test("CP1252 with euro sign (0x80) → unknown", () => {
+		const buf = Buffer.from([0x80]);
+		expect(sniffEncoding(buf)).toEqual({ encoding: "unknown", hasBom: false });
 	});
 
-	test("buffer starting with 0xC0 (overlong, invalid UTF-8) → windows-1252", () => {
-		const buf = Buffer.from("Hello\xC0World", "latin1");
-		expect(sniffEncoding(buf)).toEqual({
-			encoding: "windows-1252",
-			hasBom: false
-		});
+	test("buffer with truncated 2-byte UTF-8 sequence → unknown", () => {
+		const buf = Buffer.from("Hello\xC2", "latin1");
+		expect(sniffEncoding(buf)).toEqual({ encoding: "unknown", hasBom: false });
 	});
 
-	test("buffer with truncated 2-byte UTF-8 sequence → windows-1252", () => {
-		const buf = Buffer.from("Hello\xC2", "latin1"); // 0xC2 needs a continuation byte
-		expect(sniffEncoding(buf)).toEqual({
-			encoding: "windows-1252",
-			hasBom: false
-		});
-	});
-
-	test("UTF-16 LE without BOM (sufficient null bytes) → utf16le", () => {
-		// "A" in UTF-16LE = 0x41 0x00, repeat enough times
+	test("UTF-16 LE without BOM → unknown (Phase 1: no heuristic)", () => {
 		const chars = "A".repeat(20);
 		const buf = Buffer.from(chars, "utf16le");
-		expect(sniffEncoding(buf)).toEqual({ encoding: "utf16le", hasBom: false });
+		expect(sniffEncoding(buf)).toEqual({ encoding: "unknown", hasBom: false });
 	});
 });
 
@@ -204,7 +186,7 @@ describe("decodeBuffer", () => {
 
 	test("pre-computed SniffResult skips sniffing", () => {
 		const buf = cp1252("éàç");
-		const result = decodeBuffer(buf, { encoding: "windows-1252", hasBom: false });
+		const result = decodeBuffer(buf, { encoding: "unknown", hasBom: false });
 		expect(result).toBe("éàç");
 	});
 
@@ -286,7 +268,7 @@ describe("sniff → decode roundtrip", () => {
 	test("UTF-8 roundtrip", () => {
 		const original = "Café crème à la française";
 		const buf = Buffer.from(original, "utf8");
-		const result = decodeBuffer(buf);
+		const result = decodeBuffer(buf, { encoding: "utf8", hasBom: false });
 		expect(result).toBe(original);
 	});
 

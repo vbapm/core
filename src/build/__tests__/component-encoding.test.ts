@@ -73,7 +73,7 @@ describe("Component encoding", () => {
 		expect(comp.code).toBe(source);
 		expect(comp.code).not.toContain("\uFFFD");
 		expect(comp.encoding).toBeDefined();
-		expect(comp.encoding!.encoding).toBe("windows-1252");
+		expect(comp.encoding!.encoding).toBe("unknown");
 	});
 
 	test("UTF-8 buffer + Codepage.Unknown → correct", () => {
@@ -83,7 +83,7 @@ describe("Component encoding", () => {
 
 		expect(comp.name).toBe("ModuleTest");
 		expect(comp.code).toBe(source);
-		expect(comp.encoding!.encoding).toBe("utf8");
+		expect(comp.encoding!.encoding).toBe("unknown");
 	});
 
 	test("UTF-8 buffer with French + Codepage.Unknown → correct", () => {
