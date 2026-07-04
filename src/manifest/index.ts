@@ -118,6 +118,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			authors: packageAuthors,
 			publish: packagePublish,
 			target: packageTarget,
+			"src-encoding": packageSrcEncoding,
 			...packageMetadata
 		} = value.package;
 
@@ -126,6 +127,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		version = packageVersion;
 		authors = packageAuthors;
 		publish = packagePublish;
+		srcEncoding = packageSrcEncoding;
 		sectionMetadata = packageMetadata;
 
 		manifestOk(name, `[package] name is a required field. \n\n${EXAMPLE}`);

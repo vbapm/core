@@ -180,3 +180,4 @@ export interface Source {
   files build fine without encoding. Non-ASCII files will start failing with
   a helpful message — this is a controlled breaking change that guides users
   to the fix.
+- Let's say that someone create a new .bas file on their machine and decide to add it to the vbaproject. However, by default VS Code would create that file using utf-8. Can we have a test that creates this type of situation?

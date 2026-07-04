@@ -1,6 +1,7 @@
 import dedent from "@timhall/dedent";
 import { createDocument, importGraph } from "../addin";
 import { loadFromProject, stageBuildGraph } from "../build";
+import { labelToCodepage } from "../build/encoding-sniffer";
 import { CliError, ErrorCode } from "../errors";
 import { Target } from "../manifest/target";
 import { Project } from "../project";
@@ -115,7 +116,11 @@ export async function importTarget(
 	await emptyDir(staging);
 
 	const build_graph = await loadFromProject(project, dependencies, options);
-	const import_graph = await stageBuildGraph(build_graph, staging);
+
+	const targetCodepage = target.encoding
+		? labelToCodepage(target.encoding)
+		: undefined;
+	const import_graph = await stageBuildGraph(build_graph, staging, targetCodepage);
 
 	try {
 		await importGraph(project, target, import_graph, file, options);

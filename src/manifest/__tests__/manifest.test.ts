@@ -53,6 +53,32 @@ test("loads valid sources", () => {
 	expect(normalizeManifest(parseManifest(value, FIXTURES))).toMatchSnapshot();
 });
 
+test("loads src-encoding from [project]", () => {
+	const value = {
+		...BASE_MANIFEST,
+		package: {
+			...BASE_MANIFEST.package,
+			"src-encoding": "cp1252"
+		},
+		src: { A: "src/a.bas" }
+	};
+
+	const manifest = parseManifest(value, FIXTURES);
+	expect(manifest.srcEncoding).toBe("cp1252");
+});
+
+test("loads per-source encoding", () => {
+	const value = {
+		...BASE_MANIFEST,
+		src: {
+			A: { path: "src/a.bas", encoding: "cp932" }
+		}
+	};
+
+	const manifest = parseManifest(value, FIXTURES);
+	expect(manifest.src[0].encoding).toBe("cp932");
+});
+
 test("loads valid [dev-src]", () => {
 	const value = {
 		...BASE_MANIFEST,
@@ -181,6 +207,19 @@ test("loads valid target", () => {
 	value.package.target = { type: "xlam", name: "addin", path: "targets/xlam" };
 
 	expect(normalizeManifest(parseManifest(value, FIXTURES))).toMatchSnapshot();
+});
+
+test("loads target with encoding", () => {
+	const value = {
+		...BASE_MANIFEST,
+		package: {
+			...BASE_MANIFEST.package,
+			target: { type: "xlsm", encoding: "cp932" }
+		}
+	};
+
+	const manifest = parseManifest(value, FIXTURES);
+	expect(manifest.target?.encoding).toBe("cp932");
 });
 
 test("loads and parses manifest", async () => {
