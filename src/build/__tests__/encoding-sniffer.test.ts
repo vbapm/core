@@ -2,6 +2,7 @@ import { Buffer } from "buffer";
 import {
 	Codepage,
 	codepageToLabel,
+	labelToCodepage,
 	decodeBuffer,
 	getSystemCodepage,
 	sniffEncoding
@@ -248,6 +249,34 @@ describe("codepageToLabel", () => {
 
 	test("Windows950 → windows-950", () => {
 		expect(codepageToLabel(Codepage.Windows950)).toBe("windows-950");
+	});
+});
+
+// ── labelToCodepage ──────────────────────────────────────────────
+
+describe("labelToCodepage", () => {
+	test("windows-1252 → Windows1252", () => {
+		expect(labelToCodepage("windows-1252")).toBe(Codepage.Windows1252);
+	});
+
+	test("cp1252 → Windows1252", () => {
+		expect(labelToCodepage("cp1252")).toBe(Codepage.Windows1252);
+	});
+
+	test("Windows-1252 (mixed case) → Windows1252", () => {
+		expect(labelToCodepage("Windows-1252")).toBe(Codepage.Windows1252);
+	});
+
+	test("CP932 → Windows932", () => {
+		expect(labelToCodepage("CP932")).toBe(Codepage.Windows932);
+	});
+
+	test("unknown label → Unknown", () => {
+		expect(labelToCodepage("iso-8859-1")).toBe(Codepage.Unknown);
+	});
+
+	test("empty string → Unknown", () => {
+		expect(labelToCodepage("")).toBe(Codepage.Unknown);
 	});
 });
 

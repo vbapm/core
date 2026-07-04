@@ -101,6 +101,9 @@ const CODEPAGE_LABELS: Record<number, string> = {
 // Build reverse mapping from CODEPAGE_LABELS (label → codepage)
 for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 	LABEL_TO_CODEPAGE[label.toLowerCase()] = Number(cp) as Codepage;
+	// Also register the short "cpXXXX" alias (e.g. "cp1252" → Windows1252)
+	const short = "cp" + cp;
+	LABEL_TO_CODEPAGE[short] = Number(cp) as Codepage;
 }
 
 /**
