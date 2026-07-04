@@ -53,23 +53,31 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 
 	// Try jschardet to see if a different encoding is more likely
 	try {
-		const jschardet = require("jschardet");
+		// TODO: Fix when we update vbapm to ESM-only.
+		const jschardet = (await import("jschardet")).default;
+		if (!jschardet) {
+			throw new Error("jschardet not available");
+		}
 
 		const results = (jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>)
 			.filter((r: { encoding: string }) => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
 			.sort((a: { confidence: number }, b: { confidence: number }) => b.confidence - a.confidence);
 
 		const SYSTEM_PREFIX = /^windows-?/i;
-		if (results.length > 0 && results[0].confidence >= 0.8) {
+		if (results.length > 0 && results[0].confidence >= 0.4) {
 			const detected = results[0].encoding.toLowerCase();
+			// jschardet may return "SHIFT_JIS" for Windows-932 content;
+			// normalize to "cp932" which is our canonical label.
+			const normalized = detected === "shift_jis" ? "cp932" : detected;
 			const systemNormalized = systemLabel.replace(SYSTEM_PREFIX, "cp").toLowerCase();
 
-			if (detected !== systemNormalized) {
-				detectedEncoding = detected;
+			if (normalized !== systemNormalized) {
+				detectedEncoding = normalized;
 			}
 		}
 	} catch {
-		// jschardet unavailable — keep system codepage
+		// Log error message to console as a warning, but don't fail the import. The system codepage is a safe fallback.
+		console.warn("[detectImportEncoding] jschardet unavailable or failed; using system codepage:", systemLabel);
 	}
 
 	return detectedEncoding;

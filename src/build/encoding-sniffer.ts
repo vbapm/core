@@ -120,7 +120,7 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 export const SUPPORTED_WINDOWS_CODEPAGE_LABELS: ReadonlySet<string> = new Set(
 	Object.keys(CODEPAGE_LABELS)
 		.filter(cp => Number(cp) !== Codepage.UTF8)
-		.map(cp => "CP" + cp)
+		.flatMap(cp => ["CP" + cp, "cp" + cp])
 );
 
 /**

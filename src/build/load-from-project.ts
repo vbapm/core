@@ -149,7 +149,12 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		let suggestion = "";
 		try {
 			const buffer = await readFile(source?.path || "");
-			const jschardet = require("jschardet");
+			// TODO: Fix when we update vbapm to ESM-only.
+			const jschardet = (await import("jschardet")).default;
+			if (!jschardet) {
+				throw new Error("jschardet not available");
+			}
+
 			const results = (
 				jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
 			)
@@ -162,8 +167,8 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 					`\nSuggested change:\n\n  src-encoding = "${label}"` +
 					`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
 			}
-		} catch {
-			// jschardet unavailable or file unreadable — omit suggestion
+		} catch (err) {
+			suggestion = "\n\n(Unable to suggest an encoding." + (err instanceof Error ? ` ${err.message}` : "") + ")";
 		}
 
 		throw new CliError(
