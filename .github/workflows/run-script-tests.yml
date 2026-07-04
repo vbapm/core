@@ -351,7 +351,9 @@ jobs:
           fi
           echo "PASS: no cscript references in run.ts"
 
-          grep -q 'powershell.*-File' src/utils/run.ts || { echo "FAIL: run.ts does not invoke powershell"; exit 1; }
+          # After execFile/spawn refactor, powershell and -File may be on different lines.
+          # Use two separate greps to verify both are present.
+          (grep -q 'powershell' src/utils/run.ts && grep -q '\-File' src/utils/run.ts) || { echo "FAIL: run.ts does not invoke powershell -File"; exit 1; }
           echo "PASS: run.ts invokes powershell -File"
 
   # ------------------------------------------------------------------

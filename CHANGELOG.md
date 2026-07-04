@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Switched package manager from npm to pnpm v11.
 
+### Security
+- Replaced shell-based `exec()` with `execFile()` (macOS) and `spawn()` (Windows) in bridge script runner to prevent shell injection from user-controlled arguments. ([#75])
+
 ## [0.8.0] - 2026-04-05
 
 ### Added

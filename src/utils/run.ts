@@ -1,5 +1,5 @@
 import dedent from "@timhall/dedent";
-import { exec as _exec, spawn } from "child_process";
+import { execFile as _execFile, spawn } from "child_process";
 import { promisify } from "util";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
@@ -9,7 +9,7 @@ import { parallel } from "./parallel";
 import { join } from "./path";
 import { createStdoutFile } from "./stdout-file";
 
-const exec = promisify(_exec);
+const execFile = promisify(_execFile);
 
 const debug = env.debug("vbapm:run");
 const SPECIAL_FILE_STDOUT = env.isWindows ? "CON" : "/dev/stdout";
@@ -74,21 +74,31 @@ export async function run(
 	const parts = env.isWindows
 		? [application, file, macro, ...formatted_args]
 		: [application, file, macro, keepOpen ? "1" : "0", ...formatted_args];
-	const command = env.isWindows
-		? `powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" ${
-				keepOpen ? "-KeepOpen " : ""
-			}${parts.map(part => `"${part}"`).join(" ")}`
-		: `osascript '${script}' ${parts.map(part => `'${part}'`).join(" ")}`;
+	const command = env.isWindows ? "powershell" : "osascript";
+	const commandArgs = env.isWindows
+		? [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				script,
+				...(keepOpen ? ["-KeepOpen"] : []),
+				...parts
+			]
+		: [script, ...parts];
 
 	debug("params:", { application, file, macro, args });
-	debug("command:", command);
+	debug("command:", command, commandArgs);
 
 	let result;
 	try {
-		// Use execPowershell on Windows to work around Node.js libuv assertion bug (see execPowershell JSDoc)
+		// Use execPowershell on Windows (spawn-based) to work around Node.js libuv assertion bug
+		// and execFile on macOS to avoid shell injection (no shell on either platform).
+		// TODO: Replace execPowershell with execFile on Windows once upstream Node.js fix lands.
+		//       https://github.com/nodejs/node/issues/56645
 		const { stdout, stderr } = env.isWindows
 			? await execPowershell(script, keepOpen, parts, { env: process.env })
-			: await exec(command, { env: process.env });
+			: await execFile(command, commandArgs, { env: process.env });
 		result = toResult(stdout, stderr);
 	} catch (err: any) {
 		result = toResult(err?.stdout, err?.stderr, err);
