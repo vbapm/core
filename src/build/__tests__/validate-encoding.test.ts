@@ -2,8 +2,7 @@ import { loadFromProject } from "../load-from-project";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { dir } from "../../../tests/__fixtures__";
 import { join } from "../../utils/path";
-import { ensureDir, remove } from "../../utils/fs";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, rmSync } from "fs";
 
 afterEach(reset);
 
@@ -15,8 +14,8 @@ describe("encoding validation", () => {
 		mkdirSync(join(fixtureDir, "targets"), { recursive: true });
 	});
 
-	afterAll(async () => {
-		await remove(fixtureDir);
+	afterAll(() => {
+		rmSync(fixtureDir, { recursive: true, force: true });
 	});
 
 	test("ASCII-only source without encoding → builds fine", async () => {

@@ -1,8 +1,8 @@
 import { complex, dir, standardImport } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
-import { pathExists, readFile, remove, ensureDir } from "../../utils/fs";
+import { pathExists, readFile, ensureDir } from "../../utils/fs";
 import { join, relative } from "../../utils/path";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, rmSync } from "fs";
 import { ImportGraph } from "../build-graph";
 import { Codepage } from "../encoding-sniffer";
 import { loadFromProject } from "../load-from-project";
@@ -81,5 +81,5 @@ Module1 = "src/Module1.bas"
 	expect(decoded).toContain("Bonjour");
 
 	// Cleanup
-	await remove(fixtureDir);
+	rmSync(fixtureDir, { recursive: true, force: true });
 });
