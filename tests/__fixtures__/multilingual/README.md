@@ -8,11 +8,14 @@ export roundtrip.
 
 | Directory | Codepage | Region |
 |-----------|----------|--------|
-| `cp1252/` | 1252 | Western European (French, German, Spanish) |
+| `cp1252/` | 1252 | Western European (French, German, Spanish, etc.) |
 | `cp1251/` | 1251 | Cyrillic (Russian) |
 | `cp1250/` | 1250 | Central European (Polish, Czech) |
-| `cp932/`  | 932  | Japanese (CP932) |
-| `cp936/`  | 936  | Simplified Chinese (GBK) |
+| `cp932/`  | 932  | Japanese (Windows-31J / CP932) |
+| `cp936/`  | 936  | Simplified Chinese (GBK / CP936) |
+| `cp950/`  | 950  | Traditional Chinese (Big5 / CP950) |
+| `cp949/`  | 949  | Korean |
+| `cp874/`  | 874  | Thai |
 
 ## How it works
 
