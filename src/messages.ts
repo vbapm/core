@@ -25,5 +25,7 @@ export enum Message {
 	PatchRemoveReference = "patch-remove-reference",
 
 	RegistrySourceLocalOnly = "registry-source-local-only",
-	RegistrySourceSkipPull = "registry-source-skip-pull"
+	RegistrySourceSkipPull = "registry-source-skip-pull",
+
+	EncodingLossWarning = "encoding-loss-warning"
 }

@@ -1,4 +1,5 @@
 import { env } from "../env";
+import { Message } from "../messages";
 import { writeManifest } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Source } from "../manifest/source";
@@ -8,6 +9,7 @@ import { parallel } from "../utils/parallel";
 import { dirname, join } from "../utils/path";
 import { Changeset } from "./changeset";
 import { Component } from "./component";
+import { codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
 export async function applyChangeset(project: Project, changeset: Changeset) {
 	const progress = env.reporter.progress("Updating src files");
@@ -81,7 +83,50 @@ async function updateManifest(project: Project, changeset: Changeset) {
 async function writeComponent(path: string, component: Component) {
 	const dir = dirname(path);
 	await ensureDir(dir);
-	await writeFile(path, component.code);
+
+	// Write in the source encoding if declared, otherwise UTF-8.
+	// This preserves the original encoding when exporting on a machine
+	// whose system codepage differs from the source encoding.
+	let data: string | Buffer = component.code;
+	const srcEncoding = component.details.sourceEncoding;
+
+	if (srcEncoding) {
+		const iconv = require("iconv-lite");
+		const systemLabel = codepageToLabel(getSystemCodepage());
+
+		if (srcEncoding.toLowerCase() !== systemLabel.toLowerCase()) {
+			// Source encoding differs from the system codepage — transcode.
+			// Warn if the target encoding is not UTF-8/UTF-16 and the
+			// content has non-ASCII characters that may not be representable.
+			const isLossyTarget =
+				!/^utf-?8$/i.test(srcEncoding) &&
+				!/^utf-?16/i.test(srcEncoding);
+
+			if (isLossyTarget) {
+				const hasNonAscii = [...component.code].some(c => c.charCodeAt(0) > 127);
+				if (hasNonAscii) {
+					env.reporter.log(
+						Message.EncodingLossWarning,
+						`Character loss possible: "${component.filename}" contains ` +
+						`non-ASCII characters and is being encoded to ${srcEncoding}. ` +
+						`Some characters may not be representable in the target encoding.`
+					);
+					// NOTE: We are working on an iconv-lite feature to allow a
+					// handler to be passed when an invalid character is being
+					// encoded, so that we can fail the export in the future when
+					// there are such incompatibilities.
+					// See https://github.com/pillarjs/iconv-lite/pull/388
+				}
+			}
+
+			data = iconv.encode(component.code, srcEncoding);
+		} else {
+			// Same encoding as system codepage — encode directly
+			data = iconv.encode(component.code, srcEncoding);
+		}
+	}
+
+	await writeFile(path, data);
 
 	if (component.binaryPath) {
 		if (!component.details.binary) {
