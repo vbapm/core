@@ -26,40 +26,42 @@ Write-Output "Original ACP: $originalAcp"
 $failed = @()
 $passed = @()
 
-foreach ($cp in $Codepages) {
-    Write-Output "`n=============================================="
-    Write-Output "Testing codepage: $cp"
-    Write-Output "=============================================="
+try {
+    foreach ($cp in $Codepages) {
+        Write-Output "`n=============================================="
+        Write-Output "Testing codepage: $cp"
+        Write-Output "=============================================="
 
-    # Ensure Excel is fully closed before changing codepage
-    Write-Output "Closing Excel..."
-    taskkill /f /im excel.exe 2>$null
-    Start-Sleep -Seconds 3
+        # Ensure Excel is fully closed before changing codepage
+        Write-Output "Closing Excel..."
+        taskkill /f /im excel.exe 2>$null
+        Start-Sleep -Seconds 3
 
-    # Set the ANSI codepage in registry
-    Write-Output "Setting ACP to $cp..."
-    Set-ItemProperty -Path $regPath -Name "ACP" -Value $cp -Type String
+        # Set the ANSI codepage in registry
+        Write-Output "Setting ACP to $cp..."
+        Set-ItemProperty -Path $regPath -Name "ACP" -Value $cp -Type String
 
-    # Verify
-    $current = (Get-ItemProperty $regPath).ACP
-    Write-Output "ACP now: $current"
+        # Verify
+        $current = (Get-ItemProperty $regPath).ACP
+        Write-Output "ACP now: $current"
 
-    # Run the multilingual test suite
-    $env:CI = "1"
-    npx jest --config mlang.config.mjs --runInBand --no-coverage
+        # Run the multilingual test suite
+        $env:CI = "1"
+        npx jest --config mlang.config.mjs --runInBand --no-coverage
 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Output "✓ Codepage $cp PASSED"
-        $passed += $cp
-    } else {
-        Write-Output "✗ Codepage $cp FAILED"
-        $failed += $cp
+        if ($LASTEXITCODE -eq 0) {
+            Write-Output "✓ Codepage $cp PASSED"
+            $passed += $cp
+        } else {
+            Write-Output "✗ Codepage $cp FAILED"
+            $failed += $cp
+        }
     }
+} finally {
+    # Restore original ACP (always runs, even on error)
+    Write-Output "`nRestoring original ACP: $originalAcp"
+    Set-ItemProperty -Path $regPath -Name "ACP" -Value $originalAcp -Type String
 }
-
-# Restore original ACP
-Write-Output "`nRestoring original ACP: $originalAcp"
-Set-ItemProperty -Path $regPath -Name "ACP" -Value $originalAcp -Type String
 
 # Summary
 Write-Output "`n=============================================="
