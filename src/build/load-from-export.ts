@@ -7,7 +7,7 @@ import { parallel } from "../utils/parallel";
 import { basename, extname, join } from "../utils/path";
 import { BuildGraph } from "./build-graph";
 import { byComponentName, Component, extensionToType } from "./component";
-import { Codepage, getSystemCodepage } from "./encoding-sniffer";
+import { getSystemCodepage } from "./encoding-sniffer";
 
 const binary_extensions = [".frx"];
 const ignoreFile = (file: string) => {

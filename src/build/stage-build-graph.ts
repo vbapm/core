@@ -2,7 +2,7 @@ import { writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
 import { BuildGraph, ImportGraph } from "./build-graph";
-import { Codepage, encodeForCodepage, getSystemCodepage } from "./encoding-sniffer";
+import { encodeForCodepage, getSystemCodepage } from "./encoding-sniffer";
 
 export async function stageBuildGraph(graph: BuildGraph, staging: string): Promise<ImportGraph> {
 	// VBA's Component.Import reads files in the system ANSI codepage,
