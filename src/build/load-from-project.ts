@@ -1,5 +1,4 @@
 import dedent from "@timhall/dedent";
-import { yellowBright } from "@timhall/ansi-colors";
 import { CliError, ErrorCode } from "../errors";
 import { Manifest } from "../manifest";
 import { Reference } from "../manifest/reference";
@@ -151,7 +150,7 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		try {
 			const buffer = await readFile(source?.path || "");
 			const jschardet = require("jschardet");
-						const results = (
+			const results = (
 				jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
 			)
 				.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
