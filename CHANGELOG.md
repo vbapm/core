@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Transcoding during build (source → target encoding) and export (system codepage → source encoding).
   - Export warns when transcoding to a non-UTF encoding could lose characters.
   - Multilingual e2e CI test suite covering all 8 codepages plus a validation error test.
+- When importing an existing workbook with `vbapm init --from`, encoding is auto-detected and written to `vbaproject.toml`.
 - `vbapm init` and and `vbapm new` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
