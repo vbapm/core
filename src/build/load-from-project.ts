@@ -151,11 +151,10 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		try {
 			const buffer = await readFile(source?.path || "");
 			const jschardet = require("jschardet");
-			const SUPPORTED = /^(CP(932|936|949|950|874|125[0-8]))$/;
-			const results = (
+						const results = (
 				jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
 			)
-				.filter(r => SUPPORTED.test(r.encoding))
+				.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
 				.sort((a, b) => b.confidence - a.confidence);
 
 			if (results.length > 0 && results[0].confidence >= 0.5) {

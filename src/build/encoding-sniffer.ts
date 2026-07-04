@@ -107,6 +107,23 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 }
 
 /**
+ * Set of Windows Cedepages that vbapm supports using the jschardet naming rules.
+ *
+ * jschardet returns uppercase labels like `"CP1252"` or `"CP932"`.
+ * This set includes all Windows ANSI / DBCS codepages known to the
+ * sniffer, excluding UTF-8 (which the sniffer already handles via BOM
+ * and multi-byte detection).
+ *
+ * Used by callers that filter jschardet's `detectAll` results to only
+ * relevant encodings.
+ */
+export const SUPPORTED_WINDOWS_CODEPAGE_LABELS: ReadonlySet<string> = new Set(
+	Object.keys(CODEPAGE_LABELS)
+		.filter(cp => Number(cp) !== Codepage.UTF8)
+		.map(cp => "CP" + cp)
+);
+
+/**
  * Detect the encoding of a buffer containing VBA source code.
  *
  * Detection order:
