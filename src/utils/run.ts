@@ -164,7 +164,7 @@ function execPowershell(
 export function escape(value: string): string {
 	// Replace quotes with ^q placeholder to avoid issues with shell argument passing.
 	// The PowerShell/AppleScript bridge script unescapes these back to quotes.
-	return value.replace(/\"/g, "^q");
+	return value.replace(/"/g, "^q");
 }
 
 export function unescape(value: string): string {
@@ -187,7 +187,7 @@ export function toResult(stdout: string, stderr: string, err?: Error): RunResult
 			} else {
 				throw new Error("(ok, non-standard response)");
 			}
-		} catch (err) {
+		} catch {
 			success = true;
 			messages = [stdout];
 		}

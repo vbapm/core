@@ -31,7 +31,7 @@ export async function solveSat(workspace: Workspace, resolver: Resolver): Promis
 	}
 
 	const reversed = [...resolver].reverse();
-	for (const [name, resolved] of reversed) {
+	for (const [, resolved] of reversed) {
 		const { registered } = resolved;
 
 		for (const registration of registered) {

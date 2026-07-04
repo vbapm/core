@@ -146,7 +146,7 @@ export async function backupTarget(project: Project, target: Target) {
 
 		try {
 			await move(file, backup);
-		} catch (err: any) {
+		} catch {
 			throw new CliError(ErrorCode.TargetIsOpen, targetIsOpen(target, file));
 		}
 	}

@@ -40,13 +40,13 @@ const defaults: ConfigValue = {
 export async function loadConfig(): Promise<Config> {
 	const user: ConfigValue = {
 		...empty,
-		...((await readConfig(env.config)) || {})
+		...(await readConfig(env.config))
 	};
 
 	const dir = await findConfig(env.cwd);
 	const local: ConfigValue = {
 		...empty,
-		...(dir ? await readConfig(dir) : {})
+		...(dir ? await readConfig(dir) : undefined)
 	};
 
 	const override = loadConfigFromEnv();
@@ -94,7 +94,7 @@ export async function readConfig(dir: string): Promise<ConfigValue | undefined> 
 
 // Find config up from and including given dir
 // (looking for .vbapm/config.toml)
-export async function findConfig(dir: string): Promise<string | undefined> {
+export async function findConfig(_dir: string): Promise<string | undefined> {
 	// TODO Search for .vbapm/config.toml starting at cwd
 	return;
 }

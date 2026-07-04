@@ -140,7 +140,7 @@ async function publishToRegistry(entry, { dryrun }) {
 	let raw_entries = "";
 	try {
 		raw_entries = await readFile(entries_path, "utf8");
-	} catch (error) {}
+	} catch {}
 
 	const entries = raw_entries
 		.split("\n")

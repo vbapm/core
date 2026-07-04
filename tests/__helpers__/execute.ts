@@ -82,7 +82,7 @@ export async function execute(
 }
 
 const isBackup = /\.backup/;
-const isGit = /\.git[\/,\\]/;
+const isGit = /\.git[/,\\]/;
 const isBinary = (file: string) => [".xlsm", ".frx"].includes(extname(file));
 
 export async function readdir(cwd: string): Promise<{ [path: string]: string }> {

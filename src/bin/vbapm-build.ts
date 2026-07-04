@@ -28,7 +28,7 @@ export default async function (args: Args) {
 	const path = await buildProject({ target, addin, release });
 	console.log(`Done. ${time(process.hrtime(start))}`);
 
-	if (!!args.open) {
+	if (args.open) {
 		console.log(`Opening built target: ${path}`);
 		await openTarget(path);
 	}

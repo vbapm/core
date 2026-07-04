@@ -107,8 +107,6 @@ export async function exportProject(options: ExportOptions = {}) {
 			xmlOnly: options.xmlOnly,
 			vbaOnly: options.vbaOnly
 		});
-	} catch (err) {
-		throw err;
 	} finally {
 		// @ts-ignore Variable is used before being assigned
 		if (staging) await remove(staging);

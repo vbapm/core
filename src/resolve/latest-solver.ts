@@ -15,7 +15,7 @@ export async function solveLatest(
 
 	const graph = [];
 	const errors = [];
-	for (const [name, resolution] of resolver) {
+	for (const [, resolution] of resolver) {
 		const matching = getMatching(resolution);
 
 		if (!matching) {

@@ -33,7 +33,7 @@ async function mac() {
 
 function getInput(platform) {
 	const ignoreBackup = path => !/\.backup/.test(path);
-	const isPowershellScript = path => /\.ps1$/.test(path);
+	const isPowershellScript = path => path.endsWith(".ps1");
 	const isAppleScript = path => /\.applescript/.test(path);
 	const compatibleRunScript = path =>
 		platform === "win32" ? isPowershellScript(path) : isAppleScript(path);

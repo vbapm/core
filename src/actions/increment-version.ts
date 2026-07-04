@@ -23,7 +23,7 @@ export async function incrementVersion(
 		version = isIncrement
 			? inc(currentVersion, increment as ReleaseType, undefined, options.preid)
 			: valid(increment);
-	} catch (_error) {}
+	} catch {}
 
 	if (!version) {
 		throw new CliError(ErrorCode.InvalidVersion, `Invalid version increment "${increment}"`);

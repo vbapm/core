@@ -30,7 +30,7 @@ export class Component {
 			);
 		}
 
-		const [key, value] = line.split("=");
+		const [, value] = line.split("=");
 		return JSON.parse(value);
 	}
 
@@ -38,8 +38,8 @@ export class Component {
 		const line = findLine(this.code, "OleObjectBlob");
 		if (!line) return;
 
-		const [key, value] = line.split("=", 2);
-		const [path, offset] = value.split(":", 2);
+		const [, value] = line.split("=", 2);
+		const [path] = value.split(":", 2);
 		return JSON.parse(path);
 	}
 
