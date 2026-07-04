@@ -215,6 +215,17 @@ describeML("multilingual encoding", () => {
 			});
 		}
 	);
+
+	// This fixture intentionally lacks src-encoding and should fail the build
+	test("non-ASCII without src-encoding fails with helpful error", async () => {
+		const noEncDir = join(fixturesDir, "no-encoding");
+
+		await setup(noEncDir, "ml-no-enc", async cwd => {
+			await expect(execute(cwd, "build")).rejects.toThrow(
+				/Non-ASCII characters detected/
+			);
+		});
+	});
 });
 
 /**
