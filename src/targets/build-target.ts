@@ -117,9 +117,7 @@ export async function importTarget(
 
 	const build_graph = await loadFromProject(project, dependencies, options);
 
-	const targetCodepage = target.encoding
-		? labelToCodepage(target.encoding)
-		: undefined;
+	const targetCodepage = target.encoding ? labelToCodepage(target.encoding) : undefined;
 	const import_graph = await stageBuildGraph(build_graph, staging, targetCodepage);
 
 	try {

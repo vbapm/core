@@ -32,7 +32,10 @@ Module1 = "src/Module1.bas"
 		const srcPath = join(fixtureDir, "src", "Module1.bas");
 		const manifestPath = join(fixtureDir, "vbaproject.toml");
 
-		await writeFileSync(srcPath, 'Attribute VB_Name = "Module1"\nPublic Sub Hello()\n  MsgBox "Hi"\nEnd Sub\n');
+		await writeFileSync(
+			srcPath,
+			'Attribute VB_Name = "Module1"\nPublic Sub Hello()\n  MsgBox "Hi"\nEnd Sub\n'
+		);
 		await writeFileSync(manifestPath, toml);
 
 		const { project, dependencies } = await setup(fixtureDir);
@@ -56,13 +59,15 @@ Module1 = "src/Module1.bas"
 		const manifestPath = join(fixtureDir, "vbaproject.toml");
 
 		// French accented characters
-		const srcContent = 'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve façade\nPublic Sub Hello()\n  MsgBox "é"  \' café\nEnd Sub\n';
+		const srcContent =
+			'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve façade\nPublic Sub Hello()\n  MsgBox "é"  \' café\nEnd Sub\n';
 		writeFileSync(srcPath, srcContent);
 		writeFileSync(manifestPath, toml);
 
 		const { project, dependencies } = await setup(fixtureDir);
-		await expect(loadFromProject(project, dependencies))
-			.rejects.toThrow(/Non-ASCII characters detected/);
+		await expect(loadFromProject(project, dependencies)).rejects.toThrow(
+			/Non-ASCII characters detected/
+		);
 	});
 
 	test("non-ASCII with src-encoding → builds fine", async () => {
@@ -80,7 +85,8 @@ Module1 = "src/Module1.bas"
 		const srcPath = join(fixtureDir, "src", "Module1.bas");
 		const manifestPath = join(fixtureDir, "vbaproject.toml");
 
-		const srcContent = 'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve façade\nPublic Sub Hello()\n  MsgBox "é"  \' café\nEnd Sub\n';
+		const srcContent =
+			'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve façade\nPublic Sub Hello()\n  MsgBox "é"  \' café\nEnd Sub\n';
 		writeFileSync(srcPath, srcContent);
 		writeFileSync(manifestPath, toml);
 
@@ -105,7 +111,8 @@ Module1 = { path = "src/Module1.bas", encoding = "cp932" }
 		const manifestPath = join(fixtureDir, "vbaproject.toml");
 
 		// Japanese characters (CP932)
-		const srcContent = 'Attribute VB_Name = "Module1"\n\' 日本語テスト\nPublic Sub Hello()\n  MsgBox "こんにちは"\nEnd Sub\n';
+		const srcContent =
+			'Attribute VB_Name = "Module1"\n\' 日本語テスト\nPublic Sub Hello()\n  MsgBox "こんにちは"\nEnd Sub\n';
 		writeFileSync(srcPath, srcContent);
 		writeFileSync(manifestPath, toml);
 

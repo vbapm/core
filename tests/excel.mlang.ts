@@ -221,9 +221,7 @@ describeML("multilingual encoding", () => {
 		const noEncDir = join(fixturesDir, "no-encoding");
 
 		await setup(noEncDir, "ml-no-enc", async cwd => {
-			await expect(execute(cwd, "build")).rejects.toThrow(
-				/Non-ASCII characters detected/
-			);
+			await expect(execute(cwd, "build")).rejects.toThrow(/Non-ASCII characters detected/);
 		});
 	});
 });

@@ -35,21 +35,17 @@ export async function loadFromProject(
 		for (const source of manifest.src) {
 			// Resolve encoding: per-source override > project-level > Unknown
 			const declaredLabel = source.encoding ?? manifest.srcEncoding;
-			const codepage = declaredLabel
-				? labelToCodepage(declaredLabel)
-				: Codepage.Unknown;
+			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 
 			loadingComponents.push(
-				Component.load(source.path, codepage, { binary_path: source.binary }).then(
-					component => {
-						component.details.sourceEncoding = declaredLabel;
-						if (manifest !== project.manifest) {
-							fromDependencies.components.set(component, manifest.name);
-						}
-
-						return component;
+				Component.load(source.path, codepage, { binary_path: source.binary }).then(component => {
+					component.details.sourceEncoding = declaredLabel;
+					if (manifest !== project.manifest) {
+						fromDependencies.components.set(component, manifest.name);
 					}
-				)
+
+					return component;
+				})
 			);
 		}
 		for (const reference of manifest.references) {
@@ -156,13 +152,16 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 			const buffer = await readFile(source?.path || "");
 			const jschardet = require("jschardet");
 			const SUPPORTED = /^(CP(932|936|949|950|874|125[0-8]))$/;
-			const results = (jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>)
+			const results = (
+				jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
+			)
 				.filter(r => SUPPORTED.test(r.encoding))
 				.sort((a, b) => b.confidence - a.confidence);
 
 			if (results.length > 0 && results[0].confidence >= 0.5) {
 				const label = results[0].encoding.toLowerCase();
-				suggestion = `\nSuggested change:\n\n  src-encoding = "${label}"` +
+				suggestion =
+					`\nSuggested change:\n\n  src-encoding = "${label}"` +
 					`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
 			}
 		} catch {

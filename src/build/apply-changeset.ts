@@ -98,9 +98,7 @@ async function writeComponent(path: string, component: Component) {
 			// Source encoding differs from the system codepage — transcode.
 			// Warn if the target encoding is not UTF-8/UTF-16 and the
 			// content has non-ASCII characters that may not be representable.
-			const isLossyTarget =
-				!/^utf-?8$/i.test(srcEncoding) &&
-				!/^utf-?16/i.test(srcEncoding);
+			const isLossyTarget = !/^utf-?8$/i.test(srcEncoding) && !/^utf-?16/i.test(srcEncoding);
 
 			if (isLossyTarget) {
 				const hasNonAscii = [...component.code].some(c => c.charCodeAt(0) > 127);
@@ -108,8 +106,8 @@ async function writeComponent(path: string, component: Component) {
 					env.reporter.log(
 						Message.EncodingLossWarning,
 						`Character loss possible: "${component.filename}" contains ` +
-						`non-ASCII characters and is being encoded to ${srcEncoding}. ` +
-						`Some characters may not be representable in the target encoding.`
+							`non-ASCII characters and is being encoded to ${srcEncoding}. ` +
+							`Some characters may not be representable in the target encoding.`
 					);
 					// NOTE: We are working on an iconv-lite feature to allow a
 					// handler to be passed when an invalid character is being

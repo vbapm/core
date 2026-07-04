@@ -54,7 +54,8 @@ Module1 = "src/Module1.bas"
 `;
 
 	// CP1252: é = 0xE9, à = 0xE0
-	const srcContent = 'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve\nPublic Sub Bonjour()\nEnd Sub\n';
+	const srcContent =
+		'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve\nPublic Sub Bonjour()\nEnd Sub\n';
 	const srcPath = join(fixtureDir, "src", "Module1.bas");
 	const manifestPath = join(fixtureDir, "vbaproject.toml");
 	writeFileSync(srcPath, srcContent);
