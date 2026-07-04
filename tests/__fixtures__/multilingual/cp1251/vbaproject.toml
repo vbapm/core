@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "multilingual-cp1251"
 target = { type = "xlsm", path = "targets/xlsm" }
 
