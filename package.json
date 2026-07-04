@@ -43,7 +43,7 @@
         "test:e2e": "cross-env VBA_BACKGROUND_BUILD=0 jest --config e2e.config.mjs --runInBand",
         "test:e2e:background": "cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand",
         "test:e2e:updateSnapshots": "cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand --updateSnapshot",
-        "test:e2e:mlang": "cross-env E2E_ML=1 jest --config mlang.config.mjs --runInBand",
+        "test:e2e:multilang": "cross-env E2E_ML=1 jest --config multilang.config.mjs --runInBand",
         "build": "rimraf lib && rollup -c rollup.config.mjs",
         "build:lib": "run-s build && tsc -p tsconfig.build.json",
         "build:cli": "run-s build && node scripts/ensure-vendor",

@@ -63,7 +63,7 @@ jobs:
         shell: pwsh
         run: |
           # The loop script iterates over codepages (1252, 1251, 1250),
-          # sets each in the registry, and runs the mlang Jest suite.
+          # sets each in the registry, and runs the multilang Jest suite.
           # Excel is killed between iterations so new processes pick up
           # the changed ACP codepage.
-          ./tests/mlang-loop.ps1
+          ./tests/multilang-loop.ps1

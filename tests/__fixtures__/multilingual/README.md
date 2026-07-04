@@ -1,6 +1,6 @@
 # Multilingual Encoding Fixtures
 
-These fixtures are used by `tests/excel.mlang.ts` to verify that VBA source
+These fixtures are used by `tests/excel.multilang.ts` to verify that VBA source
 files encoded in different Windows ANSI codepages survive the full build →
 export roundtrip.
 
@@ -33,5 +33,5 @@ export roundtrip.
 The test is gated behind the `E2E_ML` environment variable:
 
 ```powershell
-pnpm test:e2e:mlang
+pnpm test:e2e:multilang
 ```

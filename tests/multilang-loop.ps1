@@ -4,7 +4,7 @@
     
 .DESCRIPTION
     Iterates over Windows ANSI codepages, sets each one in the registry,
-    and runs the multilingual Jest suite (mlang.config.mjs) for that
+    and runs the multilingual Jest suite (multilang.config.mjs) for that
     codepage. Excel must be installed and closed between iterations so
     that new Excel processes pick up the changed ACP.
     
@@ -47,7 +47,7 @@ try {
 
         # Run the multilingual test suite
         $env:CI = "1"
-        npx jest --config mlang.config.mjs --runInBand --no-coverage
+        npx jest --config multilang.config.mjs --runInBand --no-coverage
 
         if ($LASTEXITCODE -eq 0) {
             Write-Output "✓ Codepage $cp PASSED"

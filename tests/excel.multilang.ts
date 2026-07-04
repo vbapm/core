@@ -28,7 +28,7 @@
  *
  * ## Running
  *
- *   pnpm test:e2e:mlang
+ *   pnpm test:e2e:multilang
  */
 
 import { readFile } from "fs-extra";

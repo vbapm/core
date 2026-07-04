@@ -7,13 +7,13 @@
  * variable set.
  *
  * Run:
- *   $env:E2E_ML=1; npx jest --config mlang.config.mjs --runInBand
+ *   $env:E2E_ML=1; npx jest --config multilang.config.mjs --runInBand
  */
 
 export default {
 	testEnvironment: "node",
 	testTimeout: 300000,
-	testMatch: ["**/tests/**/*.mlang.ts"],
+	testMatch: ["**/tests/**/*.multilang.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
 	transformIgnorePatterns: [
