@@ -8,7 +8,7 @@ import { BuildOptions } from "../targets/build-target";
 import { readFile } from "../utils/fs";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
-import { Codepage, labelToCodepage } from "./encoding-sniffer";
+import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
 import { byComponentName, Component } from "./component";
 
 export async function loadFromProject(
