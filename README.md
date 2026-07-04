@@ -76,8 +76,6 @@ If you want to start in the current directory instead of creating a new one:
 vba init
 ```
 
-```txt
-
 This creates a new directory `my-project/` containing:
 
 ```
