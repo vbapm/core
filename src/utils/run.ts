@@ -94,6 +94,8 @@ export async function run(
 	try {
 		// Use execPowershell on Windows (spawn-based) to work around Node.js libuv assertion bug
 		// and execFile on macOS to avoid shell injection (no shell on either platform).
+		// TODO: Replace execPowershell with execFile on Windows once upstream Node.js fix lands.
+		//       https://github.com/nodejs/node/issues/56645
 		const { stdout, stderr } = env.isWindows
 			? await execPowershell(script, keepOpen, parts, { env: process.env })
 			: await execFile(command, commandArgs, { env: process.env });
