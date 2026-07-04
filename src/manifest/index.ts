@@ -52,6 +52,7 @@ export interface Manifest extends Snapshot {
 	type: ManifestType;
 	metadata: Metadata;
 	src: Source[];
+	srcEncoding?: string;
 	references: Reference[];
 	devSrc: Source[];
 	devDependencies: Dependency[];
@@ -84,6 +85,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let authors: string[] | undefined;
 	let publish: boolean | undefined;
 	let target: Target | undefined;
+	let srcEncoding: string | undefined;
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
@@ -93,6 +95,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			authors: projectAuthors,
 			publish: projectPublish,
 			target: projectTarget,
+			"src-encoding": projectSrcEncoding,
 			...projectMetadata
 		} = value.project;
 
@@ -101,6 +104,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		version = projectVersion || DEFAULT_VERSION;
 		authors = projectAuthors;
 		publish = projectPublish;
+		srcEncoding = projectSrcEncoding;
 		sectionMetadata = projectMetadata;
 
 		manifestOk(name, `[project] name is a required field. \n\n${EXAMPLE}`);
@@ -145,6 +149,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		version,
 		metadata: { authors, publish, ...sectionMetadata },
 		src,
+		srcEncoding,
 		dependencies,
 		references,
 		devSrc,

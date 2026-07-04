@@ -64,6 +64,17 @@ export function codepageToLabel(codepage: Codepage): string {
 	return CODEPAGE_LABELS[codepage] ?? "";
 }
 
+/**
+ * Reverse of {@link codepageToLabel}: map an encoding label back to
+ * a {@link Codepage}. Returns {@link Codepage.Unknown} if the label
+ * is not recognised.
+ */
+export function labelToCodepage(label: string): Codepage {
+	return LABEL_TO_CODEPAGE[label.toLowerCase()] ?? Codepage.Unknown;
+}
+
+const LABEL_TO_CODEPAGE: Record<string, Codepage> = {};
+
 const CODEPAGE_LABELS: Record<number, string> = {
 	[Codepage.UTF8]: "utf-8",
 	[Codepage.Windows1250]: "windows-1250", // Central European
@@ -86,6 +97,11 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	[Codepage.Windows949]: "windows-949", // Korean (ks_c_5601-1987)
 	[Codepage.Windows950]: "windows-950" // Traditional Chinese (Big5)
 };
+
+// Build reverse mapping from CODEPAGE_LABELS (label → codepage)
+for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
+	LABEL_TO_CODEPAGE[label.toLowerCase()] = Number(cp) as Codepage;
+}
 
 /**
  * Detect the encoding of a buffer containing VBA source code.

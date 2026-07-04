@@ -67,6 +67,7 @@
         "fs-extra": "^11",
         "iconv-lite": "^0.7.2",
         "isomorphic-git": "^1.37.1",
+        "jschardet": "4.0.0-rc.0",
         "logic-solver": "^2",
         "meant": "^2.0.0",
         "mri": "^1",

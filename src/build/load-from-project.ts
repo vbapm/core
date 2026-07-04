@@ -1,12 +1,14 @@
 import dedent from "@timhall/dedent";
+import { yellowBright } from "@timhall/ansi-colors";
 import { CliError, ErrorCode } from "../errors";
 import { Manifest } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
+import { readFile } from "../utils/fs";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
-import { Codepage } from "./encoding-sniffer";
+import { Codepage, labelToCodepage } from "./encoding-sniffer";
 import { byComponentName, Component } from "./component";
 
 export async function loadFromProject(
@@ -31,9 +33,16 @@ export async function loadFromProject(
 	// Load components and references from project and dependencies
 	for (const manifest of manifests) {
 		for (const source of manifest.src) {
+			// Resolve encoding: per-source override > project-level > Unknown
+			const declaredLabel = source.encoding ?? manifest.srcEncoding;
+			const codepage = declaredLabel
+				? labelToCodepage(declaredLabel)
+				: Codepage.Unknown;
+
 			loadingComponents.push(
-				Component.load(source.path, Codepage.Unknown, { binary_path: source.binary }).then(
+				Component.load(source.path, codepage, { binary_path: source.binary }).then(
 					component => {
+						component.details.sourceEncoding = declaredLabel;
 						if (manifest !== project.manifest) {
 							fromDependencies.components.set(component, manifest.name);
 						}
@@ -74,6 +83,7 @@ export async function loadFromProject(
 	const components = (await Promise.all(loadingComponents)).sort(byComponentName);
 	const graph = { name: "VBAProject", components, references, fromDependencies };
 
+	await validateEncoding(project, graph);
 	validateGraph(project, graph);
 	return graph;
 }
@@ -117,4 +127,63 @@ function validateGraph(project: Project, graph: BuildGraph) {
       `
 		);
 	}
+}
+
+/**
+ * Validate that any source file containing non-ASCII characters has
+ * an encoding declared (src-encoding in the project or encoding on
+ * the individual source entry). If not, fail with a jschardet
+ * suggestion.
+ */
+async function validateEncoding(project: Project, graph: BuildGraph) {
+	const srcEncoding = project.manifest.srcEncoding;
+
+	for (const component of graph.components) {
+		// Only check project-owned components, not dependency components
+		if (graph.fromDependencies.components.has(component)) continue;
+
+		// Check if encoding is declared (project-level or per-source)
+		const source = project.manifest.src.find(s => s.name === component.name);
+		const declaredEncoding = source?.encoding ?? srcEncoding;
+		if (declaredEncoding) continue;
+
+		// Check for non-ASCII characters
+		if (!hasNonAscii(component.code)) continue;
+
+		// Try jschardet to suggest an encoding
+		let suggestion = "";
+		try {
+			const buffer = await readFile(source?.path || "");
+			const jschardet = require("jschardet");
+			const SUPPORTED = /^(CP(932|936|949|950|874|125[0-8]))$/;
+			const results = (jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>)
+				.filter(r => SUPPORTED.test(r.encoding))
+				.sort((a, b) => b.confidence - a.confidence);
+
+			if (results.length > 0 && results[0].confidence >= 0.5) {
+				const label = results[0].encoding.toLowerCase();
+				suggestion = `\nSuggested change:\n\n  src-encoding = "${label}"` +
+					`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
+			}
+		} catch {
+			// jschardet unavailable or file unreadable — omit suggestion
+		}
+
+		throw new CliError(
+			ErrorCode.BuildInvalid,
+			dedent`
+        Non-ASCII characters detected in "${source?.path || component.filename}".
+        Please specify the encoding of the source code so the build process
+        can preserve them correctly.${suggestion}
+      `
+		);
+	}
+}
+
+/** Check if a string contains any non-ASCII characters (U+0080+). */
+function hasNonAscii(str: string): boolean {
+	for (let i = 0; i < str.length; i++) {
+		if (str.charCodeAt(i) > 127) return true;
+	}
+	return false;
 }

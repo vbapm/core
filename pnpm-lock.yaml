@@ -47,6 +47,9 @@ importers:
       isomorphic-git:
         specifier: ^1.37.1
         version: 1.38.4
+      jschardet:
+        specifier: 4.0.0-rc.0
+        version: 4.0.0-rc.0
       logic-solver:
         specifier: ^2
         version: 2.0.1
@@ -1840,6 +1843,10 @@ packages:
 
   js-yaml@3.14.2:
     resolution: {integrity: sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg==}
+    hasBin: true
+
+  jschardet@4.0.0-rc.0:
+    resolution: {integrity: sha512-pmJwo/aFUYjjdz++gfllU4HHkPF5EGTZ2Xl02u6kReLXzAGBHbHYI7TtdDgyf7LM0PtMcLd4MB0D2C7Gdiqxfg==}
     hasBin: true
 
   jsesc@3.1.0:
@@ -4552,6 +4559,8 @@ snapshots:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
+
+  jschardet@4.0.0-rc.0: {}
 
   jsesc@3.1.0: {}
 

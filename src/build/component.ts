@@ -16,6 +16,8 @@ export type ComponentType = "module" | "class" | "form" | "document";
 export interface ComponentDetails {
 	path?: string;
 	binary?: Buffer;
+	/** Source encoding declared in TOML (for transcoding). */
+	sourceEncoding?: string;
 }
 
 /**

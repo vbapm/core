@@ -59,6 +59,7 @@ Object {
       "path": "projects/complex/src/Added.bas",
     },
   ],
+  "srcEncoding": undefined,
   "target": Object {
     "filename": "complex.xlsm",
     "name": "complex",
