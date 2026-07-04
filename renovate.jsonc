@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "minimumReleaseAge": "5 days",
+  "internalChecksFilter": "strict",
+  "schedule": ["before 9am on Wednesday"],
+  "packageRules": [
+    {
+      "description": "Group all non-major updates into a single weekly PR",
+      "matchUpdateTypes": ["minor", "patch"],
+      // A negation-only pattern matches everything except what's negated.
+      // Equivalent to ["*", "!pnpm"] but avoids Renovate's validation error
+      // when mixing * or ** with other patterns.
+      "matchPackageNames": ["!pnpm"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "description": "Auto-merge packageManager minor/patch updates",
+      // The packageManager field (even for pnpm) is extracted by the npm manager,
+      // not a separate "pnpm" manager. See https://docs.renovatebot.com/modules/manager/npm/#dependency-types
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["packageManager"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^subactions/.*?/action\\.yml$/"
+      ],
+      "matchStrings": [
+        "uses:\\s+(?<dep>[^\\s@]+)@(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "{{dep}}"
+    }
+  ]
+}

@@ -18,16 +18,20 @@ export default function transformCoreXml(file: UnzipFile): UnzipFile {
 	if (core_properties) {
 		// 1.
 		const last_modified_by = findElementByName(core_properties.elements, "cp:lastModifiedBy");
-		const creator = findElementByName(core_properties.elements, "dc:creator");
-		if (last_modified_by && creator) {
-			last_modified_by.elements![0].text = creator.elements![0].text;
+		if (last_modified_by && last_modified_by.elements && last_modified_by.elements[0]) {
+			const creator = findElementByName(core_properties.elements, "dc:creator");
+			const creatorText =
+				creator && creator.elements && creator.elements[0] ? creator.elements[0].text : "";
+			last_modified_by.elements[0].text = creatorText;
 		}
 
 		// 2.
 		const modified = findElementByName(core_properties.elements, "dcterms:modified");
-		const created = findElementByName(core_properties.elements, "dcterms:created");
-		if (modified && created) {
-			modified.elements![0].text = created.elements![0].text;
+		if (modified && modified.elements && modified.elements[0]) {
+			const created = findElementByName(core_properties.elements, "dcterms:created");
+			const createdText =
+				created && created.elements && created.elements[0] ? created.elements[0].text : "";
+			modified.elements[0].text = createdText;
 		}
 	} else {
 		debug("Warning: cp:coreProperties not found, unable to transform core.xml");

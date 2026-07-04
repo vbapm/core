@@ -2,8 +2,8 @@
 --
 -- appname (e.g. "excel")
 -- addin: posix full path to addin (e.g. "...")
--- command: macro to execute in addin (e.g. "Build.ImportGraph")
--- keep_open: "1" to leave the workbook/app open after the macro, "0" to close
+-- command: macro to execute in addin (e.g. "Build.ImportGraph", "Build.CloseFile")
+-- For macros: arg 4 is keep_open: "1" to leave open after macro, "0" to close
 -- ...args: arguments to pass to macro (up to 10)
 
 on run argv

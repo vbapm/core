@@ -22,8 +22,19 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      
+      - name: Configure Git
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          $autocrlf = git config --get core.autocrlf
+          $eol = git config --get core.eol
+          Write-Output "core.autocrlf: $autocrlf"
+          Write-Output "core.eol: $eol"
+
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -37,11 +48,16 @@ jobs:
         with:
           node-version: 24.x
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
       - name: Install Node dependencies and build
         run: |
-          npm install --ci
-          npm run build:cli
-          npm run build:addins
+          pnpm install --frozen-lockfile
+          pnpm run build:cli
+          pnpm run build:addins
 
       - name: Install CLI standalone App (local build)
         shell: pwsh
@@ -59,4 +75,4 @@ jobs:
         run: |
           $env:VBA_BIN_DIR = Join-Path $env:APPDATA "vbapm\bin"
           Write-Output "Using VBA_BIN_DIR=$env:VBA_BIN_DIR"
-          npm run test:e2e
+          pnpm run test:e2e

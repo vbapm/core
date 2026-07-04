@@ -1,4 +1,5 @@
 import dedent from "@timhall/dedent";
+import { yellowBright } from "@timhall/ansi-colors";
 import { exportTo } from "../addin";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
@@ -8,6 +9,7 @@ import { fetchDependencies, loadProject } from "../project";
 import { exportTarget } from "../targets";
 import { emptyDir, ensureDir, remove } from "../utils/fs";
 import { join, sanitize } from "../utils/path";
+import { isTargetSaved } from "./check-saved";
 
 export interface ExportOptions {
 	target?: string;
@@ -15,6 +17,7 @@ export interface ExportOptions {
 	addin?: string;
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
+	skipSheetNameNormalization?: boolean;
 }
 
 export async function exportProject(options: ExportOptions = {}) {
@@ -65,6 +68,17 @@ export async function exportProject(options: ExportOptions = {}) {
 			ErrorCode.ExportNoMatching,
 			`No matching target found for type "${options.target!}" in project.`
 		);
+	}
+
+	// Warn if the workbook is open in Excel with unsaved changes — the exported XML
+	// will only reflect the last saved state of the file on disk.
+	if (!options.vbaOnly) {
+		const saved = await isTargetSaved(target, project);
+		if (saved === false) {
+			console.warn(
+				`\n${yellowBright("WARN:")} The workbook has unsaved changes. The XML data will only reflect the last saved version.`
+			);
+		}
 	}
 
 	const dependencies = await fetchDependencies(project);

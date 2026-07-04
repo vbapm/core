@@ -30,12 +30,15 @@
     "engines": {
         "node": ">=18.14.0"
     },
+    "packageManager": "pnpm@11.9.0",
     "scripts": {
         "format": "prettier --write \"**/*.{ts,js}\"",
         "format:check": "prettier --check \"**/*.{ts,js}\"",
+        "sync:config-templates": "node scripts/sync-templates.js",
+        "check:config-templates": "node scripts/sync-templates.js --check",
         "test": "jest --runInBand",
         "typecheck": "tsc",
-        "deps": "npm i",
+        "deps": "pnpm install",
         "dev": "run-s deps typecheck format:check test build:cli",
         "test:e2e": "cross-env VBA_BACKGROUND_BUILD=0 jest --config e2e.config.mjs --runInBand",
         "test:e2e:background": "cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand",
@@ -47,10 +50,10 @@
         "build:addins": "cd addins && node --no-warnings ../scripts/build-addins",
         "build:bootstrap": "cd scripts/bootstrap && node --no-warnings ../../lib/vbapm build",
         "clean": "rimraf lib && rimraf dist && rimraf addins/build",
-        "deploy:dev": "npm run build:dev && powershell -ExecutionPolicy Bypass -File ./installer/devinstall.ps1"
+        "deploy:dev": "pnpm run build:dev && powershell -ExecutionPolicy Bypass -File ./installer/devinstall.ps1"
     },
     "dependencies": {
-        "@decimalturn/toml-patch": "^1.0.5",
+        "@decimalturn/toml-patch": "^2.0.0",
         "@timhall/ansi-colors": "^5.0.0",
         "@timhall/dedent": "^0.10.0",
         "archiver": "^7.0.1",
@@ -94,7 +97,7 @@
         "dotenv": "^17.0.0",
         "jest": "^30",
         "mustache": "^4.0.0",
-        "npm-run-all2": "^8.0.0",
+        "npm-run-all2": "^9.0.0",
         "prettier": "^3",
         "rimraf": "^6.1.3",
         "rollup": "^4.34.9",
@@ -117,7 +120,7 @@
             "scripts.build:lib": "Core build: rollup bundle + .d.ts generation (used by both npm and standalone channels)",
             "scripts.build:cli": "Standalone CLI build: rollup bundle (no sourcemaps, no .d.ts) + fetch vendored Node binary",
             "scripts.build:dev": "Allows to quickly rebuild the project in development mode with environment variables set for easier debugging of the js/ts code",
-            "scripts.build:addins": "Builds the add-ins by running a custom build script in the addins directory",
+            "scripts.build:addins": "Builds the vbapm.xlam add-ins by running a custom build script in the addins directory",
             "scripts.build:bootstrap": "Update the bootstrap file (used to build the addin) by using the latest addin build (inception!)",
             "scripts.clean": "Removes generated files from lib, dist, and addins/build directories",
             "devDependencies.cross-env": "Used to set environment variables in a cross-platform-compatible way for build scripts",

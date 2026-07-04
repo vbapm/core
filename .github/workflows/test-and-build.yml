@@ -5,7 +5,13 @@ on:
       - '**'
     tags-ignore:
       - '**'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 
 permissions:
   contents: read
@@ -18,22 +24,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
       - name: Install
-        run: npm install
+        run: pnpm install --frozen-lockfile
         env:
           CI: true
+      - name: Check config templates sync
+        run: pnpm run check:config-templates
       - name: Format Check
-        run: npx prettier --check "**/*.{ts,js}"
+        run: pnpm run format:check
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
       - name: Test
-        run: npm test
+        run: pnpm test
       - name: Build
-        run: npm run build:dev
+        run: pnpm run build:dev

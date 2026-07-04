@@ -170,6 +170,94 @@ ErrorHandling:
     CreateDocument = Output.Result
 End Function
 
+''
+' Close a workbook by file path, optionally saving changes
+'
+' @param {String} Info json value for file and save
+' @param {String} Info.file absolute file path to workbook
+' @param {Boolean} [Info.save=false] whether to save before closing
+''
+Public Function CloseFile(Info As Variant) As String
+    On Error GoTo ErrorHandling
+
+    Dim Values As Dictionary
+    Dim File As String
+    Dim SaveFlag As Boolean
+
+    Set Values = JsonConverter.ParseJson(Info)
+    File = Values("file")
+    SaveFlag = Values("save")    ' defaults to Empty/False if missing
+
+    Dim FileName As String
+    FileName = FileSystem.GetBase(File)
+
+    Dim Wb As Workbook
+    On Error Resume Next
+    Set Wb = Application.Workbooks(FileName)
+    On Error GoTo ErrorHandling
+
+    If Wb Is Nothing Then
+        Output.Messages.Add "File is not open"
+        CloseFile = Output.Result
+        Exit Function
+    End If
+
+    Wb.Close SaveFlag
+    Output.Messages.Add "Workbook closed successfully"
+
+    CloseFile = Output.Result
+    Exit Function
+
+ErrorHandling:
+    Output.Errors.Add Err.Number & ": " & Err.Description
+    CloseFile = Output.Result
+End Function
+
+''
+' Check whether a workbook has unsaved changes
+'
+' @param {String} Info json value for file
+' @param {String} Info.file absolute file path to workbook
+' Returns Output with saved status in messages (messages[0] = "saved:true" or "saved:false")
+''
+Public Function CheckFileSaved(Info As Variant) As String
+    On Error GoTo ErrorHandling
+
+    Dim Values As Dictionary
+    Dim File As String
+
+    Set Values = JsonConverter.ParseJson(Info)
+    File = Values("file")
+
+    Dim FileName As String
+    FileName = FileSystem.GetBase(File)
+
+    Dim Wb As Workbook
+    On Error Resume Next
+    Set Wb = Application.Workbooks(FileName)
+    On Error GoTo ErrorHandling
+
+    If Wb Is Nothing Then
+        ' Workbook is not open - treat as saved
+        Output.Messages.Add "saved:true"
+        CheckFileSaved = Output.Result
+        Exit Function
+    End If
+
+    If Wb.Saved Then
+        Output.Messages.Add "saved:true"
+    Else
+        Output.Messages.Add "saved:false"
+    End If
+
+    CheckFileSaved = Output.Result
+    Exit Function
+
+ErrorHandling:
+    Output.Errors.Add Err.Number & ": " & Err.Description
+    CheckFileSaved = Output.Result
+End Function
+
 ' ============================================= '
 
 ''

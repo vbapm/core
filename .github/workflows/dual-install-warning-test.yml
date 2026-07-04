@@ -31,17 +31,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24.x
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
       - name: Install dependencies and build
         run: |
-          npm install
-          npm run build:lib
+          pnpm install --frozen-lockfile
+          pnpm run build:lib
 
       # ---------------------------------------------------------------
       # Simulate standalone CLI install (%APPDATA%\vbapm\bin\)

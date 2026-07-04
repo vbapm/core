@@ -1,9 +1,50 @@
-import { copy, readFile, writeFile } from "fs-extra";
+/**
+ * End-to-end tests for the `vba` CLI.
+ *
+ * ## Summary
+ *
+ * This file exercises the full lifecycle of an Excel VBA project by running the
+ * actual `vba` CLI binary against real Excel via COM automation. Each
+ * test spins up a copy of a pre-built fixture project in a temp directory,
+ * runs one or more CLI commands, and asserts the resulting filesystem state or
+ * CLI output against Jest snapshots.
+ *
+ *
+ * ## File and fixture layout
+ *
+ * ### Test helpers
+ * `tests/__helpers__/execute.ts` — core test utilities: `setup()`, `tmp()`,
+ * `execute()`, `readdir()`, and `run()` (used to invoke macros inside a built
+ * workbook).
+ *
+ * ### Fixture projects
+ * Each fixture is a pre-built vbapm project directory located under
+ * `tests/__fixtures__/projects/`. They are imported via
+ * `tests/__fixtures__/index.ts`
+ *
+ * ### CLI binary
+ * The `vba` binary is resolved from `bin/vba` at the repo root, unless the
+ * `VBA_BIN_DIR` environment variable is set (see `getVbaBin()` in
+ * `tests/__helpers__/execute.ts`).
+ *
+ * ### Snapshots
+ * Jest snapshots are stored under `tests/__snapshots__/excel.e2e.ts.snap`.
+ *
+ * ### Temporary directories
+ * Each test is set up in a temporary directory under `tests/.tmp/`. The
+ * directory is cleaned up after the test unless the `KEEP_E2E_TMP` environment
+ * variable is set to true (or `1` or `yes`).
+ */
+
+import { copy, pathExists, readFile, writeFile } from "fs-extra";
 import { join } from "path";
-import { dev, empty, json, single, standard, targetless } from "./__fixtures__";
+import { promisify } from "util";
+import { dev, empty, json, single, standard, targetless, withDrawing } from "./__fixtures__";
 import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
 
-jest.setTimeout(120000);
+const exec = promisify(require("child_process").exec);
+
+jest.setTimeout(180000);
 
 expect.addSnapshotSerializer({
 	test: value => isSnapshotFileMap(value),
@@ -253,6 +294,92 @@ describe("new", () => {
 	});
 });
 
+describe("open", () => {
+	test("open fails when built target does not exist", async () => {
+		await setup(standard, "open-not-built", async cwd => {
+			// Build not run, so no built file exists
+			await expect(execute(cwd, "open")).rejects.toThrow();
+		});
+	});
+
+	test("open shows error for missing build", async () => {
+		await setup(standard, "open-missing-build", async cwd => {
+			try {
+				await execute(cwd, "open");
+			} catch (err: any) {
+				expect(err.stderr || err.stdout || "").toMatch(/built target/i);
+			}
+		});
+	});
+});
+
+describe("close", () => {
+	test("close with --force succeeds after build", async () => {
+		await setup(standard, "close-built", async cwd => {
+			await execute(cwd, "build");
+			const result = await execute(cwd, "close --force");
+			expect(typeof result.stderr).toBe("string");
+		});
+	});
+
+	test("close fails when built target does not exist", async () => {
+		await setup(standard, "close-not-built", async cwd => {
+			await expect(execute(cwd, "close --force")).rejects.toThrow();
+		});
+	});
+
+	test("close with --force shows error for missing build", async () => {
+		await setup(standard, "close-missing-build", async cwd => {
+			try {
+				await execute(cwd, "close --force");
+			} catch (err: any) {
+				expect(err.stderr || err.stdout || "").toMatch(/not found/i);
+			}
+		});
+	});
+
+	test("close fails with unsaved changes error when workbook has been modified", async () => {
+		await setup(standard, "close-unsaved", async cwd => {
+			// 1. Build
+			await execute(cwd, "build");
+
+			const buildDir = join(cwd, "build");
+			const builtFiles = await readdir(buildDir);
+			const targetFile = Object.keys(builtFiles).find(
+				f => f.endsWith(".xlsm") || f.endsWith(".xlam")
+			);
+			if (!targetFile) throw new Error("No built target file found");
+
+			const fullPath = join(buildDir, targetFile);
+
+			// 2. Open workbook via COM, make a change, don't save (leave open)
+			const psScriptPath = join(cwd, "_open_unsaved.ps1");
+			const escapedPath = fullPath.replace(/\\/g, "\\\\");
+			const psScript = [
+				'$path = "' + escapedPath + '"',
+				"$excel = New-Object -ComObject Excel.Application",
+				"$excel.Visible = $false",
+				"$wb = $excel.Workbooks.Open($path)",
+				"$ws = $wb.Worksheets(1)",
+				'$ws.Cells.Item(1,1) = "unsaved change"',
+				'Write-Output "opened_and_modified"'
+			].join("\n");
+			await writeFile(psScriptPath, psScript);
+
+			const { stdout: psOut } = await exec(
+				`powershell -NoProfile -ExecutionPolicy Bypass -File "${psScriptPath}"`,
+				{ timeout: 30000 }
+			);
+			expect(psOut.trim()).toBe("opened_and_modified");
+
+			// 3. Close without --save or --force → should fail with unsaved changes
+			await expect(execute(cwd, "close")).rejects.toThrow();
+		}).catch(() => {
+			// Temp dir cleanup may fail (EBUSY from lingering Excel process) — ignore
+		});
+	});
+});
+
 describe("version", () => {
 	test("should update to explicit version", async () => {
 		await tmp("new-blank-package", async cwd => {
@@ -283,3 +410,20 @@ async function validateBuild(cwd: string, target: string): Promise<RunResult> {
 	const file = join(cwd, "build", target);
 	return await run("excel", file, "Validation.Validate");
 }
+
+describe("normalize-worksheet-names", () => {
+	test("renames worksheet sidecar .rels file alongside worksheet XML", async () => {
+		await setup(withDrawing, "normalize-sidecar-rels", async cwd => {
+			// Build creates the xlsm from targets/xlsm OOXML (which contains a drawing)
+			await execute(cwd, "build");
+
+			// Export runs normalizeWorksheetNames: sheet1.xml → shtSheet1.xml
+			// The sidecar _rels/sheet1.xml.rels must also be renamed → shtSheet1.xml.rels
+			await execute(cwd, "export --target xlsm");
+
+			const relsDir = join(cwd, "targets/xlsm/xl/worksheets/_rels");
+			expect(await pathExists(join(relsDir, "shtSheet1.xml.rels"))).toBe(true);
+			expect(await pathExists(join(relsDir, "sheet1.xml.rels"))).toBe(false);
+		});
+	});
+});

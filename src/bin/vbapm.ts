@@ -24,6 +24,8 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	test: async () => (await import("./vbapm-test")).default,
 	export: async () => (await import("./vbapm-export")).default,
 	update: async () => (await import("./vbapm-update")).default,
+	open: async () => (await import("./vbapm-open")).default,
+	close: async () => (await import("./vbapm-close")).default,
 	run: async () => (await import("./vbapm-run")).default,
 	version: async () => (await import("./vbapm-version")).default
 };
@@ -59,6 +61,8 @@ const help = dedent`
     - test          Run tests for built target
     - export        Export src from built target
     - update        Update VBA source in a built target
+    - open          Open the current built target file
+    - close         Close the current built target file
     - run           Run macro in document / add-in
     - help          Outputs this message or the help of the given command
 
@@ -90,15 +94,33 @@ process.on("unhandledRejection", handleError);
 process.on("uncaughtException", handleError);
 
 main()
-	.then(() => process.exit(0))
+	.then(command => {
+		// Work around Node.js v23+ libuv assertion crash on Windows
+		// (nodejs/node#56645). The export command, especially to an
+		// empty project, can complete before V8's wasm task runner
+		// has drained its pending delayed tasks. Calling
+		// process.exit(0) fires while the handle is still closing:
+		//   ASSERT(!(handle->flags & UV_HANDLE_CLOSING))
+		// On the export path we omit process.exit entirely, letting
+		// the event loop drain naturally so no pending task is
+		// interrupted. All other commands exit immediately via
+		// process.exit(0) as before.
+		// TODO: Remove once nodejs/node#61999 is merged and released.
+		if (command === "export" && process.platform === "win32") {
+			// Let the event loop drain naturally — no process.exit()
+			return;
+		}
+		process.exit(0);
+	})
 	.catch(handleError);
 
-async function main() {
+async function main(): Promise<string | undefined> {
 	let [command] = args._;
 
 	if (!command) {
-		if (args.version) console.log(version);
-		else {
+		if (args.version) {
+			console.log(version);
+		} else {
 			console.log(help);
 
 			if (updateAvailable()) {
@@ -107,7 +129,8 @@ async function main() {
 		}
 
 		warnIfDualInstall();
-		return;
+
+		return undefined;
 	}
 
 	if (command === "help") {
@@ -115,7 +138,8 @@ async function main() {
 
 		if (!command) {
 			console.log(help);
-			return;
+			warnIfDualInstall();
+			return undefined;
 		}
 
 		args._ = [command];
@@ -160,7 +184,7 @@ async function main() {
 		env.reporter.log(Message.UpdateAvailable, updateAvailableMessage());
 	}
 
-	warnIfDualInstall();
+	return command;
 }
 
 function warnIfDualInstall() {

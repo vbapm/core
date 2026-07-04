@@ -5,9 +5,23 @@ import { Manifest, writeManifest } from "../manifest";
 import { TargetType } from "../manifest/target";
 import { initProject as init } from "../project";
 import { addTarget } from "../targets/add-target";
-import { ensureDir, pathExists, writeFile } from "../utils/fs";
+import { copy, ensureDir, pathExists } from "../utils/fs";
 import { init as git_init } from "../utils/git";
 import { basename, extname, join } from "../utils/path";
+
+const TEMPLATE_FILES = [
+	{ source: "template.gitignore", target: ".gitignore" },
+	{ source: "template.gitattributes", target: ".gitattributes" },
+	{ source: "template.editorconfig", target: ".editorconfig" }
+];
+
+async function copyTemplateConfigFiles(dir: string) {
+	const templatesDir = join(__dirname, "templates");
+
+	for (const { source, target } of TEMPLATE_FILES) {
+		await copy(join(templatesDir, source), join(dir, target));
+	}
+}
 
 export interface InitOptions {
 	name?: string;
@@ -16,10 +30,19 @@ export interface InitOptions {
 	from?: string;
 	pkg: boolean;
 	git: boolean;
+	configTemplates: boolean;
 }
 
 export async function initProject(options: InitOptions) {
-	let { name, dir = env.cwd, target: targetType, from, pkg: asPackage, git } = options;
+	let {
+		name,
+		dir = env.cwd,
+		target: targetType,
+		from,
+		pkg: asPackage,
+		git,
+		configTemplates
+	} = options;
 
 	if (await pathExists(join(dir, "vbaproject.toml"))) {
 		throw new CliError(
@@ -61,25 +84,12 @@ export async function initProject(options: InitOptions) {
 
 	await ensureDir(join(dir, "src"));
 
+	if (configTemplates) {
+		await copyTemplateConfigFiles(dir);
+	}
+
 	if (git && !(await pathExists(join(dir, ".git")))) {
 		await git_init(dir);
-		await writeFile(join(dir, ".gitignore"), `/build`);
-		await writeFile(
-			join(dir, ".gitattributes"),
-			`* text=auto\n*.bas text eol=crlf\n*.cls text eol=crlf`
-		);
-		await writeFile(
-			join(dir, ".editorconfig"),
-			dedent`
-        [*]
-        trim_trailing_whitespace = true
-        insert_final_newline = true
-        charset = utf-8
-
-        [*.{bas,cls}]
-        end_of_line = crlf
-      `
-		);
 	}
 
 	const project = await init(name, dir, {

@@ -1,0 +1,28 @@
+name: Enforce ASCII in VBA files
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  enforce-ascii:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Check for non-ASCII characters
+        run: |
+          python "${{ github.workspace }}/.github/workflows/enforce-ascii/enforce_ascii.py" \
+            --extensions ".bas,.frm,.cls"
+        shell: bash

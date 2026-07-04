@@ -1,0 +1,25 @@
+# Chartsheet rename-reorder test fixture
+#
+# Demonstrates that chart sheets have the same sequential-file-swapping
+# problem as worksheets when reordered in Excel.  ChartSheetGenerator.Main
+# creates two chart sheets ("Chart A" and "Chart B"), then moves "Chart B"
+# before "Chart A".  After export:
+#
+#   xl/chartsheets/sheet2.xml.rels -> ../drawings/drawing2.xml  (Chart B tab)
+#   xl/chartsheets/sheet3.xml.rels -> ../drawings/drawing3.xml  (Chart A tab)
+#
+# but drawing2 was created for Chart A and drawing3 for Chart B — the
+# sidecar references are swapped, just like with worksheets.
+#
+# normalizeWorksheetNames does NOT handle chart sheets because they use
+# the chartsheet relationship type, not the worksheet type.  This fixture
+# serves as a baseline for future chart-sheet normalization work.
+[project]
+name = "chartsheet"
+version = "0.0.0"
+authors = []
+license = "UNLICENSED"
+target = "xlsm"
+
+[src]
+ChartSheetGenerator = "src/ChartSheetGenerator.bas"

@@ -31,7 +31,7 @@ jobs:
       version: ${{ steps.next_version.outputs.version }}
       release_url: ${{ steps.create_draft_release.outputs.url }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
@@ -40,6 +40,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24.x
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
 
       - name: Get current version
         id: current_version
@@ -96,9 +99,9 @@ jobs:
               echo "Skipping package.json update (no-bump selected)"
             fi
 
-      - name: Update package-lock.json
+      - name: Update pnpm-lock.yaml
         if: github.event.inputs.version_bump != 'no-bump'
-        run: npm install --package-lock-only
+        run: pnpm install --lockfile-only
 
       - name: Update CHANGELOG.md
         if: github.event.inputs.version_bump != 'no-bump'
@@ -139,7 +142,7 @@ jobs:
             if [[ "${{ github.event.inputs.version_bump }}" != "no-bump" ]]; then
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
-              git add package.json package-lock.json CHANGELOG.md
+              git add package.json pnpm-lock.yaml CHANGELOG.md
               git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }}"
               git push origin ${{ github.ref_name }}
               echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
@@ -165,7 +168,7 @@ jobs:
     outputs:
       release_url: ${{ steps.upload_assets.outputs.url }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
 

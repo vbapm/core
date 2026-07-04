@@ -1,3 +1,6 @@
 [submodule "installer"]
 	path = installer
 	url = https://github.com/vbapm/installer.git
+[submodule "src/actions/templates/VBA-on-GitHub"]
+	path = src/actions/templates/VBA-on-GitHub
+	url = https://github.com/DecimalTurn/VBA-on-GitHub.git

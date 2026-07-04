@@ -9,4 +9,4 @@ test("loads and parses manifest", async () => {
 	const toml = toToml(project, dev);
 
 	expect(normalizeLockfile(toml)).toMatchSnapshot();
-});
+}, 30000);

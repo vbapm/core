@@ -6,6 +6,7 @@ import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import fs from "fs";
+import { createRequire } from "module";
 import path from "path";
 
 const mode = process.env.NODE_ENV || "production";
@@ -36,8 +37,23 @@ function shebang() {
 				}
 			}
 
+			const templates = [
+				"template.editorconfig",
+				"template.gitattributes",
+				"template.gitignore"
+			];
+			const templatesSourceDir = path.resolve("src", "actions", "templates");
+			const templatesTargetDir = path.resolve(options.dir, "templates");
+			fs.mkdirSync(templatesTargetDir, { recursive: true });
+			for (const templateFile of templates) {
+				fs.copyFileSync(path.join(templatesSourceDir, templateFile), path.join(templatesTargetDir, templateFile));
+			}
+
 			// editorconfig's one-ini parser may load this wasm file at runtime.
-			const wasmSource = path.resolve("node_modules", "@one-ini", "wasm", "one_ini_bg.wasm");
+			// Uses require.resolve to find it even in pnpm's .pnpm/ directory layout.
+			const localRequire = createRequire(import.meta.url);
+			const wasmPkg = localRequire.resolve("@one-ini/wasm/package.json");
+			const wasmSource = path.resolve(path.dirname(wasmPkg), "one_ini_bg.wasm");
 			if (fs.existsSync(wasmSource)) {
 				const wasmTarget = path.resolve(options.dir, "one_ini_bg.wasm");
 				fs.copyFileSync(wasmSource, wasmTarget);

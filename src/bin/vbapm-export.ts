@@ -10,7 +10,10 @@ const help = dedent`
   Options:
     --target=TYPE   Export target of type TYPE
     --xml-only      Only extract the target XML, skip VBA source export
-    --vba-only      Only export the VBA source, skip target XML extraction`;
+    --vba-only      Only export the VBA source, skip target XML extraction
+
+  Debugging options:
+    --skip-sheet-name-normalization   Skip sheet name normalization (keep sheetN.xml names)`;
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -23,6 +26,7 @@ export default async function (args: Args) {
 	const addin = <string | undefined>args.addin;
 	const xmlOnly = !!args["xml-only"];
 	const vbaOnly = !!args["vba-only"];
+	const skipSheetNameNormalization = !!args["skip-sheet-name-normalization"];
 
-	await exportProject({ target, completed, addin, xmlOnly, vbaOnly });
+	await exportProject({ target, completed, addin, xmlOnly, vbaOnly, skipSheetNameNormalization });
 }
