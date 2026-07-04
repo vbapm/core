@@ -1,3 +1,4 @@
+# Central European (CP1250) project fixture for testing encoding detection and handling.
 [project]
 name = "multilingual-cp1250"
 target = { type = "xlsm", path = "targets/xlsm" }

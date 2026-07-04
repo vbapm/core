@@ -1,3 +1,4 @@
+# Japanese (CP932) project fixture for testing encoding detection and handling.
 [project]
 name = "multilingual-cp932"
 target = { type = "xlsm", path = "targets/xlsm" }

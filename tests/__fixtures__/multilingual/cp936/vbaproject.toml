@@ -1,3 +1,4 @@
+# Chinese Simplified (CP936) project fixture for testing encoding detection and handling.
 [project]
 name = "multilingual-cp936"
 target = { type = "xlsm", path = "targets/xlsm" }
