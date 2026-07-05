@@ -1,0 +1,7 @@
+# No specific encoding project fixture for testing default encoding handling.
+[project]
+name = "multilingual-no-encoding"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[src]
+Hello = "src/Hello.bas"

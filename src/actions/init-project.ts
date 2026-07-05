@@ -8,6 +8,7 @@ import { addTarget } from "../targets/add-target";
 import { copy, ensureDir, pathExists } from "../utils/fs";
 import { init as git_init } from "../utils/git";
 import { basename, extname, join } from "../utils/path";
+import { detectImportEncoding } from "./detect-encoding";
 
 const TEMPLATE_FILES = [
 	{ source: "template.gitignore", target: ".gitignore" },
@@ -104,5 +105,35 @@ export async function initProject(options: InitOptions) {
 		await addTarget(<TargetType>targetType, { project, dependencies }, { from });
 	}
 
+	// Auto-detect src-encoding when importing from an existing workbook
+	if (from) {
+		await detectSourceEncoding(project);
+	}
+
 	await writeManifest(project.manifest, project.paths.dir);
+}
+
+/**
+ * Auto-detect the source encoding for a project initialized from an
+ * existing workbook.
+ *
+ * Important: this should be used right after the first export of the workbook to src,
+ * before any source files are modified.
+ *
+ * If any source file contains non-ASCII characters,
+ * the system codepage is used as the default. If jschardet confidently
+ * identifies a different encoding (e.g. a Japanese workbook opened on
+ * a Western European system), that encoding is used instead.
+ */
+async function detectSourceEncoding(project: import("../project").Project): Promise<void> {
+	const firstSource = project.manifest.src[0];
+	if (!firstSource) return;
+
+	const encoding = await detectImportEncoding(join(project.paths.dir, firstSource.path));
+	if (!encoding) return;
+
+	project.manifest.srcEncoding = encoding;
+	if (project.manifest.target) {
+		project.manifest.target.encoding = encoding;
+	}
 }

@@ -2,22 +2,59 @@ import { CliError, ErrorCode } from "../errors";
 import { readFile } from "../utils/fs";
 import { extname } from "../utils/path";
 import { BY_LINE } from "../utils/text";
+import {
+	Codepage,
+	codepageToLabel,
+	decodeBuffer,
+	SniffResult,
+	sniffEncoding
+} from "./encoding-sniffer";
+import * as iconv from "iconv-lite";
 
 export type ComponentType = "module" | "class" | "form" | "document";
 
 export interface ComponentDetails {
 	path?: string;
 	binary?: Buffer;
+	/** Source encoding declared in TOML (for transcoding). */
+	sourceEncoding?: string;
 }
 
+/**
+ * Represents a VBA component, which can be a module, class, form, or document.
+ *
+ * The code is stored as a JavaScript string. When constructed from a Buffer,
+ * the encoding is auto-detected via {@link sniffEncoding} so that files
+ * exported by VBA in a locale-specific codepage (e.g. Windows-1252) are
+ * decoded correctly.
+ */
 export class Component {
 	type: ComponentType;
 	code: string;
 	details: ComponentDetails;
+	/** Encoding that was detected when the component was loaded from a Buffer. */
+	encoding?: SniffResult;
 
-	constructor(type: ComponentType, code: Buffer | string, details: ComponentDetails = {}) {
+	constructor(
+		type: ComponentType,
+		code: Buffer | string,
+		codepage: Codepage,
+		details: ComponentDetails = {}
+	) {
 		this.type = type;
-		this.code = code && Buffer.isBuffer(code) ? code.toString() : code;
+
+		if (code && Buffer.isBuffer(code)) {
+			if (codepage === Codepage.Unknown) {
+				const result = sniffEncoding(code);
+				this.code = decodeBuffer(code, result);
+				this.encoding = result;
+			} else {
+				this.code = iconv.decode(code, codepageToLabel(codepage));
+			}
+		} else {
+			this.code = code as string;
+		}
+
 		this.details = details;
 	}
 
@@ -48,7 +85,20 @@ export class Component {
 		return `${this.name}${extension}`;
 	}
 
-	static async load(path: string, details: { binary_path?: string } = {}): Promise<Component> {
+	/**
+	 * Load a component from a file on disk.
+	 *
+	 * @param path - Absolute path to the .bas / .cls / .frm file.
+	 * @param codepage - Known codepage (e.g. from {@link getSystemCodepage}
+	 *   when loading files just exported by VBA), or {@link Codepage.Unknown}
+	 *   to auto-detect via sniffing.
+	 * @param details - Optional binary path for .frx companions.
+	 */
+	static async load(
+		path: string,
+		codepage: Codepage,
+		details: { binary_path?: string } = {}
+	): Promise<Component> {
 		const { binary_path } = details;
 
 		const type = extensionToType[extname(path)];
@@ -62,7 +112,7 @@ export class Component {
 		const code = await readFile(path);
 		const binary = <Buffer | undefined>(binary_path && (await readFile(binary_path)));
 
-		return new Component(type, code, { path, binary });
+		return new Component(type, code, codepage, { path, binary });
 	}
 }
 

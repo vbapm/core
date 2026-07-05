@@ -1,0 +1,8 @@
+# Western European (CP1252) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1252"
+target = { type = "xlsm", path = "targets/xlsm" }
+src-encoding = "cp1252" 
+
+[src]
+Hello = "src/Hello.bas"

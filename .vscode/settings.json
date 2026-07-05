@@ -1,4 +1,9 @@
 // --*- mode: jsonc -*-
 {
-
+  // Auto-detect encoding for multilingual fixture .bas files.
+  // EditorConfig only supports latin1/utf-8/utf-16, and .vscode/
+  // subdirectories don't scope files.encoding.  Auto-guess is the
+  // only way VS Code can correctly open the CP125x/CP93x-encoded
+  // fixtures in tests/__fixtures__/multilingual/.
+  "files.autoGuessEncoding": true
 }

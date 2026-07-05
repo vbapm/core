@@ -31,9 +31,12 @@ def find_non_ascii(filepath: str) -> list[tuple[int, int, str]]:
     return issues
 
 
-def main(extensions: str):
+def main(extensions: str, exclude_dirs: str = ""):
     repo_dir = os.environ.get("GITHUB_WORKSPACE", os.getcwd())
     extensions_tuple = tuple(ext.strip() for ext in extensions.split(","))
+    exclude_patterns = tuple(
+        os.path.normpath(p.strip()) for p in exclude_dirs.split(",") if p.strip()
+    )
 
     files: list[str] = []
     files_with_issues: list[str] = []
@@ -43,6 +46,15 @@ def main(extensions: str):
         # Skip .git directory
         if ".git" in root.split(os.sep):
             continue
+
+        # Skip excluded directories
+        rel_root = os.path.relpath(root, repo_dir)
+        skip = any(
+            rel_root == p or rel_root.startswith(p + os.sep) for p in exclude_patterns
+        )
+        if skip:
+            continue
+
         for filename in filenames:
             if filename.endswith(extensions_tuple):
                 filepath = os.path.join(root, filename)
@@ -87,9 +99,13 @@ def parse_arguments():
         "--extensions", type=str, required=True,
         help="Comma-separated list of file extensions to process (e.g. .bas,.frm,.cls)"
     )
+    parser.add_argument(
+        "--exclude-dirs", type=str, default="",
+        help="Comma-separated list of directories to exclude from scanning"
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_arguments()
-    main(args.extensions)
+    main(args.extensions, args.exclude_dirs)

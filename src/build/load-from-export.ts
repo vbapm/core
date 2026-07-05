@@ -7,6 +7,7 @@ import { parallel } from "../utils/parallel";
 import { basename, extname, join } from "../utils/path";
 import { BuildGraph } from "./build-graph";
 import { byComponentName, Component, extensionToType } from "./component";
+import { getSystemCodepage } from "./encoding-sniffer";
 
 const binary_extensions = [".frx"];
 const ignoreFile = (file: string) => {
@@ -41,6 +42,10 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 		return false;
 	});
 
+	// Files just exported by VBA's Component.Export are in the
+	// local system codepage — pass the known codepage to skip sniffing.
+	const exportCodepage = getSystemCodepage();
+
 	const components = await parallel(
 		toComponents,
 		async file => {
@@ -56,7 +61,7 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 				);
 			}
 
-			return new Component(type, code, { binary });
+			return new Component(type, code, exportCodepage, { binary });
 		},
 		{ progress: env.reporter.progress("Loading exported components") }
 	);

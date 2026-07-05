@@ -15,6 +15,7 @@ export interface Source {
 	name: string;
 	path: string;
 	binary?: string;
+	encoding?: string;
 }
 
 const EXAMPLE = `Example vbaproject.toml:
@@ -31,7 +32,7 @@ export function parseSrc(value: any, dir: string): Source[] {
 
 export function parseSource(name: string, value: string | any, dir: string): Source {
 	if (isString(value)) value = { path: value };
-	const { path: relativePath, binary } = value;
+	const { path: relativePath, binary, encoding } = value;
 
 	if (!relativePath) {
 		const extKey = Object.keys(value).find(k => VBA_EXTENSIONS.test(k));
@@ -51,6 +52,7 @@ export function parseSource(name: string, value: string | any, dir: string): Sou
 
 	const source: Source = { name, path };
 	if (binary) source.binary = join(dir, binary);
+	if (encoding) source.encoding = encoding;
 
 	return source;
 }

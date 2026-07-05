@@ -5,7 +5,6 @@ indent_style = tab
 end_of_line = lf
 insert_final_newline = true
 #trim_trailing_whitespace = true
-charset = utf-8
 
 [*.json]
 indent_style = space
@@ -23,7 +22,8 @@ end_of_line = crlf
 max_line_length = 1023
 insert_final_newline = true
 trim_trailing_whitespace = true
-# We would like to use CP1252 for VBA files, but the editorconfig extension does not support it.
-# Also, latin1 is supported, but doesn't match some of the encoding for €, ‰ and some other characters that are encoded in CP152 of the form 1XXXXXXX.
-# This can lead to loss of information. See https://github.com/editorconfig/editorconfig-vscode/issues/474
-charset = utf-8
+# Since this project aims at supporting all VBA encodings supported by VBA, we can't specify the
+# encoding in the top level editorconfig file.
+# We might specify it inside subfolders when it's not easy to detect the encoding of the files
+# in that folder. For example, if a folder contains only files with CP1252 encoding, we can specify it there.
+

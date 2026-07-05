@@ -1,0 +1,69 @@
+name: Multilingual Encoding Test
+
+on:
+  push:
+    branches:
+      - main*
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  multilingual:
+    runs-on: windows-2025
+
+    steps:
+      - name: Configure Git
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Verify fixture encoding after checkout
+        shell: pwsh
+        run: |
+          @("cp1252","cp1251","cp1250","cp932","cp936") | ForEach-Object {
+            $file = "tests/__fixtures__/multilingual/$_/src/Hello.bas"
+            $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $file).Path)
+            $hex = ($bytes | ForEach-Object { '{0:X2}' -f $_ }) -join ' '
+            Write-Output "$_ ($($bytes.Length) bytes): $hex"
+          }
+
+      - name: Setup VBA runtime
+        uses: DecimalTurn/setup-vba@abad6bed4025d3d709cbd9c9281f856d298bd68d # v0.1.2
+        with:
+          office-apps: Excel
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Install Node dependencies and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build:cli
+          pnpm run build:addins
+
+      - name: Run multilingual encoding tests
+        shell: pwsh
+        run: |
+          # The loop script iterates over codepages (1252, 1251, 1250),
+          # sets each in the registry, and runs the multilang Jest suite.
+          # Excel is killed between iterations so new processes pick up
+          # the changed ACP codepage.
+          ./tests/multilang-loop.ps1

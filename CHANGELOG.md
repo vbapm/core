@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Multilingual encoding support for VBA source files across Windows ANSI codepages (CP874, CP932, CP936, CP949, CP950, CP1250–CP1258). ([#103])
+  - Source files can declare their encoding via `src-encoding` in `[project]`/`[package]` or per-source `encoding`.
+  - Target encoding can be declared via `encoding` on `[project] target`.
+  - Build-time validation fails with a `jschardet` suggestion when non-ASCII characters are detected without a declared encoding.
+  - Transcoding during build (source → target encoding) and extract (system codepage → source encoding).
+  - Extract warns when transcoding to a non-UTF encoding could lose characters.
+  - When extracting from an existing workbook with `vbapm init --from`, encoding is auto-detected and written to `vbaproject.toml`.
 - `vbapm init` and and `vbapm new` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
