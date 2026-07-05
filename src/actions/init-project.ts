@@ -115,11 +115,11 @@ export async function initProject(options: InitOptions) {
 
 /**
  * Auto-detect the source encoding for a project initialized from an
- * existing workbook. 
- * 
- * Important: this should be used right after the first export of the workbook to src, 
+ * existing workbook.
+ *
+ * Important: this should be used right after the first export of the workbook to src,
  * before any source files are modified.
- * 
+ *
  * If any source file contains non-ASCII characters,
  * the system codepage is used as the default. If jschardet confidently
  * identifies a different encoding (e.g. a Japanese workbook opened on

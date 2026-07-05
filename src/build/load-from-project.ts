@@ -167,7 +167,10 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 					`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
 			}
 		} catch (err) {
-			suggestion = "\n\n(Unable to suggest an encoding." + (err instanceof Error ? ` ${err.message}` : "") + ")";
+			suggestion =
+				"\n\n(Unable to suggest an encoding." +
+				(err instanceof Error ? ` ${err.message}` : "") +
+				")";
 		}
 
 		throw new CliError(

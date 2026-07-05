@@ -56,8 +56,9 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 	try {
 		const jschardet = require("jschardet");
 
-		const results = (jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>)
-			.sort((a: { confidence: number }, b: { confidence: number }) => b.confidence - a.confidence);
+		const results = (
+			jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
+		).sort((a: { confidence: number }, b: { confidence: number }) => b.confidence - a.confidence);
 
 		// Remap jschardet guesses that are impossible in a VBA context
 		// (e.g. MacCyrillic will never be a VBA source encoding)
@@ -66,8 +67,8 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 			encoding: remapForVbaContext(r.encoding)
 		}));
 
-		const filtered = remapped.filter(
-			(r: { encoding: string }) => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding)
+		const filtered = remapped.filter((r: { encoding: string }) =>
+			SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding)
 		);
 
 		if (filtered.length > 0 && filtered[0].confidence >= 0.4) {

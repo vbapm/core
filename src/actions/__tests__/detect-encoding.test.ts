@@ -16,11 +16,28 @@ afterAll(() => {
 describe("detectImportEncoding", () => {
 	// Valid Windows codepage labels that detectImportEncoding may return
 	const validLabels = new Set([
-		"windows-1250", "windows-1251", "windows-1252", "windows-1253",
-		"windows-1254", "windows-1255", "windows-1256", "windows-1257", "windows-1258",
-		"windows-932", "windows-936", "windows-874", "windows-949", "windows-950",
-		"cp1250", "cp1251", "cp1252",
-		"cp932", "cp936", "cp949", "cp950", "cp874"
+		"windows-1250",
+		"windows-1251",
+		"windows-1252",
+		"windows-1253",
+		"windows-1254",
+		"windows-1255",
+		"windows-1256",
+		"windows-1257",
+		"windows-1258",
+		"windows-932",
+		"windows-936",
+		"windows-874",
+		"windows-949",
+		"windows-950",
+		"cp1250",
+		"cp1251",
+		"cp1252",
+		"cp932",
+		"cp936",
+		"cp949",
+		"cp950",
+		"cp874"
 	]);
 
 	test("returns undefined for ASCII-only file", async () => {
@@ -36,9 +53,9 @@ describe("detectImportEncoding", () => {
 		const iconv = require("iconv-lite");
 		const buf = iconv.encode(
 			'Attribute VB_Name = "M"\n' +
-			"' Voilà déjà quelques caractères accentués\n" +
-			"' école élève élégant été\n" +
-			"Public Sub H()\nEnd Sub\n",
+				"' Voilà déjà quelques caractères accentués\n" +
+				"' école élève élégant été\n" +
+				"Public Sub H()\nEnd Sub\n",
 			"windows-1252"
 		);
 		writeFileSync(path, buf);
