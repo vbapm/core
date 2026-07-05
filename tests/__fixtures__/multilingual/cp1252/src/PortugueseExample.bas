@@ -1,61 +1,61 @@
 Attribute VB_Name = "PortugueseExample"
-' Módulo de exemplo com caracteres acentuados em português
+' MÃ³dulo de exemplo com caracteres acentuados em portuguÃªs
 '
-' Este módulo contém texto em português para testar a detecção
-' de codificação CP1252. As funções abaixo são puramente ilustrativas.
+' Este mÃ³dulo contÃ©m texto em portuguÃªs para testar a detecÃ§Ã£o
+' de codificaÃ§Ã£o CP1252. As funÃ§Ãµes abaixo sÃ£o puramente ilustrativas.
 ' ------------------------------------------------------------------
-' Função para processar descrições de produtos
+' FunÃ§Ã£o para processar descriÃ§Ãµes de produtos
 ' ------------------------------------------------------------------
 Function ObterDescricao(codigo As String) As String
-    ' Esta função retorna a descrição completa do produto
-    ' incluindo informações sobre fabricação e composição
+    ' Esta funÃ§Ã£o retorna a descriÃ§Ã£o completa do produto
+    ' incluindo informaÃ§Ãµes sobre fabricaÃ§Ã£o e composiÃ§Ã£o
     Dim descricao As String
     Dim categoria As String
     Dim preco As Double
     Dim disponivel As Boolean
-    ' Verificar se o código é válido
+    ' Verificar se o cÃ³digo Ã© vÃ¡lido
     If Len(codigo) < 3 Then
-        ObterDescricao = "Código inválido"
+        ObterDescricao = "CÃ³digo invÃ¡lido"
         Exit Function
     End If
     ' Consultar a tabela de produtos
-    descricao = "Produto não encontrado"
-    ' Categorias disponíveis:
-    ' - Eletrônicos e acessórios
-    ' - Alimentação e bebidas
-    ' - Vestuário e calçados
-    ' - Material de escritório
+    descricao = "Produto nÃ£o encontrado"
+    ' Categorias disponÃ­veis:
+    ' - EletrÃ´nicos e acessÃ³rios
+    ' - AlimentaÃ§Ã£o e bebidas
+    ' - VestuÃ¡rio e calÃ§ados
+    ' - Material de escritÃ³rio
     ' - Produtos de limpeza
     Select Case Left(codigo, 2)
         Case "EL"
-            categoria = "Eletrônicos"
-            descricao = "Equipamento eletrônico - garantia de 12 meses"
+            categoria = "EletrÃ´nicos"
+            descricao = "Equipamento eletrÃ´nico - garantia de 12 meses"
         Case "AL"
-            categoria = "Alimentação"
-            descricao = "Produto alimentício - verificar data de validade"
+            categoria = "AlimentaÃ§Ã£o"
+            descricao = "Produto alimentÃ­cio - verificar data de validade"
         Case "VS"
-            categoria = "Vestuário"
-            descricao = "Peça de vestuário - consultar tabela de tamanhos"
+            categoria = "VestuÃ¡rio"
+            descricao = "PeÃ§a de vestuÃ¡rio - consultar tabela de tamanhos"
         Case "ES"
-            categoria = "Escritório"
-            descricao = "Material de escritório - verificar stock disponível"
+            categoria = "EscritÃ³rio"
+            descricao = "Material de escritÃ³rio - verificar stock disponÃ­vel"
         Case "LP"
             categoria = "Limpeza"
-            descricao = "Produto de limpeza - consultar ficha técnica"
+            descricao = "Produto de limpeza - consultar ficha tÃ©cnica"
     End Select
-    ' Adicionar informações complementares
+    ' Adicionar informaÃ§Ãµes complementares
     descricao = descricao & " | Categoria: " & categoria
     ObterDescricao = descricao
 End Function
 ' ------------------------------------------------------------------
-' Função para formatar valores monetários
+' FunÃ§Ã£o para formatar valores monetÃ¡rios
 ' ------------------------------------------------------------------
 Function FormatarMoeda(valor As Double, Optional simbolo As Boolean = True) As String
-    ' Formata um valor numérico como moeda no formato brasileiro
+    ' Formata um valor numÃ©rico como moeda no formato brasileiro
     '
-    ' Parâmetros:
+    ' ParÃ¢metros:
     '   valor   - valor a ser formatado (ex: 1234.56)
-    '   simbolo - incluir símbolo R$ (padrão: True)
+    '   simbolo - incluir sÃ­mbolo R$ (padrÃ£o: True)
     '
     ' Exemplos:
     '   1234.56 -> "R$ 1.234,56"
@@ -68,7 +68,7 @@ Function FormatarMoeda(valor As Double, Optional simbolo As Boolean = True) As S
     ' Separar parte inteira e centavos
     inteiro = Int(valor)
     centavos = Round((valor - inteiro) * 100, 0)
-    ' Formatar centavos com dois dígitos
+    ' Formatar centavos com dois dÃ­gitos
     If centavos < 10 Then
         strCentavos = "0" & centavos
     Else
@@ -85,30 +85,30 @@ Function FormatarMoeda(valor As Double, Optional simbolo As Boolean = True) As S
     FormatarMoeda = resultado
 End Function
 ' ------------------------------------------------------------------
-' Função para validar dados de entrada
+' FunÃ§Ã£o para validar dados de entrada
 ' ------------------------------------------------------------------
 Function ValidarEntrada(dados As Variant) As Boolean
     ' Valida dados de entrada verificando:
-    ' - Não está vazio
-    ' - Não contém caracteres proibidos
-    ' - Tamanho mínimo e máximo
+    ' - NÃ£o estÃ¡ vazio
+    ' - NÃ£o contÃ©m caracteres proibidos
+    ' - Tamanho mÃ­nimo e mÃ¡ximo
     Dim texto As String
     Dim i As Integer
     Dim tamanho As Integer
     ' Converter para texto
     texto = CStr(dados)
     tamanho = Len(texto)
-    ' Verificar se não está vazio
+    ' Verificar se nÃ£o estÃ¡ vazio
     If tamanho = 0 Then
         ValidarEntrada = False
         Exit Function
     End If
-    ' Verificar tamanho mínimo e máximo
+    ' Verificar tamanho mÃ­nimo e mÃ¡ximo
     If tamanho < 3 Or tamanho > 100 Then
         ValidarEntrada = False
         Exit Function
     End If
-    ' Verificar caracteres não permitidos
+    ' Verificar caracteres nÃ£o permitidos
     ' (caracteres de controle e especiais)
     For i = 1 To tamanho
         Select Case Asc(Mid(texto, i, 1))
@@ -126,8 +126,8 @@ End Function
 ' Registro de log para auditoria
 ' ------------------------------------------------------------------
 Sub RegistrarAuditoria(operacao As String, Optional detalhes As String = "")
-    ' Esta sub-rotina registra operações no log de auditoria
-    ' para fins de rastreabilidade e conformidade regulatória.
+    ' Esta sub-rotina registra operaÃ§Ãµes no log de auditoria
+    ' para fins de rastreabilidade e conformidade regulatÃ³ria.
     Dim wsLog As Worksheet
     Dim ultimaLinha As Long
     Dim dataHora As String
@@ -140,11 +140,11 @@ Sub RegistrarAuditoria(operacao As String, Optional detalhes As String = "")
         Set wsLog = ThisWorkbook.Worksheets.Add
         wsLog.Name = "LOG"
         wsLog.Cells(1, 1).Value = "Data/Hora"
-        wsLog.Cells(1, 2).Value = "Operação"
+        wsLog.Cells(1, 2).Value = "OperaÃ§Ã£o"
         wsLog.Cells(1, 3).Value = "Detalhes"
-        wsLog.Cells(1, 4).Value = "Usuário"
+        wsLog.Cells(1, 4).Value = "UsuÃ¡rio"
     End If
-    ' Registrar operação
+    ' Registrar operaÃ§Ã£o
     dataHora = Format(Now, "yyyy-mm-dd hh:mm:ss")
     ultimaLinha = wsLog.Cells(wsLog.Rows.Count, 1).End(xlUp).Row + 1
     wsLog.Cells(ultimaLinha, 1).Value = dataHora
