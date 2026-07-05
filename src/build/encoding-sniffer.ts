@@ -105,11 +105,16 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 	const short = "cp" + cp;
 	LABEL_TO_CODEPAGE[short] = Number(cp) as Codepage;
 }
+// jschardet may return "SHIFT_JIS" for Windows-932 content
+LABEL_TO_CODEPAGE["shift_jis"] = Codepage.Windows932;
+// jschardet may return "x-mac-cyrillic" for Windows-1251 content
+LABEL_TO_CODEPAGE["x-mac-cyrillic"] = Codepage.Windows1251;
 
 /**
- * Set of Windows Cedepages that vbapm supports using the jschardet naming rules.
+ * Set of Windows codepage labels that vbapm supports, using the naming
+ * conventions of both jschardet v3 (`"windows-1252"`) and v4 (`"CP1252"`,
+ * `"cp932"`).
  *
- * jschardet returns uppercase labels like `"CP1252"` or `"CP932"`.
  * This set includes all Windows ANSI / DBCS codepages known to the
  * sniffer, excluding UTF-8 (which the sniffer already handles via BOM
  * and multi-byte detection).
@@ -120,7 +125,7 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 export const SUPPORTED_WINDOWS_CODEPAGE_LABELS: ReadonlySet<string> = new Set(
 	Object.keys(CODEPAGE_LABELS)
 		.filter(cp => Number(cp) !== Codepage.UTF8)
-		.flatMap(cp => ["CP" + cp, "cp" + cp])
+		.flatMap(cp => ["CP" + cp, "cp" + cp, "windows-" + cp])
 );
 
 /**

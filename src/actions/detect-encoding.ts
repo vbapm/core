@@ -1,7 +1,9 @@
 import { readFile } from "../utils/fs";
 import {
+	Codepage,
 	codepageToLabel,
 	getSystemCodepage,
+	labelToCodepage,
 	SUPPORTED_WINDOWS_CODEPAGE_LABELS
 } from "../build/encoding-sniffer";
 
@@ -48,37 +50,60 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 
 	// Default to system codepage
 	const systemCp = getSystemCodepage();
-	const systemLabel = codepageToLabel(systemCp);
-	let detectedEncoding = systemLabel;
+	let detectedEncoding = codepageToLabel(systemCp);
 
 	// Try jschardet to see if a different encoding is more likely
 	try {
-		// TODO: Fix when we update vbapm to ESM-only.
-		const jschardet = (await import("jschardet")).default;
-		if (!jschardet) {
-			throw new Error("jschardet not available");
-		}
+		const jschardet = require("jschardet");
 
 		const results = (jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>)
-			.filter((r: { encoding: string }) => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
 			.sort((a: { confidence: number }, b: { confidence: number }) => b.confidence - a.confidence);
 
-		const SYSTEM_PREFIX = /^windows-?/i;
-		if (results.length > 0 && results[0].confidence >= 0.4) {
-			const detected = results[0].encoding.toLowerCase();
-			// jschardet may return "SHIFT_JIS" for Windows-932 content;
-			// normalize to "cp932" which is our canonical label.
-			const normalized = detected === "shift_jis" ? "cp932" : detected;
-			const systemNormalized = systemLabel.replace(SYSTEM_PREFIX, "cp").toLowerCase();
+		// Remap jschardet guesses that are impossible in a VBA context
+		// (e.g. MacCyrillic will never be a VBA source encoding)
+		const remapped = results.map(r => ({
+			...r,
+			encoding: remapForVbaContext(r.encoding)
+		}));
 
-			if (normalized !== systemNormalized) {
-				detectedEncoding = normalized;
+		const filtered = remapped.filter(
+			(r: { encoding: string }) => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding)
+		);
+
+		if (filtered.length > 0 && filtered[0].confidence >= 0.4) {
+			const detectedLabel = filtered[0].encoding.toLowerCase();
+			const detectedCp = labelToCodepage(detectedLabel);
+
+			if (detectedCp !== Codepage.Unknown && detectedCp !== systemCp) {
+				// Normalize to canonical label (e.g. "shift_jis" → "windows-932")
+				detectedEncoding = codepageToLabel(detectedCp);
 			}
 		}
 	} catch {
-		// Log error message to console as a warning, but don't fail the import. The system codepage is a safe fallback.
-		console.warn("[detectImportEncoding] jschardet unavailable or failed; using system codepage:", systemLabel);
+		// jschardet unavailable — keep system codepage
 	}
 
 	return detectedEncoding;
+}
+
+/**
+ * Remap jschardet encoding guesses that are impossible or extremely
+ * unlikely in a VBA context to their Windows codepage equivalents.
+ *
+ * VBA on Windows only uses Windows ANSI / DBCS codepages. Encodings
+ * like MacCyrillic or ISO-8859-* will never appear in a VBA source
+ * file exported from Excel, but jschardet may guess them based on
+ * byte frequency. We remap them to the corresponding Windows codepage.
+ */
+function remapForVbaContext(encoding: string): string {
+	// SHIFT_JIS → Windows-932 (VBA uses Windows-31J, not standard Shift_JIS)
+	if (/^shift[-_]?jis$/i.test(encoding)) return "windows-932";
+	// MacCyrillic → Windows-1251 (VBA on Windows never uses Mac encodings)
+	if (/^x?-?mac-?cyrillic$/i.test(encoding)) return "windows-1251";
+	// ISO-8859-5 (Cyrillic) → Windows-1251
+	if (/^iso-?8859-?5$/i.test(encoding)) return "windows-1251";
+	// ISO-8859-2 (Central European) → Windows-1250
+	if (/^iso-?8859-?2$/i.test(encoding)) return "windows-1250";
+
+	return encoding;
 }

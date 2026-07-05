@@ -149,8 +149,7 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		let suggestion = "";
 		try {
 			const buffer = await readFile(source?.path || "");
-			// TODO: Fix when we update vbapm to ESM-only.
-			const jschardet = (await import("jschardet")).default;
+			const jschardet = require("jschardet");
 			if (!jschardet) {
 				throw new Error("jschardet not available");
 			}
