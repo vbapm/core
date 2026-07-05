@@ -1,1 +1,2 @@
-src/Hello.bas working-tree-encoding=cp932
+src/Hello.bas -text working-tree-encoding=cp932
+src/JapaneseExample.bas -text working-tree-encoding=cp932

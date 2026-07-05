@@ -1,1 +1,2 @@
-src/Hello.bas working-tree-encoding=cp1251
+src/Hello.bas -text working-tree-encoding=cp1251
+src/RussianExample.bas -text working-tree-encoding=cp1251
