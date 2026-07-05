@@ -50,7 +50,7 @@ describe("detectImportEncoding", () => {
 	});
 
 	test("detects CP1252 from Portuguese VBA fixture", async () => {
-		const path = join(dir, "multilingual", "cp1252-portuguese", "src", "PortugueseExample.bas");
+		const path = join(dir, "multilingual", "cp1252", "src", "PortugueseExample.bas");
 		const result = await detectImportEncoding(path);
 		expect(result).toBeDefined();
 		expect(validLabels.has(result!)).toBe(true);
@@ -58,7 +58,7 @@ describe("detectImportEncoding", () => {
 	});
 
 	test("detects CP1251 from Cyrillic VBA fixture", async () => {
-		const path = join(dir, "multilingual", "cp1251-cyrillic", "src", "RussianExample.bas");
+		const path = join(dir, "multilingual", "cp1251", "src", "RussianExample.bas");
 		const result = await detectImportEncoding(path);
 		expect(result).toBeDefined();
 		expect(validLabels.has(result!)).toBe(true);
@@ -66,7 +66,7 @@ describe("detectImportEncoding", () => {
 	});
 
 	test("detects encoding for Windows-932 content", async () => {
-		const path = join(dir, "multilingual", "cp932-japanese", "src", "JapaneseExample.bas");
+		const path = join(dir, "multilingual", "cp932", "src", "JapaneseExample.bas");
 		const result = await detectImportEncoding(path);
 		expect(result).toBeDefined();
 		expect(validLabels.has(result!)).toBe(true);
