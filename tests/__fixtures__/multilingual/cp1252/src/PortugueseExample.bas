@@ -151,4 +151,4 @@ Sub RegistrarAuditoria(operacao As String, Optional detalhes As String = "")
     wsLog.Cells(ultimaLinha, 2).Value = operacao
     wsLog.Cells(ultimaLinha, 3).Value = detalhes
     wsLog.Cells(ultimaLinha, 4).Value = Environ("USERNAME")
-End Sub
+End Sub
