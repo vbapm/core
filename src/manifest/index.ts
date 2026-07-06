@@ -61,6 +61,48 @@ export interface Manifest extends Snapshot {
 	buildDir?: string;
 }
 
+/** Recognized keys in [project] / [package] sections. */
+const KNOWN_SECTION_KEYS = new Set([
+	"name",
+	"version",
+	"authors",
+	"publish",
+	"target",
+	"src-encoding",
+	"build-dir"
+]);
+
+/** Snake_case → kebab-case corrections for common misspellings. */
+const SNAKE_TO_KEBAB: Record<string, string> = {
+	build_dir: "build-dir",
+	src_encoding: "src-encoding"
+};
+
+function validateSectionKeys(metadata: Metadata, _section: string): void {
+	const unknown = Object.keys(metadata);
+	if (!unknown.length) return;
+
+	const suggestions: string[] = [];
+
+	for (const key of unknown) {
+		// Direct match in the snake_case → kebab-case map
+		if (SNAKE_TO_KEBAB[key]) {
+			suggestions.push(`  "${key}" is not a valid key. Did you mean "${SNAKE_TO_KEBAB[key]}"?`);
+			continue;
+		}
+
+		// Heuristic: any snake_case key that matches a known key after _ → -
+		const kebab = key.replace(/_/g, "-");
+		if (kebab !== key && KNOWN_SECTION_KEYS.has(kebab)) {
+			suggestions.push(`  "${key}" is not a valid key. Did you mean "${kebab}"?`);
+		}
+	}
+
+	if (suggestions.length) {
+		manifestOk(false, suggestions.join("\n"));
+	}
+}
+
 const EXAMPLE = `Example vbaproject.toml for a package (e.g. library to be shared):
 
   [package]
@@ -142,6 +184,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 		target = packageTarget && parseTarget(packageTarget, name, dir);
 		buildDir = packageBuildDir;
 	}
+
+	validateSectionKeys(sectionMetadata, type);
 
 	// Normalize build-dir: strip trailing slashes, default to undefined
 	if (typeof buildDir === "string") {
