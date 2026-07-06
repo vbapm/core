@@ -44,9 +44,15 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 		return undefined;
 	}
 
-	// Check for non-ASCII characters
-	const code = buffer.toString();
-	if (!/[^\x00-\x7F]/.test(code)) return undefined;
+	// Check for non-ASCII characters — byte loop avoids allocating a string
+	let hasNonAscii = false;
+	for (let i = 0; i < buffer.length; i++) {
+		if (buffer[i] > 0x7f) {
+			hasNonAscii = true;
+			break;
+		}
+	}
+	if (!hasNonAscii) return undefined;
 
 	// Default to system codepage
 	const systemCp = getSystemCodepage();
