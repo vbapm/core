@@ -6,11 +6,11 @@ pre-commit:
   commands:
     format:
       glob: "*.{ts,js}"
-      run: pnpm oxfmt --check {staged_files}
+      run: sh -c 'files="{staged_files}"; if [ -n "$files" ]; then pnpm oxfmt --check $files; fi'
       stage_fixed: false
     lint:
       glob: "*.ts"
-      run: pnpm oxlint --deny-warnings {staged_files}
+      run: sh -c 'files="{staged_files}"; if [ -n "$files" ]; then pnpm oxlint --deny-warnings $files; fi'
 
 #       run: bundle exec rubocop --force-exclusion -- {all_files}
 #
