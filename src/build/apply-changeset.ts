@@ -1,6 +1,6 @@
 import { env } from "../env";
 import { Message } from "../messages";
-import { resolveSrcSubfolder, writeManifest } from "../manifest";
+import { resolveSrcSubfolders, writeManifest } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Source } from "../manifest/source";
 import { Project } from "../project";
@@ -31,7 +31,7 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 	await parallel(
 		changeset.components.added,
 		async component => {
-			const sub = resolveSrcSubfolder(project.manifest.srcSubfolder, component.type);
+			const sub = resolveSrcSubfolders(project.manifest.srcSubfolders, component.type);
 			const path = join(project.paths.dir, "src", sub, component.filename);
 			component.details.path = path;
 
@@ -55,7 +55,7 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 
 async function updateManifest(project: Project, changeset: Changeset) {
 	for (const component of changeset.components.added) {
-		const sub = resolveSrcSubfolder(project.manifest.srcSubfolder, component.type);
+		const sub = resolveSrcSubfolders(project.manifest.srcSubfolders, component.type);
 		const srcPath = sub ? `src/${sub}/${component.filename}` : `src/${component.filename}`;
 		const source: Source = {
 			name: component.name,

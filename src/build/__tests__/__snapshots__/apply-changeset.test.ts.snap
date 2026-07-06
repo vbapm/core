@@ -61,7 +61,7 @@ Object {
     },
   ],
   "srcEncoding": undefined,
-  "srcSubfolder": undefined,
+  "srcSubfolders": undefined,
   "target": Object {
     "filename": "complex.xlsm",
     "name": "complex",

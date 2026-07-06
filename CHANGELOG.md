@@ -11,10 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build-dir` field in `vbaproject.toml` to specify where the built `.xlsm`/`.xlam` is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
 - `vba init --from workbook.xlsm` automatically sets `build-dir = "."` when the workbook is at the project root.
 - `vbaproject.toml` now validates section keys and suggests corrections for snake_case misspellings (e.g. `build_dir` → `build-dir`, `src_encoding` → `src-encoding`).
-- `src-subfolder` field in `vbaproject.toml` to organize exported source files by component type. Map VBA types to subdirectories under `src/` (e.g. `src-subfolder = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }`).
+- `src-subfolders` field in `vbaproject.toml` to organize exported source files by component type. Map VBA types to subdirectories under `src/` (e.g. `src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }`).
 
 ### Fixed
-- `src-encoding` and `src-subfolder` are now preserved when writing `vbaproject.toml` (previously silently dropped on export).
+- `src-encoding` and `src-subfolders` are now preserved when writing `vbaproject.toml` (previously silently dropped on export).
 - VBA component names in `[src]` are now matched case-insensitively, matching VBA's own behavior.
 
 ## [0.9.0] - 2026-07-06
