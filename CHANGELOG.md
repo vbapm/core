@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vbaproject.toml` now validates section keys and suggests corrections for snake_case misspellings (e.g. `build_dir` → `build-dir`, `src_encoding` → `src-encoding`).
 - `src-subfolders` field in `vbaproject.toml` to organize exported source files by component type. Map VBA types to subdirectories under `src/` (e.g. `src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }`).
 
+### Changed
+- Source files in `[src]` are now sorted by type (Modules → Forms → Classes), then alphabetically within each group.
+
 ### Fixed
 - `src-encoding` and `src-subfolders` are now preserved when writing `vbaproject.toml` (previously silently dropped on export).
 - VBA component names in `[src]` are now matched case-insensitively, matching VBA's own behavior.

@@ -69,6 +69,7 @@ export interface SrcSubfolders {
 	Modules?: string;
 	Forms?: string;
 	Classes?: string;
+	Objects?: string;
 }
 
 /**
@@ -79,7 +80,11 @@ export interface SrcSubfolders {
 export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type: string): string {
 	if (!subfolders) return "";
 
-	const key = type === "class" ? "Classes" : type === "form" ? "Forms" : "Modules";
+	const key =
+		type === "document" ? "Objects" :
+		type === "class" ? "Classes" :
+		type === "form" ? "Forms" :
+		"Modules";
 	return subfolders[key] || "";
 }
 

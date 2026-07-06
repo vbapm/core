@@ -8,7 +8,7 @@ import { readFile } from "../utils/fs";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
 import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
-import { byComponentName, Component } from "./component";
+import { byComponentTypeThenName, Component } from "./component";
 
 import jschardet from "jschardet";
 
@@ -77,7 +77,7 @@ export async function loadFromProject(
 		}
 	}
 
-	const components = (await Promise.all(loadingComponents)).sort(byComponentName);
+	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
 	const graph = {
 		name: project.manifest.codename || "VBAProject",
 		components,
