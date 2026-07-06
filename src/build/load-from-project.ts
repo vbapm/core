@@ -10,6 +10,8 @@ import { BuildGraph, FromDependences } from "./build-graph";
 import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
 import { byComponentName, Component } from "./component";
 
+import jschardet from "jschardet";
+
 export async function loadFromProject(
 	project: Project,
 	dependencies: Manifest[],
@@ -154,10 +156,6 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		if (sourcePath) {
 			try {
 				const buffer = await readFile(sourcePath);
-				const jschardet = require("jschardet");
-				if (!jschardet) {
-					throw new Error("jschardet not available");
-				}
 
 				const results = (
 					jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
