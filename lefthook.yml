@@ -12,9 +12,13 @@ pre-commit:
       # The `if test -n` guard prevents oxfmt from reading stdin when {staged_files}
       # is empty (no matching staged files). Without this guard, oxfmt hangs indefinitely
       # waiting for stdin input, which blocks the commit with no error message.
-      run: if test -n "{staged_files}"; then npx oxfmt --check {staged_files}; fi
+      run: if test -n "{staged_files}"; then npx oxfmt --check {staged_files} > /dev/null 2>&1; fi
       # Do NOT auto-stage formatting fixes — let the contributor review and stage manually.
       stage_fixed: false
+      fail_text: |
+        ❌ Formatting issues found. To fix:
+          pnpm run format
+        Then try committing again.
 
     # ---- oxlint (lint check) ----
     lint:
@@ -22,7 +26,11 @@ pre-commit:
       # Same stdin guard as format above — oxlint also reads stdin when given no files.
       # --deny-warnings makes warnings fail the hook, preventing new warnings from being
       # committed while allowing pre-existing warnings (on unchanged files) through.
-      run: if test -n "{staged_files}"; then npx oxlint --deny-warnings {staged_files}; fi
+      run: if test -n "{staged_files}"; then npx oxlint --deny-warnings {staged_files} > /dev/null 2>&1; fi
+      fail_text: |
+        ❌ Lint issues found in staged files. To view them:
+          pnpm run lint
+        Fix the warnings before committing.
 
 # Design notes:
 # - Use npx (not pnpm) — pnpm may hang in the git hook shell context on Windows.

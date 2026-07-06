@@ -36,7 +36,7 @@
         "format:check": "oxfmt --check \"**/*.{ts,js}\"",
         "lint": "oxlint",
         "lint:check": "oxlint --deny-warnings",
-        "postinstall": "lefthook install",
+        "lefthook:install": "lefthook install && node scripts/lefthook-cleanup.js",
         "sync:config-templates": "node scripts/sync-templates.js",
         "check:config-templates": "node scripts/sync-templates.js --check",
         "test": "jest --runInBand",
