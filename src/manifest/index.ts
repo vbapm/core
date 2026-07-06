@@ -328,6 +328,14 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["build-dir"] = manifest.buildDir;
 	}
 
+	if (manifest.srcEncoding) {
+		values["src-encoding"] = manifest.srcEncoding;
+	}
+
+	if (manifest.srcSubfolder) {
+		values["src-subfolder"] = manifest.srcSubfolder;
+	}
+
 	value.src = formatSrc(manifest.src, dir);
 
 	if (manifest.dependencies.length) {

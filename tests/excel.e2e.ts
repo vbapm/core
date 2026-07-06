@@ -199,6 +199,28 @@ describe("export", () => {
 			});
 		});
 	});
+	test("export preserves src-subfolder config in vbaproject.toml", async () => {
+		await setup(standard, "export-subfolder", async cwd => {
+			// 1. Add src-subfolder config to the project
+			let toml = (await readFile(join(cwd, "vbaproject.toml"), "utf-8"));
+			toml = toml.replace(
+				'target = { type = "xlsm", path = "targets/xlsm" }',
+				'target = { type = "xlsm", path = "targets/xlsm" }\nsrc-subfolder = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }'
+			);
+			await writeFile(join(cwd, "vbaproject.toml"), toml);
+
+			// 2. Build and export
+			await execute(cwd, "build");
+			await execute(cwd, "export --target xlsm");
+
+			// 3. Verify the TOML still has src-subfolder
+			const updatedToml = await readFile(join(cwd, "vbaproject.toml"), "utf-8");
+			expect(updatedToml).toContain('src-subfolder');
+			expect(updatedToml).toContain('Modules = "Modules"');
+			expect(updatedToml).toContain('Classes = "Classes"');
+		});
+	});
+});
 });
 
 describe("update", () => {
