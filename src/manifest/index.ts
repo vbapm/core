@@ -53,12 +53,32 @@ export interface Manifest extends Snapshot {
 	metadata: Metadata;
 	src: Source[];
 	srcEncoding?: string;
+	srcSubfolder?: SrcSubfolder;
 	references: Reference[];
 	devSrc: Source[];
 	devDependencies: Dependency[];
 	devReferences: Reference[];
 	target?: Target;
 	buildDir?: string;
+}
+
+/** Maps VBA component types to subdirectories under `src/`. */
+export interface SrcSubfolder {
+	Modules?: string;
+	Forms?: string;
+	Classes?: string;
+}
+
+/**
+ * Resolve the subdirectory under `src/` for a given component type.
+ * Uses the `src-subfolder` config if present, otherwise defaults to
+ * placing all files directly in `src/`.
+ */
+export function resolveSrcSubfolder(subfolder: SrcSubfolder | undefined, type: string): string {
+	if (!subfolder) return "";
+
+	const key = type === "class" ? "Classes" : type === "form" ? "Forms" : "Modules";
+	return subfolder[key] || "";
 }
 
 /** Recognized keys in [project] / [package] sections. */
@@ -69,6 +89,7 @@ const KNOWN_SECTION_KEYS = new Set([
 	"publish",
 	"target",
 	"src-encoding",
+	"src-subfolder",
 	"build-dir"
 ]);
 
@@ -129,6 +150,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let publish: boolean | undefined;
 	let target: Target | undefined;
 	let srcEncoding: string | undefined;
+	let srcSubfolder: SrcSubfolder | undefined;
 	let buildDir: string | undefined;
 	let sectionMetadata: Metadata = {};
 
@@ -140,6 +162,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: projectPublish,
 			target: projectTarget,
 			"src-encoding": projectSrcEncoding,
+			"src-subfolder": projectSrcSubfolder,
 			"build-dir": projectBuildDir,
 			...projectMetadata
 		} = value.project;
@@ -150,6 +173,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = projectAuthors;
 		publish = projectPublish;
 		srcEncoding = projectSrcEncoding;
+		srcSubfolder = projectSrcSubfolder;
 		sectionMetadata = projectMetadata;
 
 		manifestOk(name, `[project] name is a required field. \n\n${EXAMPLE}`);
@@ -165,6 +189,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: packagePublish,
 			target: packageTarget,
 			"src-encoding": packageSrcEncoding,
+			"src-subfolder": packageSrcSubfolder,
 			"build-dir": packageBuildDir,
 			...packageMetadata
 		} = value.package;
@@ -175,6 +200,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = packageAuthors;
 		publish = packagePublish;
 		srcEncoding = packageSrcEncoding;
+		srcSubfolder = packageSrcSubfolder;
 		sectionMetadata = packageMetadata;
 
 		manifestOk(name, `[package] name is a required field. \n\n${EXAMPLE}`);
@@ -207,6 +233,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		metadata: { authors, publish, ...sectionMetadata },
 		src,
 		srcEncoding,
+		srcSubfolder,
 		dependencies,
 		references,
 		devSrc,
