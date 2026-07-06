@@ -7,6 +7,7 @@
 /scripts/registry
 /worktrees
 /local
+/demo
 
 # Office temporary files (https://github.com/DecimalTurn/VBA-on-GitHub)
 ~$*
@@ -24,3 +25,4 @@ node_modules
 *_LOCAL.md
 *.code-workspace
 local/
+
