@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-06
+
 ### Added
 - Multilingual encoding support for VBA source files across Windows ANSI codepages (CP874, CP932, CP936, CP949, CP950, CP1250–CP1258). ([#103])
   - Source files can declare their encoding via `src-encoding` in `[project]`/`[package]` or per-source `encoding`.
