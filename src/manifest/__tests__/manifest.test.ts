@@ -254,9 +254,7 @@ describe("section key validation", () => {
 			}
 		};
 
-		expect(() => parseManifest(value, FIXTURES)).toThrow(
-			/Did you mean "build-dir"/
-		);
+		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "build-dir"/);
 	});
 
 	test("rejects snake_case src_encoding with suggestion", () => {
@@ -268,9 +266,7 @@ describe("section key validation", () => {
 			}
 		};
 
-		expect(() => parseManifest(value, FIXTURES)).toThrow(
-			/Did you mean "src-encoding"/
-		);
+		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "src-encoding"/);
 	});
 
 	test("allows arbitrary metadata keys like license", () => {
@@ -298,9 +294,6 @@ describe("section key validation", () => {
 			}
 		};
 
-		expect(() => parseManifest(value, FIXTURES)).toThrow(
-			/Did you mean "build-dir"/
-		);
+		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "build-dir"/);
 	});
 });
-
