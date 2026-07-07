@@ -46,6 +46,17 @@ const GROUPED_KEYS = new Set(["modules", "forms", "classes"]);
  * source entries alone — no `[src-properties]` needed.
  */
 export function detectSrcStructure(src: Source[]): SrcStructure {
+	// ---- empty src ----
+	if (src.length === 0) {
+		return {
+			grouped: false,
+			sortedByTypes: false,
+			sortedAlphabetically: false,
+			sortedByTypeThenAlphabetically: false,
+			unstructured: true
+		};
+	}
+
 	// ---- grouped check ----
 	if (
 		src.length === 3 &&

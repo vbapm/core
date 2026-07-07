@@ -32,6 +32,7 @@ export interface InitOptions {
 	pkg: boolean;
 	git: boolean;
 	configTemplates: boolean;
+	individual?: boolean;
 }
 
 export async function initProject(options: InitOptions) {
@@ -42,7 +43,8 @@ export async function initProject(options: InitOptions) {
 		from,
 		pkg: asPackage,
 		git,
-		configTemplates
+		configTemplates,
+		individual
 	} = options;
 
 	if (await pathExists(join(dir, "vbaproject.toml"))) {
@@ -97,6 +99,23 @@ export async function initProject(options: InitOptions) {
 		type: asPackage ? "package" : "project"
 	});
 
+	// Default to grouped convention for new projects.
+	// Set srcStructure before addTarget so applyChangeset skips manifest updates.
+	if (!individual) {
+		project.manifest.srcStructure = {
+			grouped: true,
+			sortedByTypes: false,
+			sortedAlphabetically: false,
+			sortedByTypeThenAlphabetically: false,
+			unstructured: false,
+			groupedPatterns: {
+				Modules: "src/**/*.bas",
+				Forms: "src/**/*.frm",
+				Classes: "src/**/*.cls"
+			}
+		};
+	}
+
 	// When importing from a workbook at the project root, default build-dir to "."
 	// so the built file is written alongside the source workbook
 	if (from && dirname(from) === dir) {
@@ -116,6 +135,15 @@ export async function initProject(options: InitOptions) {
 	// Auto-detect src-encoding when importing from an existing workbook
 	if (from) {
 		await detectSourceEncoding(project);
+	}
+
+	// Write the grouped [src] entries for new projects
+	if (!individual) {
+		project.manifest.src = [
+			{ name: "Modules", path: join(dir, "src/**/*.bas") },
+			{ name: "Forms", path: join(dir, "src/**/*.frm") },
+			{ name: "Classes", path: join(dir, "src/**/*.cls") }
+		];
 	}
 
 	await writeManifest(project.manifest, project.paths.dir);
