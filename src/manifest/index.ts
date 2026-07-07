@@ -6,6 +6,7 @@ import { convert as convertToToml, parse as parseToml, patch as patchToml } from
 import { Dependency, formatDependencies, parseDependencies } from "./dependency";
 import { formatReferences, parseReferences, Reference } from "./reference";
 import { formatSrc, parseSrc, Source } from "./source";
+import { detectSrcStructure, parseSrcProperties, SrcProperties, SrcStructure } from "./src-sort";
 import { formatTarget, parseTarget, Target } from "./target";
 import { DEFAULT_VERSION, Version } from "./version";
 
@@ -54,6 +55,8 @@ export interface Manifest extends Snapshot {
 	src: Source[];
 	srcEncoding?: string;
 	srcSubfolders?: SrcSubfolders;
+	srcProperties?: SrcProperties;
+	srcStructure?: SrcStructure;
 	references: Reference[];
 	devSrc: Source[];
 	devDependencies: Dependency[];
@@ -239,6 +242,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 	}
 
 	const src = parseSrc(value.src || {}, dir);
+	const srcProperties = parseSrcProperties(value["src-properties"]);
+	const srcStructure = detectSrcStructure(src);
 	const dependencies = parseDependencies(value.dependencies || {}, dir);
 	const references = parseReferences(value.references || {});
 
@@ -254,6 +259,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 		src,
 		srcEncoding,
 		srcSubfolders,
+		srcProperties,
+		srcStructure,
 		dependencies,
 		references,
 		devSrc,
@@ -361,7 +368,11 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["src-subfolders"] = manifest.srcSubfolders;
 	}
 
-	value.src = formatSrc(manifest.src, dir);
+	value.src = formatSrc(manifest.src, dir, manifest.srcStructure);
+
+	if (manifest.srcProperties) {
+		value["src-properties"] = manifest.srcProperties;
+	}
 
 	if (manifest.dependencies.length) {
 		value.dependencies = formatDependencies(manifest.dependencies, dir);
