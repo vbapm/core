@@ -5,7 +5,7 @@ import { join, relative, sanitize } from "../utils/path";
 
 /*
   # Target
-  # Indicates what format is targeted for the build ouput and where the input 
+  # Indicates what format is targeted for the build output and where the input
   # source files are located.
 
   target: type | { type, name?, path? }
