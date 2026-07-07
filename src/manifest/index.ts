@@ -96,7 +96,9 @@ const KNOWN_SECTION_KEYS = new Set([
 /** Snake_case → kebab-case corrections for common misspellings. */
 const SNAKE_TO_KEBAB: Record<string, string> = {
 	build_dir: "build-dir",
-	src_encoding: "src-encoding"
+	src_encoding: "src-encoding",
+	src_subfolder: "src-subfolders",
+	src_subfolders: "src-subfolders"
 };
 
 function validateSectionKeys(metadata: Metadata, _section: string): void {
