@@ -5,27 +5,44 @@
 .DESCRIPTION
     Uses Start-Process with the /x flag to force a genuinely new
     EXCEL.EXE process — never attaches to an existing instance.
-    Useful for getting a clean instance that vbapm can target.
+    By default, creates a blank workbook so you're not staring at
+    the start screen.
 
 .PARAMETER File
     Path to a workbook to open in the new instance.
 
-.PARAMETER Blank
-    Open with a new blank workbook (default if no File is given).
+.PARAMETER NoBlank
+    Don't create a blank workbook (leave Excel at the start screen).
 
 .EXAMPLE
     .\scripts\ps\open-new-excel.ps1
 
 .EXAMPLE
     .\scripts\ps\open-new-excel.ps1 -File "C:\my-project\build\my-project.xlsm"
+
+.EXAMPLE
+    .\scripts\ps\open-new-excel.ps1 -NoBlank
 #>
 
 param(
     [string]$File,
-    [switch]$Blank
+    [switch]$NoBlank
 )
 
-# No COM needed for Start-Process, so no PS Core redirect necessary.
+# ---------------------------------------------------------------
+# PowerShell Core -> re-invoke with Windows PowerShell for COM
+# ---------------------------------------------------------------
+if ($PSVersionTable.PSEdition -eq 'Core') {
+    $winPS = Get-Command powershell.exe -ErrorAction SilentlyContinue
+    if ($winPS) {
+        $psArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
+        if ($File)    { $psArgs += '-File'; $psArgs += $File }
+        if ($NoBlank) { $psArgs += '-NoBlank' }
+        & powershell.exe $psArgs
+        exit $LASTEXITCODE
+    }
+}
+
 $ErrorActionPreference = 'Stop'
 
 Write-Host "Launching new Excel process..." -ForegroundColor Cyan
@@ -40,14 +57,25 @@ if ($File) {
     $resolved = (Resolve-Path $File).Path
     $args += "`"$resolved`""
     Write-Host "Opening: $resolved" -ForegroundColor Yellow
-} else {
-    Write-Host "Opening with a new blank workbook" -ForegroundColor Yellow
 }
 
 $proc = Start-Process excel.exe -ArgumentList $args -PassThru
 Write-Host "New instance started: PID $($proc.Id)" -ForegroundColor Green
 
-# Give Excel a moment to register in the ROT
-Start-Sleep -Seconds 2
+# Give Excel time to initialize and register in ROT
+Start-Sleep -Seconds 3
+
+# Create a blank workbook so we're not at the start screen
+if (-not $File -and -not $NoBlank) {
+    try {
+        $excel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+        $excel.Workbooks.Add() | Out-Null
+        Write-Host "Blank workbook created." -ForegroundColor Green
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
+    } catch {
+        Write-Host "(could not create blank workbook via COM - Excel may not be ready yet)" -ForegroundColor DarkGray
+    }
+}
+
 Write-Host ""
-Write-Host "Run .\scripts\ps\count-excel-instances.ps1 to verify both instances."
+Write-Host "Run .\scripts\ps\count-excel-instances.ps1 to verify."

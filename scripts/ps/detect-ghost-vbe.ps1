@@ -221,14 +221,28 @@ foreach ($proj in $Excel.VBE.VBProjects) {
     # ---- Classification logic ----------------------------------
     $isGhost = $false
     $reason  = ""
+    $normalized = $null
 
     if (-not $indicators.FileName) {
-        # No FileName at all — cannot cross-reference; treat as ghost
-        # only if component count is non-zero (a real ghost still has
-        # cached components).
-        if ($indicators.ComponentCount -and $indicators.ComponentCount -gt 0) {
+        # No FileName — could be a ghost, or an unsaved workbook (Book1).
+        # Compare by IUnknown pointer to see if any open workbook IS this project's parent.
+        $matchedWb = $false
+        try {
+            $projPtr = [System.Runtime.InteropServices.Marshal]::GetIUnknownForObject($proj)
+            foreach ($wb in $Excel.Workbooks) {
+                try {
+                    $wbPtr = [System.Runtime.InteropServices.Marshal]::GetIUnknownForObject($wb.VBProject)
+                    if ($projPtr -eq $wbPtr) { $matchedWb = $true; break }
+                } catch { }
+            }
+            [System.Runtime.InteropServices.Marshal]::Release($projPtr) | Out-Null
+        } catch { }
+
+        if (-not $matchedWb -and $indicators.ComponentCount -and $indicators.ComponentCount -gt 0) {
             $isGhost = $true
-            $reason  = "FileName is inaccessible ($($indicators.FileNameError)) but VBComponents.Count = $($indicators.ComponentCount)"
+            $reason  = "FileName is inaccessible ($($indicators.FileNameError)), VBComponents.Count = $($indicators.ComponentCount), and no matching open workbook"
+        } elseif ($matchedWb) {
+            $reason  = "Unsaved workbook (no FileName), matched by IUnknown pointer"
         }
     } else {
         $normalized = [System.IO.Path]::GetFullPath($indicators.FileName).ToLowerInvariant()
@@ -261,9 +275,14 @@ foreach ($proj in $Excel.VBE.VBProjects) {
         $Healthy += $entry
         if (-not $Quiet) {
             Write-Host "OK    $projName" -ForegroundColor Green -NoNewline
-            Write-Host "  | matched: $($OpenPaths[$normalized])"
+            if ($normalized) {
+                Write-Host "  | matched: $($OpenPaths[$normalized])"
+            } else {
+                Write-Host "  | $reason"
+            }
         }
     }
+    $normalized = $null
 }
 
 # ---------------------------------------------------------------
