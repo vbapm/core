@@ -556,6 +556,15 @@ B = "src/B.cls"
 C = { path = "src/C.bas" }
 ```
 
+#### [src-subfolders]
+`src-subfolders` organizes exported source files into subdirectories under `src/` based on component type. Without it, all files land flat in `src/`.
+
+```toml
+src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
+```
+
+This maps `.bas` → `src/Modules/`, `.frm` → `src/Forms/`, `.cls` → `src/Classes/`.
+
 ### [dependencies]
 
 `name = "version"` or
