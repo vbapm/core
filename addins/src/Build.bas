@@ -23,6 +23,19 @@ Public Function ImportGraph(Graph As Variant) As String
     DebugLog.Clear
     DebugLog.Log "ImportGraph", "Starting import for: " & Values("file")
 
+    ' Set VBA project name (from codename in vbaproject.toml)
+    Dim ProjectName As String
+    ProjectName = Values("name")
+    If ProjectName <> "" And ProjectName <> "VBAProject" Then
+        On Error Resume Next
+        Document.VBProject.Name = ProjectName
+        If Err.Number <> 0 Then
+            Output.Warnings.Add "Could not set VBA project name to '" & ProjectName & "': " & Err.Description
+            Err.Clear
+        End If
+        On Error GoTo ErrorHandling
+    End If
+
     ' Capture the currently active VBE code pane (best-effort, non-fatal)
     Dim ActiveComponentName As String
     Dim ActiveStartLine As Long, ActiveStartCol As Long

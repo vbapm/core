@@ -60,6 +60,8 @@ export interface Manifest extends Snapshot {
 	devReferences: Reference[];
 	target?: Target;
 	buildDir?: string;
+	/** VBA project code name as shown in the VBE (defaults to "VBAProject"). */
+	codename?: string;
 }
 
 /** Maps VBA component types to subdirectories under `src/`. */
@@ -90,7 +92,8 @@ const KNOWN_SECTION_KEYS = new Set([
 	"target",
 	"src-encoding",
 	"src-subfolders",
-	"build-dir"
+	"build-dir",
+	"codename"
 ]);
 
 /** Snake_case → kebab-case corrections for common misspellings. */
@@ -154,6 +157,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let srcEncoding: string | undefined;
 	let srcSubfolders: SrcSubfolders | undefined;
 	let buildDir: string | undefined;
+	let codename: string | undefined;
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
@@ -163,6 +167,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			authors: projectAuthors,
 			publish: projectPublish,
 			target: projectTarget,
+			codename: projectCodename,
 			"src-encoding": projectSrcEncoding,
 			"src-subfolders": projectSrcSubfolders,
 			"build-dir": projectBuildDir,
@@ -183,6 +188,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 
 		target = parseTarget(projectTarget, name, dir);
 		buildDir = projectBuildDir;
+		codename = projectCodename;
 	} else {
 		const {
 			name: packageName,
@@ -242,7 +248,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 		devDependencies,
 		devReferences,
 		target,
-		buildDir
+		buildDir,
+		codename
 	};
 }
 
@@ -328,6 +335,10 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 
 	if (manifest.buildDir != null && manifest.buildDir !== "build") {
 		values["build-dir"] = manifest.buildDir;
+	}
+
+	if (manifest.codename != null) {
+		values["codename"] = manifest.codename;
 	}
 
 	if (manifest.srcEncoding) {
