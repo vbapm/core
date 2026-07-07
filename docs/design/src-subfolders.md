@@ -1,4 +1,4 @@
-# src-subfolder Feature
+# src-subfolders Feature
 
 ## What
 
