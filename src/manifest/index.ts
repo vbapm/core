@@ -53,11 +53,77 @@ export interface Manifest extends Snapshot {
 	metadata: Metadata;
 	src: Source[];
 	srcEncoding?: string;
+	srcSubfolders?: SrcSubfolders;
 	references: Reference[];
 	devSrc: Source[];
 	devDependencies: Dependency[];
 	devReferences: Reference[];
 	target?: Target;
+	buildDir?: string;
+}
+
+/** Maps VBA component types to subdirectories under `src/`. */
+export interface SrcSubfolders {
+	Modules?: string;
+	Forms?: string;
+	Classes?: string;
+}
+
+/**
+ * Resolve the subdirectory under `src/` for a given component type.
+ * Uses the `src-subfolders` config if present, otherwise defaults to
+ * placing all files directly in `src/`.
+ */
+export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type: string): string {
+	if (!subfolders) return "";
+
+	const key = type === "class" ? "Classes" : type === "form" ? "Forms" : "Modules";
+	return subfolders[key] || "";
+}
+
+/** Recognized keys in [project] / [package] sections. */
+const KNOWN_SECTION_KEYS = new Set([
+	"name",
+	"version",
+	"authors",
+	"publish",
+	"target",
+	"src-encoding",
+	"src-subfolders",
+	"build-dir"
+]);
+
+/** Snake_case → kebab-case corrections for common misspellings. */
+const SNAKE_TO_KEBAB: Record<string, string> = {
+	build_dir: "build-dir",
+	src_encoding: "src-encoding",
+	src_subfolder: "src-subfolders",
+	src_subfolders: "src-subfolders"
+};
+
+function validateSectionKeys(metadata: Metadata, _section: string): void {
+	const unknown = Object.keys(metadata);
+	if (!unknown.length) return;
+
+	const suggestions: string[] = [];
+
+	for (const key of unknown) {
+		// Direct match in the snake_case → kebab-case map
+		if (SNAKE_TO_KEBAB[key]) {
+			suggestions.push(`  "${key}" is not a valid key. Did you mean "${SNAKE_TO_KEBAB[key]}"?`);
+			continue;
+		}
+
+		// Heuristic: any snake_case key that matches a known key after _ → -
+		const kebab = key.replace(/_/g, "-");
+		if (kebab !== key && KNOWN_SECTION_KEYS.has(kebab)) {
+			suggestions.push(`  "${key}" is not a valid key. Did you mean "${kebab}"?`);
+		}
+	}
+
+	if (suggestions.length) {
+		manifestOk(false, suggestions.join("\n"));
+	}
 }
 
 const EXAMPLE = `Example vbaproject.toml for a package (e.g. library to be shared):
@@ -86,6 +152,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let publish: boolean | undefined;
 	let target: Target | undefined;
 	let srcEncoding: string | undefined;
+	let srcSubfolders: SrcSubfolders | undefined;
+	let buildDir: string | undefined;
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
@@ -96,6 +164,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: projectPublish,
 			target: projectTarget,
 			"src-encoding": projectSrcEncoding,
+			"src-subfolders": projectSrcSubfolders,
+			"build-dir": projectBuildDir,
 			...projectMetadata
 		} = value.project;
 
@@ -105,12 +175,14 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = projectAuthors;
 		publish = projectPublish;
 		srcEncoding = projectSrcEncoding;
+		srcSubfolders = projectSrcSubfolders;
 		sectionMetadata = projectMetadata;
 
 		manifestOk(name, `[project] name is a required field. \n\n${EXAMPLE}`);
 		manifestOk(value.project.target, `[project] target is a required field. \n\n${EXAMPLE}`);
 
 		target = parseTarget(projectTarget, name, dir);
+		buildDir = projectBuildDir;
 	} else {
 		const {
 			name: packageName,
@@ -119,6 +191,8 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: packagePublish,
 			target: packageTarget,
 			"src-encoding": packageSrcEncoding,
+			"src-subfolders": packageSrcSubfolders,
+			"build-dir": packageBuildDir,
 			...packageMetadata
 		} = value.package;
 
@@ -128,6 +202,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = packageAuthors;
 		publish = packagePublish;
 		srcEncoding = packageSrcEncoding;
+		srcSubfolders = packageSrcSubfolders;
 		sectionMetadata = packageMetadata;
 
 		manifestOk(name, `[package] name is a required field. \n\n${EXAMPLE}`);
@@ -135,6 +210,14 @@ export function parseManifest(value: any, dir: string): Manifest {
 		manifestOk(authors, `[package] authors is a required field. \n\n${EXAMPLE}`);
 
 		target = packageTarget && parseTarget(packageTarget, name, dir);
+		buildDir = packageBuildDir;
+	}
+
+	validateSectionKeys(sectionMetadata, type);
+
+	// Normalize build-dir: strip trailing slashes, default to undefined
+	if (typeof buildDir === "string") {
+		buildDir = normalize(buildDir);
 	}
 
 	const src = parseSrc(value.src || {}, dir);
@@ -152,12 +235,14 @@ export function parseManifest(value: any, dir: string): Manifest {
 		metadata: { authors, publish, ...sectionMetadata },
 		src,
 		srcEncoding,
+		srcSubfolders,
 		dependencies,
 		references,
 		devSrc,
 		devDependencies,
 		devReferences,
-		target
+		target,
+		buildDir
 	};
 }
 
@@ -239,6 +324,18 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 
 	if (manifest.target) {
 		value[type].target = formatTarget(manifest.target, manifest.name, dir);
+	}
+
+	if (manifest.buildDir != null && manifest.buildDir !== "build") {
+		values["build-dir"] = manifest.buildDir;
+	}
+
+	if (manifest.srcEncoding) {
+		values["src-encoding"] = manifest.srcEncoding;
+	}
+
+	if (manifest.srcSubfolders) {
+		values["src-subfolders"] = manifest.srcSubfolders;
 	}
 
 	value.src = formatSrc(manifest.src, dir);

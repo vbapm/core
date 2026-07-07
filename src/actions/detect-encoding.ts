@@ -7,6 +7,8 @@ import {
 	SUPPORTED_WINDOWS_CODEPAGE_LABELS
 } from "../build/encoding-sniffer";
 
+import jschardet from "jschardet";
+
 /**
  * Decide which encoding to declare for a newly imported VBA project.
  *
@@ -44,9 +46,15 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 		return undefined;
 	}
 
-	// Check for non-ASCII characters
-	const code = buffer.toString();
-	if (!/[^\x00-\x7F]/.test(code)) return undefined;
+	// Check for non-ASCII characters — byte loop avoids allocating a string
+	let hasNonAscii = false;
+	for (let i = 0; i < buffer.length; i++) {
+		if (buffer[i] > 0x7f) {
+			hasNonAscii = true;
+			break;
+		}
+	}
+	if (!hasNonAscii) return undefined;
 
 	// Default to system codepage
 	const systemCp = getSystemCodepage();
@@ -54,8 +62,6 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 
 	// Try jschardet to see if a different encoding is more likely
 	try {
-		const jschardet = require("jschardet");
-
 		const results = (
 			jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
 		).sort((a: { confidence: number }, b: { confidence: number }) => b.confidence - a.confidence);

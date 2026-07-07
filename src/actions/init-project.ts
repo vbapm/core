@@ -7,7 +7,7 @@ import { initProject as init } from "../project";
 import { addTarget } from "../targets/add-target";
 import { copy, ensureDir, pathExists } from "../utils/fs";
 import { init as git_init } from "../utils/git";
-import { basename, extname, join } from "../utils/path";
+import { basename, dirname, extname, join } from "../utils/path";
 import { detectImportEncoding } from "./detect-encoding";
 
 const TEMPLATE_FILES = [
@@ -96,6 +96,14 @@ export async function initProject(options: InitOptions) {
 	const project = await init(name, dir, {
 		type: asPackage ? "package" : "project"
 	});
+
+	// When importing from a workbook at the project root, default build-dir to "."
+	// so the built file is written alongside the source workbook
+	if (from && dirname(from) === dir) {
+		project.manifest.buildDir = ".";
+		project.paths.build = join(dir, ".");
+		project.paths.backup = join(dir, ".", ".backup");
+	}
 
 	if (from) {
 		targetType = extname(from).replace(".", "");

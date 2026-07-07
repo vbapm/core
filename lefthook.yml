@@ -1,26 +1,41 @@
-# lefthook.yml
+# lefthook.yml — Pre-commit hook configuration
 # See https://github.com/evilmartians/lefthook for documentation
 
 pre-commit:
+  # Run format and lint checks in parallel for speed
   parallel: true
   commands:
-    format:
-      glob: "*.{ts,js}"
-      run: pnpm oxfmt --check {staged_files}
-      stage_fixed: false
-    lint:
-      glob: "*.ts"
-      run: pnpm oxlint --deny-warnings {staged_files}
 
-#       run: bundle exec rubocop --force-exclusion -- {all_files}
-#
-#     - name: govet
-#       files: git ls-files -m
-#       glob: "*.go"
-#       run: go vet -- {files}
-#
-#     - script: "hello.js"
-#       runner: node
-#
-#     - script: "hello.go"
-#       runner: go run
+    # ---- oxfmt (format check) ----
+    format:
+      glob: "**/*.[tj]s"
+      # The `if test -n` guard prevents oxfmt from reading stdin when {staged_files}
+      # is empty (no matching staged files). Without this guard, oxfmt hangs indefinitely
+      # waiting for stdin input, which blocks the commit with no error message.
+      run: if test -n "{staged_files}"; then npx oxfmt --check {staged_files} > /dev/null 2>&1; fi
+      # Do NOT auto-stage formatting fixes — let the contributor review and stage manually.
+      stage_fixed: false
+      fail_text: |
+        ❌ Formatting issues found. To fix:
+          pnpm run format
+        Then try committing again.
+
+    # ---- oxlint (lint check) ----
+    lint:
+      glob: "**/*.ts"
+      # Same stdin guard as format above — oxlint also reads stdin when given no files.
+      # --deny-warnings makes warnings fail the hook, preventing new warnings from being
+      # committed while allowing pre-existing warnings (on unchanged files) through.
+      run: if test -n "{staged_files}"; then npx oxlint --deny-warnings {staged_files} > /dev/null 2>&1; fi
+      fail_text: |
+        ❌ Lint issues found in staged files. To view them:
+          pnpm run lint
+        Fix the warnings before committing.
+
+# Design notes:
+# - Use npx (not pnpm) — pnpm may hang in the git hook shell context on Windows.
+# - Do NOT wrap commands in sh -c '...' — lefthook wraps the run command in sh.exe -c
+#   automatically, and nesting another sh -c causes {staged_files} to be passed as
+#   positional arguments ($0) rather than substituted, leading the shell to attempt
+#   executing .ts files as scripts.
+# - Parallel execution keeps the hook fast (< 1s for typical commits).

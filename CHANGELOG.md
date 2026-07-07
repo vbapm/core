@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `build-dir` field in `vbaproject.toml` to specify where the built `.xlsm`/`.xlam` is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
+- `vba init --from workbook.xlsm` automatically sets `build-dir = "."` when the workbook is at the project root.
+- `vbaproject.toml` now validates section keys and suggests corrections for snake_case misspellings (e.g. `build_dir` → `build-dir`, `src_encoding` → `src-encoding`).
+- `src-subfolders` field in `vbaproject.toml` to organize exported source files by component type. Map VBA types to subdirectories under `src/` (e.g. `src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }`).
+
+### Fixed
+- `src-encoding` and `src-subfolders` are now preserved when writing `vbaproject.toml` (previously silently dropped on export).
+- VBA component names in `[src]` are now matched case-insensitively, matching VBA's own behavior.
+
 ## [0.9.0] - 2026-07-06
 
 ### Added
@@ -16,8 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Build-time validation fails with a `jschardet` suggestion when non-ASCII characters are detected without a declared encoding.
   - Transcoding during build (source → target encoding) and extract (system codepage → source encoding).
   - Extract warns when transcoding to a non-UTF encoding could lose characters.
-  - When extracting from an existing workbook with `vbapm init --from`, encoding is auto-detected and written to `vbaproject.toml`.
-- `vbapm init` and and `vbapm new` now creates starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
+  - When extracting from an existing workbook with `vba init --from`, encoding is auto-detected and written to `vbaproject.toml`.
+- `vba init` and `vba new` now create starter `.gitignore`, `.gitattributes`, and `.editorconfig` files unless `--no-conf` flag is used. ([#64] and [#98]).
 - New `open` command to open the current built target file in Excel ([#63]).
 - New `close` command to close the current built target file in Excel, with optional `--save` flag ([#63]).
 - Excel XML export: renames worksheet XML files to stable, identity-based names (`sht{codeName}.xml`) so that reordering sheets produces clean diffs with only ordering metadata changed ([#57]).

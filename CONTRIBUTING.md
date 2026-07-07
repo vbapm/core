@@ -26,8 +26,9 @@ This will pull the following submodules:
 ### Install and Build
 
 1. Run `pnpm install`
-2. Run `pnpm run format`
-3. Run `pnpm run build:cli` — builds the CLI/library into `lib/` and ensures the vendored Node runtime is available.
+2. Run `pnpm run lefthook:install` — sets up pre-commit hooks for formatting and linting.
+3. Run `pnpm run format`
+4. Run `pnpm run build:cli` — builds the CLI/library into `lib/` and ensures the vendored Node runtime is available.
 4. Run `pnpm run build:addins` — creates `addins\build\vbapm.xlam` which performs workbook/VBA operations from inside Office.
 
 ### Development Checks

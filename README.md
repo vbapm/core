@@ -94,7 +94,7 @@ my-project/
 │       ├── worksheets/
 │       ├── styles.xml
 │       └── ...
-├── build/                   # Copy of the original .xlsm
+├── build/                   # Built workbook (customizable via build-dir in vbaproject.toml)
 │   └── my-project.xlsm
 └── .git/, .gitignore, ...   # Git version control (by default)
 ```
@@ -249,7 +249,9 @@ vba add TestHelpers --dev
 
 ### `build`
 
-Build an Excel workbook from the project's source. The built file is located in the `build/` folder and if a previously built file is found it is moved to `/.backup` to protect against losing any previously saved work.
+Build an Excel workbook from the project's source. The built file is written to the directory specified by `build-dir` in `vbaproject.toml` (defaults to `build/`). If a previously built file is found it is moved to a `.backup` directory under the build directory to protect against losing any previously saved work.
+
+To output the built file in the project root instead, set `build-dir = "."` in `vbaproject.toml`.
 
 Build a project:
 
@@ -532,6 +534,13 @@ Example 2:
 target = { type = "xlam", path = "targets/xlam" }
 ```
 
+#### [build-dir]
+`build-dir` specifies where the built `.xlsm` / `.xlam` file is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
+
+```toml
+build-dir = "."    # output to project root instead of build/
+```
+
 ### [src]
 
 Will contain the list of source code files to be included in the VBA-Enabled Document at build time.
@@ -546,6 +555,15 @@ A = "src/A.bas"
 B = "src/B.cls"
 C = { path = "src/C.bas" }
 ```
+
+#### [src-subfolders]
+`src-subfolders` organizes exported source files into subdirectories under `src/` based on component type. Without it, all files land flat in `src/`.
+
+```toml
+src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
+```
+
+This maps `.bas` → `src/Modules/`, `.frm` → `src/Forms/`, `.cls` → `src/Classes/`.
 
 ### [dependencies]
 

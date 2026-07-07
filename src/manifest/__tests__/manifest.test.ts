@@ -243,3 +243,57 @@ test("should format manifest for export", async () => {
 
 	expect(converted).toMatchSnapshot();
 });
+
+describe("section key validation", () => {
+	test("rejects snake_case build_dir with suggestion", () => {
+		const value = {
+			...BASE_MANIFEST,
+			package: {
+				...BASE_MANIFEST.package,
+				build_dir: "."
+			}
+		};
+
+		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "build-dir"/);
+	});
+
+	test("rejects snake_case src_encoding with suggestion", () => {
+		const value = {
+			...BASE_MANIFEST,
+			package: {
+				...BASE_MANIFEST.package,
+				src_encoding: "cp1252"
+			}
+		};
+
+		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "src-encoding"/);
+	});
+
+	test("allows arbitrary metadata keys like license", () => {
+		const value = {
+			...BASE_MANIFEST,
+			package: {
+				...BASE_MANIFEST.package,
+				license: "MIT",
+				description: "A test package"
+			}
+		};
+
+		// Should not throw — arbitrary metadata is not a misspelled known key
+		const manifest = parseManifest(value, FIXTURES);
+		expect(manifest.metadata.license).toBe("MIT");
+		expect(manifest.metadata.description).toBe("A test package");
+	});
+
+	test("rejects snake_case build_dir in [project] section", () => {
+		const value = {
+			project: {
+				name: "test",
+				target: "xlsm",
+				build_dir: "."
+			}
+		};
+
+		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "build-dir"/);
+	});
+});

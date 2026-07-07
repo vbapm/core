@@ -10,6 +10,8 @@ import { BuildGraph, FromDependences } from "./build-graph";
 import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
 import { byComponentName, Component } from "./component";
 
+import jschardet from "jschardet";
+
 export async function loadFromProject(
 	project: Project,
 	dependencies: Manifest[],
@@ -138,7 +140,10 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		if (graph.fromDependencies.components.has(component)) continue;
 
 		// Check if encoding is declared (project-level or per-source)
-		const source = project.manifest.src.find(s => s.name === component.name);
+		// VBA component names are case-insensitive
+		const source = project.manifest.src.find(
+			s => s.name.localeCompare(component.name, undefined, { sensitivity: "base" }) === 0
+		);
 		const declaredEncoding = source?.encoding ?? srcEncoding;
 		if (declaredEncoding) continue;
 
@@ -147,30 +152,29 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 
 		// Try jschardet to suggest an encoding
 		let suggestion = "";
-		try {
-			const buffer = await readFile(source?.path || "");
-			const jschardet = require("jschardet");
-			if (!jschardet) {
-				throw new Error("jschardet not available");
-			}
+		const sourcePath = source?.path;
+		if (sourcePath) {
+			try {
+				const buffer = await readFile(sourcePath);
 
-			const results = (
-				jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
-			)
-				.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
-				.sort((a, b) => b.confidence - a.confidence);
+				const results = (
+					jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
+				)
+					.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
+					.sort((a, b) => b.confidence - a.confidence);
 
-			if (results.length > 0 && results[0].confidence >= 0.5) {
-				const label = results[0].encoding.toLowerCase();
+				if (results.length > 0 && results[0].confidence >= 0.5) {
+					const label = results[0].encoding.toLowerCase();
+					suggestion =
+						`\nSuggested change:\n\n  src-encoding = "${label}"` +
+						`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
+				}
+			} catch (err) {
 				suggestion =
-					`\nSuggested change:\n\n  src-encoding = "${label}"` +
-					`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
+					"\n\n(Unable to suggest an encoding." +
+					(err instanceof Error ? ` ${err.message}` : "") +
+					")";
 			}
-		} catch (err) {
-			suggestion =
-				"\n\n(Unable to suggest an encoding." +
-				(err instanceof Error ? ` ${err.message}` : "") +
-				")";
 		}
 
 		throw new CliError(
