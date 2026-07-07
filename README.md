@@ -249,7 +249,7 @@ vba add TestHelpers --dev
 
 ### `build`
 
-Build an Excel workbook from the project's source. The built file is written to the directory specified by `build-dir` in `vbaproject.toml` (defaults to `build/`). If a previously built file is found it is moved to `/.backup` to protect against losing any previously saved work.
+Build an Excel workbook from the project's source. The built file is written to the directory specified by `build-dir` in `vbaproject.toml` (defaults to `build/`). If a previously built file is found it is moved to a `.backup` directory under the build directory to protect against losing any previously saved work.
 
 To output the built file in the project root instead, set `build-dir = "."` in `vbaproject.toml`.
 
