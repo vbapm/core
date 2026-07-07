@@ -10,7 +10,7 @@ A `src-subfolders` key in `vbaproject.toml` that maps VBA component types to sub
 [project]
 name = "my-project"
 target = "xlsm"
-src-subfolder = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
+src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 ```
 
 - `.bas` → `src/Modules/`
