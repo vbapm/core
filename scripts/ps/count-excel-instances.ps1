@@ -65,35 +65,41 @@ foreach ($proc in $procs) {
 }
 
 # ---------------------------------------------------------------
-# COM workbooks snapshot (from the first ROT-registered instance)
+# COM workbooks snapshot — ROT-registered instance
 # ---------------------------------------------------------------
-Write-Host "===== COM Snapshot (first ROT instance) =====" -ForegroundColor Cyan
+# Only one Excel instance registers in the ROT.  GetActiveObject
+# always returns that one.  Other instances exist as processes but
+# are invisible to COM (no API to reach them by PID alone).
+#
+# Sidenote: AccessibleObjectFromWindow
+# was tested with OBJID_NATIVEOM (E_FAIL for XLMAIN) and OBJID_WINDOW
+# (returns MSAA wrapper, not Excel.Application) — neither exposes the
+# native OM for other instances.
+
+Write-Host "===== COM Snapshot (ROT-registered instance) =====" -ForegroundColor Cyan
+
+$snapCount = 0
+$rotPid    = "?"
+
 try {
     $excel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
 
-    # Resolve which PID owns the ROT instance via its window handle
-    $rotPid = "?"
+    # Resolve PID from HWND
     try {
-        $sig = '[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);'
-        $Win32 = Add-Type -MemberDefinition $sig -Name "Win32User" -Namespace "Util" -PassThru
+        $Win32 = Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);' -Name "Win32User" -Namespace "Util" -PassThru
         $pidOut = 0
         $Win32::GetWindowThreadProcessId($excel.Hwnd, [ref]$pidOut) | Out-Null
         if ($pidOut) { $rotPid = $pidOut }
     } catch { }
 
-    Write-Host "ROT instance PID: $rotPid"
-    Write-Host "Workbooks open in this instance: $($excel.Workbooks.Count)"
+    $snapCount++
+    Write-Host "PID $rotPid" -ForegroundColor Yellow
+    Write-Host "Workbooks: $($excel.Workbooks.Count)"
     foreach ($wb in $excel.Workbooks) {
         $saved = if ($wb.Saved) { "saved" } else { "MODIFIED" }
         Write-Host "  $($wb.Name)  [$saved]  $($wb.FullName)"
     }
-    Write-Host ""
-    Write-Host "Add-ins loaded:"
-    foreach ($ai in $excel.AddIns) {
-        if ($ai.Installed) {
-            Write-Host "  $($ai.Name)  (installed)"
-        }
-    }
+
     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
 } catch {
     $msg = $_.Exception.Message
@@ -104,14 +110,30 @@ try {
     }
 }
 
+# List other instances that are NOT COM-reachable
+$otherProcs = @($procs | Where-Object { $_.Id -ne $rotPid })
+if ($otherProcs.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Other instance(s) - NOT COM-reachable:" -ForegroundColor DarkGray
+    foreach ($p in $otherProcs) {
+        $msg = "  PID " + $p.Id + "  |  "
+        if ($p.MainWindowTitle) {
+            $msg += "visible  |  " + $p.MainWindowTitle
+        } else {
+            $msg += "hidden"
+        }
+        Write-Host $msg -ForegroundColor DarkGray
+    }
+    Write-Host "  (vbapm can only target the ROT instance above)" -ForegroundColor DarkGray
+}
+
 # ---------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------
 Write-Host ""
 Write-Host "===== Summary =====" -ForegroundColor Cyan
 Write-Host "Total Excel processes: $($procs.Count)"
-Write-Host "Note: If > 1 instance is running, only the FIRST one's workbooks"
-Write-Host "      are visible via COM (GetActiveObject returns the first ROT entry)."
+Write-Host "COM-reachable (ROT): $snapCount  (PID $rotPid)"
 
 if ($procs.Count -gt 1) {
     Write-Host ""
