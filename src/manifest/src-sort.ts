@@ -102,7 +102,7 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 
 	// ---- sortedByTypeThenAlphabetically ----
 	let sortedByTypeThenAlphabetically = false;
-	if (sortedByTypes && sortedAlphabetically) {
+	if (sortedByTypes) {
 		sortedByTypeThenAlphabetically = true;
 		// verify alphabetical within each segment
 		let segStart = 0;
