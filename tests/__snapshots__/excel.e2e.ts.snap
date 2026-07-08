@@ -65,14 +65,14 @@ name = \\"empty\\"
 target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
 
 [src]
+JsonConverter = \\"src/JsonConverter.bas\\"
+Validation = \\"src/Validation.bas\\"
 Class1 = \\"src/Class1.cls\\"
 Dictionary = \\"src/Dictionary.cls\\"
-JsonConverter = \\"src/JsonConverter.bas\\"
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
 Sheet3 = \\"src/Sheet3.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-Validation = \\"src/Validation.bas\\"
 
 [references]
 VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
@@ -123,12 +123,12 @@ target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
 json = \\"=2.3.0\\"
 
 [src]
+Validation = \\"src/Validation.bas\\"
 Class1 = \\"src/Class1.cls\\"
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
 Sheet3 = \\"src/Sheet3.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-Validation = \\"src/Validation.bas\\"
 
 [references]
 VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
@@ -175,14 +175,14 @@ name = \\"empty\\"
 target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
 
 [src]
+JsonConverter = \\"src/JsonConverter.bas\\"
+Validation = \\"src/Validation.bas\\"
 Class1 = \\"src/Class1.cls\\"
 Dictionary = \\"src/Dictionary.cls\\"
-JsonConverter = \\"src/JsonConverter.bas\\"
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
 Sheet3 = \\"src/Sheet3.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-Validation = \\"src/Validation.bas\\"
 
 [references]
 VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
@@ -248,6 +248,9 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src]
+Modules = \\"src/**/*.bas\\"
+Forms = \\"src/**/*.frm\\"
+Classes = \\"src/**/*.cls\\"
 ",
 }
 `;
@@ -280,21 +283,17 @@ Object {
   "target/xl/worksheets/shtSheet3.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
   "vbaproject.toml":
   "[project]
-name = \\"existing-target\\"
-version = \\"0.0.0\\"
-authors = []
+Modules\\"=x\\"src/**/*.bas\\"
+Formso= \\"src/**/*.frm\\"
+Classes = \\"src/**/*.cls\\"
 license = \\"UNLICENSED\\"
 target = { type = \\"xlsm\\", name = \\"standard\\" }
 
 [src]
-Class1 = \\"src/Class1.cls\\"
-Dictionary = \\"src/Dictionary.cls\\"
-JsonConverter = \\"src/JsonConverter.bas\\"
-Sheet1 = \\"src/Sheet1.cls\\"
-Sheet2 = \\"src/Sheet2.cls\\"
-Sheet3 = \\"src/Sheet3.cls\\"
-ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-Validation = \\"src/Validation.bas\\"
+
+
+
+
 
 [references]
 VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
@@ -326,6 +325,9 @@ license = \\"UNLICENSED\\"
 target = \\"xlsm\\"
 
 [src]
+Modules = \\"src/**/*.bas\\"
+Forms = \\"src/**/*.frm\\"
+Classes = \\"src/**/*.cls\\"
 ",
 }
 `;
@@ -343,6 +345,9 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src]
+Modules = \\"src/**/*.bas\\"
+Forms = \\"src/**/*.frm\\"
+Classes = \\"src/**/*.cls\\"
 ",
 }
 `;
@@ -360,6 +365,9 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src]
+Modules = \\"src/**/*.bas\\"
+Forms = \\"src/**/*.frm\\"
+Classes = \\"src/**/*.cls\\"
 ",
 }
 `;
