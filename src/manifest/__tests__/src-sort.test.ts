@@ -13,64 +13,11 @@ describe("detectSrcStructure", () => {
 	test("empty src is unstructured", () => {
 		const result = detectSrcStructure([]);
 		expect(result).toMatchObject({
-			grouped: false,
 			sortedByTypes: false,
 			sortedAlphabetically: false,
 			sortedByTypeThenAlphabetically: false,
 			unstructured: true
 		});
-	});
-
-	test("detects grouped convention with 4 keys (Objects + Modules + Forms + Classes)", () => {
-		const sources: Source[] = [
-			src("Objects", "src/Excel Objects/*.cls"),
-			src("Modules", "src/**/*.bas"),
-			src("Forms", "src/**/*.frm"),
-			src("Classes", "src/Class Modules/*.cls")
-		];
-		const result = detectSrcStructure(sources);
-		expect(result.grouped).toBe(true);
-		expect(result.groupedPatterns).toEqual({
-			Objects: "src/Excel Objects/*.cls",
-			Modules: "src/**/*.bas",
-			Forms: "src/**/*.frm",
-			Classes: "src/Class Modules/*.cls"
-		});
-	});
-
-	test("detects grouped convention with 3 keys (no Objects)", () => {
-		const sources: Source[] = [
-			src("Modules", "src/**/*.bas"),
-			src("Forms", "src/**/*.frm"),
-			src("Classes", "src/**/*.cls")
-		];
-		const result = detectSrcStructure(sources);
-		expect(result.grouped).toBe(true);
-		expect(result.groupedPatterns).toEqual({
-			Modules: "src/**/*.bas",
-			Forms: "src/**/*.frm",
-			Classes: "src/**/*.cls"
-		});
-	});
-
-	test("detects grouped convention with array patterns", () => {
-		const sources: Source[] = [
-			src("Modules", "src/**/*.bas"),
-			src("Forms", "src/Forms/*.frm"),
-			src("Classes", "src/Classes/*.cls")
-		];
-		const result = detectSrcStructure(sources);
-		expect(result.grouped).toBe(true);
-	});
-
-	test("grouped detection is case-insensitive for key names", () => {
-		const sources: Source[] = [
-			src("modules", "src/**/*.bas"),
-			src("FORMS", "src/**/*.frm"),
-			src("Classes", "src/**/*.cls")
-		];
-		const result = detectSrcStructure(sources);
-		expect(result.grouped).toBe(true);
 	});
 
 	test("sorted by types (bas → frm → cls)", () => {
@@ -84,7 +31,6 @@ describe("detectSrcStructure", () => {
 		const result = detectSrcStructure(sources);
 		expect(result.sortedByTypes).toBe(true);
 		expect(result.sortedAlphabetically).toBe(false);
-		expect(result.grouped).toBe(false);
 	});
 
 	test("sorted alphabetically (global)", () => {
@@ -155,11 +101,6 @@ describe("parseSrcProperties", () => {
 		expect(parseSrcProperties({})).toBeUndefined();
 	});
 
-	test("parses grouping flag", () => {
-		const result = parseSrcProperties({ grouping: true });
-		expect(result).toEqual({ grouping: true });
-	});
-
 	test("parses sort options", () => {
 		const result = parseSrcProperties({
 			sort: { "by-types": true, alphabetical: true }
@@ -180,15 +121,13 @@ describe("parseSrcProperties", () => {
 
 	test("ignores unknown keys", () => {
 		const result = parseSrcProperties({
-			grouping: true,
 			unknown: "value"
 		});
-		expect(result).toEqual({ grouping: true });
+		expect(result).toBeUndefined();
 	});
 
 	test("returns undefined when all values are invalid types", () => {
 		const result = parseSrcProperties({
-			grouping: "not-a-boolean",
 			sort: "not-an-object"
 		});
 		expect(result).toBeUndefined();

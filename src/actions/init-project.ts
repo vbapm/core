@@ -32,7 +32,7 @@ export interface InitOptions {
 	pkg: boolean;
 	git: boolean;
 	configTemplates: boolean;
-	listAll?: boolean;
+	individual?: boolean;
 }
 
 export async function initProject(options: InitOptions) {
@@ -99,23 +99,6 @@ export async function initProject(options: InitOptions) {
 		type: asPackage ? "package" : "project"
 	});
 
-	// Default to grouped convention for new projects.
-	// Set srcStructure before addTarget so applyChangeset skips manifest updates.
-	if (!listAll) {
-		project.manifest.srcStructure = {
-			grouped: true,
-			sortedByTypes: false,
-			sortedAlphabetically: false,
-			sortedByTypeThenAlphabetically: false,
-			unstructured: false,
-			groupedPatterns: {
-				Modules: "src/**/*.bas",
-				Forms: "src/**/*.frm",
-				Classes: "src/**/*.cls"
-			}
-		};
-	}
-
 	// When importing from a workbook at the project root, default build-dir to "."
 	// so the built file is written alongside the source workbook
 	if (from && dirname(from) === dir) {
@@ -137,7 +120,7 @@ export async function initProject(options: InitOptions) {
 		await detectSourceEncoding(project);
 	}
 
-	// Write the grouped [src] entries for new projects
+	// Write default wildcard [src] entries for new projects
 	if (!listAll) {
 		project.manifest.src = [
 			{ name: "Modules", path: join(dir, "src/**/*.bas") },

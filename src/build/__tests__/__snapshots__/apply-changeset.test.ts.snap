@@ -64,7 +64,6 @@ Object {
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
-    "grouped": false,
     "sortedAlphabetically": false,
     "sortedByTypeThenAlphabetically": false,
     "sortedByTypes": true,

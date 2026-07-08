@@ -7,11 +7,11 @@ import { Dependency, formatDependencies, parseDependencies } from "./dependency"
 import { formatReferences, parseReferences, Reference } from "./reference";
 import { formatSrc, parseSrc, Source } from "./source";
 import { detectSrcStructure, parseSrcProperties, resolveSrcSubfolders, SrcProperties, SrcStructure, SrcSubfolders } from "./src-sort";
+import { formatTarget, parseTarget, Target } from "./target";
+import { DEFAULT_VERSION, Version } from "./version";
 
 // Re-export for consumers
 export { resolveSrcSubfolders, SrcSubfolders };
-import { formatTarget, parseTarget, Target } from "./target";
-import { DEFAULT_VERSION, Version } from "./version";
 
 /**
  * Snapshot is the minimal manifest needed to support both Manifest
@@ -81,9 +81,7 @@ const KNOWN_SECTION_KEYS = new Set([
 /** Snake_case → kebab-case corrections for common misspellings. */
 const SNAKE_TO_KEBAB: Record<string, string> = {
 	build_dir: "build-dir",
-	src_encoding: "src-encoding",
-	src_subfolder: "src-subfolders",
-	src_subfolders: "src-subfolders"
+	src_encoding: "src-encoding"
 };
 
 function validateSectionKeys(metadata: Metadata, _section: string): void {
@@ -317,11 +315,11 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["src-encoding"] = manifest.srcEncoding;
 	}
 
-	value.src = formatSrc(manifest.src, dir, manifest.srcStructure);
-
 	if (manifest.srcProperties) {
 		value["src-properties"] = manifest.srcProperties;
 	}
+
+	value.src = formatSrc(manifest.src, dir);
 
 	if (manifest.dependencies.length) {
 		value.dependencies = formatDependencies(manifest.dependencies, dir);

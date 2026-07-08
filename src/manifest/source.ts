@@ -2,7 +2,6 @@ import dedent from "@timhall/dedent";
 import { manifestOk } from "../errors";
 import { isString } from "../utils/is";
 import { join, relative } from "../utils/path";
-import { SrcStructure } from "./src-sort";
 
 /*
   # Source
@@ -58,27 +57,7 @@ export function parseSource(name: string, value: string | any, dir: string): Sou
 	return source;
 }
 
-export function formatSrc(src: Source[], dir: string, structure?: SrcStructure): object {
-	// Grouped convention: emit the 3 reserved keys
-	if (structure?.grouped) {
-		const value: Record<string, string | string[]> = {};
-		for (const s of src) {
-			const key = s.name; // "Modules", "Forms", or "Classes"
-			const rawPath = s.path;
-			// If the path is absolute, make it relative
-			const relPath = rawPath.startsWith(dir) ? relative(dir, rawPath) : rawPath;
-			// If the value is an array of globs (from groupedPatterns), preserve it
-			if (structure.groupedPatterns?.[key as "Modules" | "Forms" | "Classes"]) {
-				const patterns = structure.groupedPatterns[key as "Modules" | "Forms" | "Classes"];
-				value[key] = typeof patterns === "string" ? patterns : patterns;
-			} else {
-				value[key] = relPath;
-			}
-		}
-		return value;
-	}
-
-	// Individual convention: emit entries in array order
+export function formatSrc(src: Source[], dir: string): object {
 	const value: { [name: string]: string } = {};
 	src.forEach(source => {
 		let { name, path } = source;

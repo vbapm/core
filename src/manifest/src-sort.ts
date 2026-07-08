@@ -15,7 +15,6 @@ export interface SrcSubfolders {
 
 /** Parsed form of the optional `[src-properties]` TOML section. */
 export interface SrcProperties {
-	grouping?: boolean;
 	sort?: {
 		"by-types"?: boolean;
 		alphabetical?: boolean;
@@ -41,9 +40,6 @@ export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type
 
 /** Describes how the `[src]` section is currently organised. */
 export interface SrcStructure {
-	/** true when [src] uses the reserved grouped keys (Modules, Forms, Classes, and optionally Objects). */
-	grouped: boolean;
-
 	/** true when all .bas files are contiguous, all .frm contiguous, all .cls contiguous. */
 	sortedByTypes: boolean;
 
@@ -55,16 +51,11 @@ export interface SrcStructure {
 
 	/** true when none of the above patterns are detected. */
 	unstructured: boolean;
-
-	/** When grouped, the raw glob strings keyed by type. */
-	groupedPatterns?: Record<"Objects" | "Modules" | "Forms" | "Classes", string | string[]>;
 }
 
 // ---------------------------------------------------------------------------
 // Detection
 // ---------------------------------------------------------------------------
-
-const GROUPED_KEYS = new Set(["objects", "modules", "forms", "classes"]);
 
 /**
  * Detect the organisational structure of the `[src]` section from the parsed
@@ -74,32 +65,10 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 	// ---- empty src ----
 	if (src.length === 0) {
 		return {
-			grouped: false,
 			sortedByTypes: false,
 			sortedAlphabetically: false,
 			sortedByTypeThenAlphabetically: false,
 			unstructured: true
-		};
-	}
-
-	// ---- grouped check ----
-	// Accept 3 or 4 keys, all from the valid set, no duplicates
-	if (
-		(src.length === 3 || src.length === 4) &&
-		src.every(s => GROUPED_KEYS.has(s.name.toLowerCase())) &&
-		new Set(src.map(s => s.name.toLowerCase())).size === src.length
-	) {
-		const groupedPatterns: Record<string, string | string[]> = {};
-		for (const s of src) {
-			groupedPatterns[s.name] = s.path;
-		}
-		return {
-			grouped: true,
-			sortedByTypes: false,
-			sortedAlphabetically: false,
-			sortedByTypeThenAlphabetically: false,
-			unstructured: false,
-			groupedPatterns: groupedPatterns as SrcStructure["groupedPatterns"]
 		};
 	}
 
@@ -153,7 +122,6 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 	const unstructured = !(sortedByTypes || sortedAlphabetically);
 
 	return {
-		grouped: false,
 		sortedByTypes,
 		sortedAlphabetically,
 		sortedByTypeThenAlphabetically,
@@ -169,8 +137,6 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 	if (!raw || typeof raw !== "object") return undefined;
 
 	const props: SrcProperties = {};
-
-	if (typeof raw.grouping === "boolean") props.grouping = raw.grouping;
 
 	if (raw.sort && typeof raw.sort === "object") {
 		const sort: SrcProperties["sort"] = {};
