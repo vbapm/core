@@ -180,14 +180,19 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build CLI
-        run: npm run build:cli
+        run: pnpm run build:cli
 
       - name: Build addins
-        run: npm run build:addins
+        run: pnpm run build:addins
 
       - name: Create packages
         run: node scripts/create-packages
