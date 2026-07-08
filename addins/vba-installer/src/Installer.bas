@@ -18,6 +18,7 @@ Attribute VB_Name = "Installer"
 ' 10109 - Failed to add reference
 ' 10110 - Failed to remove reference
 ' 10111 - Component imported with errors
+' 10112 - Failed to add project reference
 '
 ' @module Installer
 ' @author Tim Hall <tim.hall.engr@gmail.com>
@@ -212,6 +213,32 @@ ErrorHandling:
         "[10110] Failed to remove reference. " & Err.Number & ": " & Err.Description
 End Sub
 
+''
+' Add a reference to another VBA project file (peer reference)
+'
+' ```vb
+' ' Add a reference to AddinToolbox.xlam
+' Installer.AddProjectReference ThisWorkbook.VBProject, "C:\path\to\AddinToolbox.xlam"
+' ```
+''
+Public Sub AddProjectReference(Project As VBProject, FilePath As String)
+    Precheck Project
+
+    If Not GetProjectReference(Project, FilePath) Is Nothing Then
+        Exit Sub
+    End If
+
+    On Error GoTo ErrorHandling
+
+    Project.References.AddFromFile FilePath
+    Exit Sub
+
+ErrorHandling:
+
+    Err.Raise 10112 + &H30000 + vbObjectError, "Installer.AddProjectReference", _
+        "[10112] Failed to add project reference. " & Err.Number & ": " & Err.Description
+End Sub
+
 ' ============================================= '
 
 Private Function GetComponent(Project As VBProject, ComponentName As String) As VBComponent
@@ -226,6 +253,26 @@ Private Function GetReference(Project As VBProject, Guid As String, MajorVersion
     For Each Ref In Project.References
         If Ref.Guid = Guid Then
             Set GetReference = Ref
+        End If
+    Next Ref
+End Function
+
+Private Function GetProjectReference(Project As VBProject, FilePath As String) As Reference
+    Dim Ref As Reference
+    For Each Ref In Project.References
+        If Ref.FullPath = FilePath Then
+            Set GetProjectReference = Ref
+            Exit Function
+        End If
+    Next Ref
+
+    ' Also match by name (VBProject name of the referenced file)
+    Dim PeerName As String
+    PeerName = FileSystem.GetBase(FilePath)
+    For Each Ref In Project.References
+        If Ref.Name = PeerName Then
+            Set GetProjectReference = Ref
+            Exit Function
         End If
     Next Ref
 End Function
