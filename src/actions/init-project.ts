@@ -32,7 +32,7 @@ export interface InitOptions {
 	pkg: boolean;
 	git: boolean;
 	configTemplates: boolean;
-	individual?: boolean;
+	listAll?: boolean;
 }
 
 export async function initProject(options: InitOptions) {
