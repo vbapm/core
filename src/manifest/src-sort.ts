@@ -31,7 +31,7 @@ export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type
 	if (!subfolders) return "";
 
 	const key =
-		type === "document" ? "Objects" :
+		type === "object" ? "Objects" :
 		type === "class" ? "Classes" :
 		type === "form" ? "Forms" :
 		"Modules";

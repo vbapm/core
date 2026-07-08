@@ -54,58 +54,44 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 }
 
 async function updateManifest(project: Project, changeset: Changeset) {
-	const structure = project.manifest.srcStructure;
 	const enforcement = project.manifest.srcProperties;
 
-	// Grouped convention: globs cover all files, no manifest changes needed.
-	if (structure?.grouped) {
-		// Still handle removals (source entries with literal paths need cleanup).
-		// But for pure grouped mode with globs, just skip.
-		for (const component of changeset.components.removed) {
-			const index = project.manifest.src.findIndex(
-				(source: Source) => source.name === component.name
-			);
-			if (index >= 0) project.manifest.src.splice(index, 1);
-		}
-	} else {
-		// Individual convention
-		for (const component of changeset.components.added) {
-			const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
-			const srcPath = sub ? `src/${sub}/${component.filename}` : `src/${component.filename}`;
-			const source: Source = {
-				name: component.name,
-				path: join(project.paths.dir, srcPath)
-			};
+	for (const component of changeset.components.added) {
+		const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
+		const srcPath = sub ? `src/${sub}/${component.filename}` : `src/${component.filename}`;
+		const source: Source = {
+			name: component.name,
+			path: join(project.paths.dir, srcPath)
+		};
 
-			if (enforcement?.sort?.["by-types"] || enforcement?.sort?.alphabetical) {
-				// Enforcement active: insert at sorted position
-				const src = project.manifest.src;
-				let insertAt = src.length;
-				for (let i = 0; i < src.length; i++) {
-					const existingExt = src[i].path.split(".").pop()?.toLowerCase() || "";
-					const newExt = component.filename.split(".").pop()?.toLowerCase() || "";
-					// Compare by type then name
-					const existingType = extensionToType[`.${existingExt}`] || "class";
-					const newType = extensionToType[`.${newExt}`] || "class";
-					const cmp = compareByTypeThenName(newType, component.name, existingType, src[i].name);
-					if (cmp < 0) {
-						insertAt = i;
-						break;
-					}
+		if (enforcement?.sort?.["by-types"] || enforcement?.sort?.alphabetical) {
+			// Enforcement active: insert at sorted position
+			const src = project.manifest.src;
+			let insertAt = src.length;
+			for (let i = 0; i < src.length; i++) {
+				const existingExt = src[i].path.split(".").pop()?.toLowerCase() || "";
+				const newExt = component.filename.split(".").pop()?.toLowerCase() || "";
+				// Compare by type then name
+				const existingType = extensionToType[`.${existingExt}`] || "class";
+				const newType = extensionToType[`.${newExt}`] || "class";
+				const cmp = compareByTypeThenName(newType, component.name, existingType, src[i].name);
+				if (cmp < 0) {
+					insertAt = i;
+					break;
 				}
-				src.splice(insertAt, 0, source);
-			} else {
-				// No enforcement: append
-				project.manifest.src.push(source);
 			}
+			src.splice(insertAt, 0, source);
+		} else {
+			// No enforcement: append
+			project.manifest.src.push(source);
 		}
+	}
 
-		for (const component of changeset.components.removed) {
-			const index = project.manifest.src.findIndex(
-				(source: Source) => source.name === component.name
-			);
-			if (index >= 0) project.manifest.src.splice(index, 1);
-		}
+	for (const component of changeset.components.removed) {
+		const index = project.manifest.src.findIndex(
+			(source: Source) => source.name === component.name
+		);
+		if (index >= 0) project.manifest.src.splice(index, 1);
 	}
 
 	for (let reference of changeset.references.added) {
@@ -123,7 +109,7 @@ async function updateManifest(project: Project, changeset: Changeset) {
 
 /** Type order for insertion sorting (Objects → Modules → Forms → Classes). */
 const TYPE_ORDER_INSERT: Record<string, number> = {
-	document: 1,
+	object: 1,
 	module: 2,
 	form: 3,
 	class: 4
