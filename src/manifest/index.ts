@@ -189,6 +189,13 @@ export function parseManifest(value: any, dir: string): Manifest {
 		target = parseTarget(projectTarget, name, dir);
 		buildDir = projectBuildDir;
 		codename = projectCodename;
+
+		if (codename != null) {
+			manifestOk(
+				typeof codename === "string",
+				`[project] codename must be a string (got ${typeof codename}).`
+			);
+		}
 	} else {
 		const {
 			name: packageName,
@@ -337,7 +344,7 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["build-dir"] = manifest.buildDir;
 	}
 
-	if (manifest.codename != null) {
+	if (manifest.codename != null && manifest.codename !== "VBAProject") {
 		values["codename"] = manifest.codename;
 	}
 
