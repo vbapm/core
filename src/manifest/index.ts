@@ -66,6 +66,7 @@ export interface Manifest extends Snapshot {
 	srcEncoding?: string;
 	srcProperties?: SrcProperties;
 	srcStructure?: SrcStructure;
+	codename?: string;
 	references: Reference[];
 	devSrc: Source[];
 	devDependencies: Dependency[];
@@ -82,7 +83,8 @@ const KNOWN_SECTION_KEYS = new Set([
 	"publish",
 	"target",
 	"src-encoding",
-	"build-dir"
+	"build-dir",
+	"codename"
 ]);
 
 /** Snake_case → kebab-case corrections for common misspellings. */
@@ -143,6 +145,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let target: Target | undefined;
 	let srcEncoding: string | undefined;
 	let buildDir: string | undefined;
+	let codename: string | undefined;
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
@@ -154,6 +157,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			target: projectTarget,
 			"src-encoding": projectSrcEncoding,
 			"build-dir": projectBuildDir,
+			codename: projectCodename,
 			...projectMetadata
 		} = value.project;
 
@@ -163,7 +167,15 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = projectAuthors;
 		publish = projectPublish;
 		srcEncoding = projectSrcEncoding;
+		codename = projectCodename;
 		sectionMetadata = projectMetadata;
+
+		if (codename != null) {
+			manifestOk(
+				typeof codename === "string",
+				`[project] codename must be a string (got ${typeof codename}).`
+			);
+		}
 
 		manifestOk(name, `[project] name is a required field. \n\n${EXAMPLE}`);
 		manifestOk(value.project.target, `[project] target is a required field. \n\n${EXAMPLE}`);
@@ -224,6 +236,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		srcEncoding,
 		srcProperties,
 		srcStructure,
+		codename,
 		dependencies,
 		references,
 		devSrc,
@@ -320,6 +333,10 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 
 	if (manifest.srcEncoding) {
 		values["src-encoding"] = manifest.srcEncoding;
+	}
+
+	if (manifest.codename != null && manifest.codename !== "VBAProject") {
+		values["codename"] = manifest.codename;
 	}
 
 	if (manifest.srcProperties) {
