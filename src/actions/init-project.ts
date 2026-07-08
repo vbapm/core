@@ -123,9 +123,9 @@ export async function initProject(options: InitOptions) {
 	// Write default wildcard [src] entries for new projects
 	if (!listAll) {
 		project.manifest.src = [
-			{ name: "Modules", path: join(dir, "src/**/*.bas") },
-			{ name: "Forms", path: join(dir, "src/**/*.frm") },
-			{ name: "Classes", path: join(dir, "src/**/*.cls") }
+			{ name: "Modules", path: join(project.paths.dir, "src/**/*.bas") },
+			{ name: "Forms", path: join(project.paths.dir, "src/**/*.frm") },
+			{ name: "Classes", path: join(project.paths.dir, "src/**/*.cls") }
 		];
 	}
 
