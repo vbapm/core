@@ -61,7 +61,10 @@ export function formatSrc(src: Source[], dir: string): object {
 	const value: { [name: string]: string } = {};
 	src.forEach(source => {
 		let { name, path } = source;
-		path = relative(dir, path);
+		// Only relativize absolute paths; wildcard entries are already relative
+		if (path.match(/^[a-zA-Z]:[\\/]/) || path.startsWith("/")) {
+			path = relative(dir, path);
+		}
 		value[name] = path;
 	});
 
