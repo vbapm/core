@@ -41,7 +41,7 @@ export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type
 
 /** Describes how the `[src]` section is currently organised. */
 export interface SrcStructure {
-	/** true when [src] uses the 3 reserved grouped keys (Modules, Forms, Classes). */
+	/** true when [src] uses the reserved grouped keys (Modules, Forms, Classes, and optionally Objects). */
 	grouped: boolean;
 
 	/** true when all .bas files are contiguous, all .frm contiguous, all .cls contiguous. */
@@ -57,14 +57,14 @@ export interface SrcStructure {
 	unstructured: boolean;
 
 	/** When grouped, the raw glob strings keyed by type. */
-	groupedPatterns?: Record<"Modules" | "Forms" | "Classes", string | string[]>;
+	groupedPatterns?: Record<"Objects" | "Modules" | "Forms" | "Classes", string | string[]>;
 }
 
 // ---------------------------------------------------------------------------
 // Detection
 // ---------------------------------------------------------------------------
 
-const GROUPED_KEYS = new Set(["modules", "forms", "classes"]);
+const GROUPED_KEYS = new Set(["objects", "modules", "forms", "classes"]);
 
 /**
  * Detect the organisational structure of the `[src]` section from the parsed
@@ -83,11 +83,11 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 	}
 
 	// ---- grouped check ----
+	// Accept 3 or 4 keys, all from the valid set, no duplicates
 	if (
-		src.length === 3 &&
-		GROUPED_KEYS.has(src[0].name.toLowerCase()) &&
-		GROUPED_KEYS.has(src[1].name.toLowerCase()) &&
-		GROUPED_KEYS.has(src[2].name.toLowerCase())
+		(src.length === 3 || src.length === 4) &&
+		src.every(s => GROUPED_KEYS.has(s.name.toLowerCase())) &&
+		new Set(src.map(s => s.name.toLowerCase())).size === src.length
 	) {
 		const groupedPatterns: Record<string, string | string[]> = {};
 		for (const s of src) {
@@ -114,7 +114,7 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 			currentExt = ext;
 		}
 	}
-	if (segmentCount > 3) sortedByTypes = false;
+	if (segmentCount > 4) sortedByTypes = false;
 
 	// ---- sortedAlphabetically check ----
 	let sortedAlphabetically = true;

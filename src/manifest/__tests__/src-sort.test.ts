@@ -21,7 +21,24 @@ describe("detectSrcStructure", () => {
 		});
 	});
 
-	test("detects grouped convention (3 reserved keys)", () => {
+	test("detects grouped convention with 4 keys (Objects + Modules + Forms + Classes)", () => {
+		const sources: Source[] = [
+			src("Objects", "src/Excel Objects/*.cls"),
+			src("Modules", "src/**/*.bas"),
+			src("Forms", "src/**/*.frm"),
+			src("Classes", "src/Class Modules/*.cls")
+		];
+		const result = detectSrcStructure(sources);
+		expect(result.grouped).toBe(true);
+		expect(result.groupedPatterns).toEqual({
+			Objects: "src/Excel Objects/*.cls",
+			Modules: "src/**/*.bas",
+			Forms: "src/**/*.frm",
+			Classes: "src/Class Modules/*.cls"
+		});
+	});
+
+	test("detects grouped convention with 3 keys (no Objects)", () => {
 		const sources: Source[] = [
 			src("Modules", "src/**/*.bas"),
 			src("Forms", "src/**/*.frm"),
@@ -72,9 +89,10 @@ describe("detectSrcStructure", () => {
 
 	test("sorted alphabetically (global)", () => {
 		const sources: Source[] = [
-			src("Alpha", "src/Alpha.cls"),
-			src("Beta", "src/Beta.bas"),
-			src("Gamma", "src/Gamma.frm"),
+			src("Alpha", "src/Alpha.bas"),
+			src("Beta", "src/Beta.cls"),
+			src("Delta", "src/Delta.frm"),
+			src("Gamma", "src/Gamma.bas"),
 			src("Zeta", "src/Zeta.cls")
 		];
 		const result = detectSrcStructure(sources);
@@ -113,12 +131,13 @@ describe("detectSrcStructure", () => {
 	});
 
 	test("too many segments breaks sortedByTypes", () => {
-		// 4 segments (bas, frm, cls, bas) > 3 → not sortedByTypes
+		// 5 segments (cls, bas, frm, cls, bas) > 4 → not sortedByTypes
 		const sources: Source[] = [
-			src("A", "src/A.bas"),
-			src("B", "src/B.frm"),
-			src("C", "src/C.cls"),
-			src("D", "src/D.bas")
+			src("A", "src/A.cls"),
+			src("B", "src/B.bas"),
+			src("C", "src/C.frm"),
+			src("D", "src/D.cls"),
+			src("E", "src/E.bas")
 		];
 		const result = detectSrcStructure(sources);
 		expect(result.sortedByTypes).toBe(false);

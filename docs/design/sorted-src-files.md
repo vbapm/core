@@ -16,7 +16,7 @@ controlled by a new `[src-properties]` table:
 
 | Mode | Key | Description |
 |---|---|---|
-| **Grouped** | 3 reserved keys | Use wildcard patterns under 3 reserved keys (`Modules`, `Forms`, `Classes`). Compact and low-maintenance. **The default for new projects.** |
+| **Grouped** | 4 reserved keys | Use wildcard patterns under up to 4 reserved keys (`Objects`, `Modules`, `Forms`, `Classes`). `Objects` and `Classes` both match `.cls` files and are pooled — the user controls how to split them (e.g. by subdirectory). **The default for new projects.** |
 | **Individual** | one key per file | List every source file by name. The order is governed by the detected convention, optionally enforced via `[src-properties]`. |
 
 In *both* modes the manifest remains easy to scan and the tooling knows how to
@@ -32,7 +32,7 @@ themselves, using `detectSrcStructure()` (§6).
 
 | What the tool sees in `[src]` | Detected convention |
 |---|---|
-| Exactly 3 keys named `Modules`, `Forms`, `Classes` with glob, array, or literal path values | **Grouped** |
+| Exactly 3 or 4 keys named from `{Objects, Modules, Forms, Classes}` with glob, array, or literal path values | **Grouped** |
 | Individual entries, all `.bas` contiguous, all `.frm` contiguous, all `.cls` contiguous | **Sorted by types** |
 | Individual entries, globally alphabetical | **Sorted alphabetically** |
 | Individual entries, contiguous by type AND alphabetical within each type | **Sorted by type then alphabetically** |
@@ -97,11 +97,14 @@ Classes = "src/**/*.cls"
 
 ### 4.1 Manifest shape
 
-The grouped convention uses exactly three keys in `[src]` — no
+The grouped convention uses up to four reserved keys in `[src]` — no
 `[src-properties]` needed. The tool detects this convention automatically.
+`Objects` and `Classes` both match `.cls` files and are pooled; the user
+controls how to split them (typically by subdirectory).
 
 ```toml
 [src]
+Objects = "src/Excel Objects/*.cls"
 Modules = "src/**/*.bas"
 Forms = "src/**/*.frm"
 Classes = ["src/**/*.cls", "src/Documents/*.cls"]
