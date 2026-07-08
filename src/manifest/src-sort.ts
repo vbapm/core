@@ -5,6 +5,14 @@ import { Source } from "./source";
 // Types
 // ---------------------------------------------------------------------------
 
+/** Maps VBA component types to subdirectories under `src/`. */
+export interface SrcSubfolders {
+	Modules?: string;
+	Forms?: string;
+	Classes?: string;
+	Objects?: string;
+}
+
 /** Parsed form of the optional `[src-properties]` TOML section. */
 export interface SrcProperties {
 	grouping?: boolean;
@@ -12,6 +20,23 @@ export interface SrcProperties {
 		"by-types"?: boolean;
 		alphabetical?: boolean;
 	};
+	subfolders?: SrcSubfolders;
+}
+
+/**
+ * Resolve the subdirectory under `src/` for a given component type.
+ * Uses the `subfolders` config from `[src-properties]` if present,
+ * otherwise defaults to placing all files directly in `src/`.
+ */
+export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type: string): string {
+	if (!subfolders) return "";
+
+	const key =
+		type === "document" ? "Objects" :
+		type === "class" ? "Classes" :
+		type === "form" ? "Forms" :
+		"Modules";
+	return subfolders[key] || "";
 }
 
 /** Describes how the `[src]` section is currently organised. */
@@ -152,6 +177,15 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 		if (typeof raw.sort["by-types"] === "boolean") sort["by-types"] = raw.sort["by-types"];
 		if (typeof raw.sort.alphabetical === "boolean") sort.alphabetical = raw.sort.alphabetical;
 		if (Object.keys(sort).length > 0) props.sort = sort;
+	}
+
+	if (raw.subfolders && typeof raw.subfolders === "object") {
+		const sf: SrcSubfolders = {};
+		if (typeof raw.subfolders.Modules === "string") sf.Modules = raw.subfolders.Modules;
+		if (typeof raw.subfolders.Forms === "string") sf.Forms = raw.subfolders.Forms;
+		if (typeof raw.subfolders.Classes === "string") sf.Classes = raw.subfolders.Classes;
+		if (typeof raw.subfolders.Objects === "string") sf.Objects = raw.subfolders.Objects;
+		if (Object.keys(sf).length > 0) props.subfolders = sf;
 	}
 
 	return Object.keys(props).length > 0 ? props : undefined;

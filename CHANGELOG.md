@@ -8,19 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `codename` field in `[project]` section of `vbaproject.toml` to set a custom VBA project name in the VBE. Defaults to `"VBAProject"` when omitted.
-- `[src-properties]` table in `vbaproject.toml` for optional enforcement of source file ordering. Keys: `grouping`, `sort.by-types`, `sort.alphabetical`. When absent, the tool detects and respects the existing convention without enforcement via `detectSrcStructure()`.
+- `[src-properties]` table in `vbaproject.toml` for optional enforcement of source file ordering. Keys: `grouping`, `sort.by-types`, `sort.alphabetical`, `subfolders`. When absent, the tool detects and respects the existing convention without enforcement via `detectSrcStructure()`. The `subfolders` key controls where new source files are placed (supports `Modules`, `Forms`, `Classes`, and `Objects` for document-type components like `ThisWorkbook` and `Sheet` modules). Example: `subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Class Modules", Objects = "Excel Objects" }`.
 - **Grouped convention** for `[src]`: the 3 reserved keys `Modules`, `Forms`, `Classes` with glob patterns (e.g. `Modules = "src/**/*.bas"`). Supports arrays of globs and literal file paths. This is the default for new projects. Use `--individual` to opt out.
 - `build-dir` field in `vbaproject.toml` to specify where the built `.xlsm`/`.xlam` is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
 - `vba init --from workbook.xlsm` automatically sets `build-dir = "."` when the workbook is at the project root.
 - `vbaproject.toml` now validates section keys and suggests corrections for snake_case misspellings (e.g. `build_dir` → `build-dir`, `src_encoding` → `src-encoding`).
-- `src-subfolders` field in `vbaproject.toml` to organize exported source files by component type. Supports `Modules`, `Forms`, `Classes`, and `Objects` (for document-type components like `ThisWorkbook` and `Sheet` modules). Example: `src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Class Modules", Objects = "Excel Objects" }`.
 
 ### Changed
 - New projects (`vba init`, `vba new`) now default to the grouped convention with 3 reserved keys and glob patterns instead of listing every source file individually.
 
 ### Fixed
-- `src-encoding` and `src-subfolders` are now preserved when writing `vbaproject.toml` (previously silently dropped on export).
+- `src-encoding` is now preserved when writing `vbaproject.toml` (previously silently dropped on export).
 - VBA component names in `[src]` are now matched case-insensitively, matching VBA's own behavior.
 
 ## [0.9.0] - 2026-07-06

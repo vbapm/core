@@ -31,7 +31,7 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 	await parallel(
 		changeset.components.added,
 		async component => {
-			const sub = resolveSrcSubfolders(project.manifest.srcSubfolders, component.type);
+			const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
 			const path = join(project.paths.dir, "src", sub, component.filename);
 			component.details.path = path;
 
@@ -70,7 +70,7 @@ async function updateManifest(project: Project, changeset: Changeset) {
 	} else {
 		// Individual convention
 		for (const component of changeset.components.added) {
-			const sub = resolveSrcSubfolders(project.manifest.srcSubfolders, component.type);
+			const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
 			const srcPath = sub ? `src/${sub}/${component.filename}` : `src/${component.filename}`;
 			const source: Source = {
 				name: component.name,

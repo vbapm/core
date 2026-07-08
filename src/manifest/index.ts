@@ -6,7 +6,10 @@ import { convert as convertToToml, parse as parseToml, patch as patchToml } from
 import { Dependency, formatDependencies, parseDependencies } from "./dependency";
 import { formatReferences, parseReferences, Reference } from "./reference";
 import { formatSrc, parseSrc, Source } from "./source";
-import { detectSrcStructure, parseSrcProperties, SrcProperties, SrcStructure } from "./src-sort";
+import { detectSrcStructure, parseSrcProperties, resolveSrcSubfolders, SrcProperties, SrcStructure, SrcSubfolders } from "./src-sort";
+
+// Re-export for consumers
+export { resolveSrcSubfolders, SrcSubfolders };
 import { formatTarget, parseTarget, Target } from "./target";
 import { DEFAULT_VERSION, Version } from "./version";
 
@@ -54,7 +57,6 @@ export interface Manifest extends Snapshot {
 	metadata: Metadata;
 	src: Source[];
 	srcEncoding?: string;
-	srcSubfolders?: SrcSubfolders;
 	srcProperties?: SrcProperties;
 	srcStructure?: SrcStructure;
 	references: Reference[];
@@ -63,32 +65,6 @@ export interface Manifest extends Snapshot {
 	devReferences: Reference[];
 	target?: Target;
 	buildDir?: string;
-	/** VBA project code name as shown in the VBE (defaults to "VBAProject"). */
-	codename?: string;
-}
-
-/** Maps VBA component types to subdirectories under `src/`. */
-export interface SrcSubfolders {
-	Modules?: string;
-	Forms?: string;
-	Classes?: string;
-	Objects?: string;
-}
-
-/**
- * Resolve the subdirectory under `src/` for a given component type.
- * Uses the `src-subfolders` config if present, otherwise defaults to
- * placing all files directly in `src/`.
- */
-export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type: string): string {
-	if (!subfolders) return "";
-
-	const key =
-		type === "document" ? "Objects" :
-		type === "class" ? "Classes" :
-		type === "form" ? "Forms" :
-		"Modules";
-	return subfolders[key] || "";
 }
 
 /** Recognized keys in [project] / [package] sections. */
@@ -99,9 +75,7 @@ const KNOWN_SECTION_KEYS = new Set([
 	"publish",
 	"target",
 	"src-encoding",
-	"src-subfolders",
-	"build-dir",
-	"codename"
+	"build-dir"
 ]);
 
 /** Snake_case → kebab-case corrections for common misspellings. */
@@ -163,9 +137,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	let publish: boolean | undefined;
 	let target: Target | undefined;
 	let srcEncoding: string | undefined;
-	let srcSubfolders: SrcSubfolders | undefined;
 	let buildDir: string | undefined;
-	let codename: string | undefined;
 	let sectionMetadata: Metadata = {};
 
 	if (value.project) {
@@ -175,9 +147,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 			authors: projectAuthors,
 			publish: projectPublish,
 			target: projectTarget,
-			codename: projectCodename,
 			"src-encoding": projectSrcEncoding,
-			"src-subfolders": projectSrcSubfolders,
 			"build-dir": projectBuildDir,
 			...projectMetadata
 		} = value.project;
@@ -188,7 +158,6 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = projectAuthors;
 		publish = projectPublish;
 		srcEncoding = projectSrcEncoding;
-		srcSubfolders = projectSrcSubfolders;
 		sectionMetadata = projectMetadata;
 
 		manifestOk(name, `[project] name is a required field. \n\n${EXAMPLE}`);
@@ -196,14 +165,6 @@ export function parseManifest(value: any, dir: string): Manifest {
 
 		target = parseTarget(projectTarget, name, dir);
 		buildDir = projectBuildDir;
-		codename = projectCodename;
-
-		if (codename != null) {
-			manifestOk(
-				typeof codename === "string",
-				`[project] codename must be a string (got ${typeof codename}).`
-			);
-		}
 	} else {
 		const {
 			name: packageName,
@@ -212,7 +173,6 @@ export function parseManifest(value: any, dir: string): Manifest {
 			publish: packagePublish,
 			target: packageTarget,
 			"src-encoding": packageSrcEncoding,
-			"src-subfolders": packageSrcSubfolders,
 			"build-dir": packageBuildDir,
 			...packageMetadata
 		} = value.package;
@@ -223,7 +183,6 @@ export function parseManifest(value: any, dir: string): Manifest {
 		authors = packageAuthors;
 		publish = packagePublish;
 		srcEncoding = packageSrcEncoding;
-		srcSubfolders = packageSrcSubfolders;
 		sectionMetadata = packageMetadata;
 
 		manifestOk(name, `[package] name is a required field. \n\n${EXAMPLE}`);
@@ -258,7 +217,6 @@ export function parseManifest(value: any, dir: string): Manifest {
 		metadata: { authors, publish, ...sectionMetadata },
 		src,
 		srcEncoding,
-		srcSubfolders,
 		srcProperties,
 		srcStructure,
 		dependencies,
@@ -267,8 +225,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		devDependencies,
 		devReferences,
 		target,
-		buildDir,
-		codename
+		buildDir
 	};
 }
 
@@ -356,16 +313,8 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["build-dir"] = manifest.buildDir;
 	}
 
-	if (manifest.codename != null && manifest.codename !== "VBAProject") {
-		values["codename"] = manifest.codename;
-	}
-
 	if (manifest.srcEncoding) {
 		values["src-encoding"] = manifest.srcEncoding;
-	}
-
-	if (manifest.srcSubfolders) {
-		values["src-subfolders"] = manifest.srcSubfolders;
 	}
 
 	value.src = formatSrc(manifest.src, dir, manifest.srcStructure);

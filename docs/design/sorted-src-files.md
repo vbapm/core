@@ -181,16 +181,14 @@ Excel document objects (e.g. `ThisWorkbook`). Rationale:
 The same principle applies to other Office hosts (Word's `ThisDocument`,
 Access forms, etc.) — all `.cls` variants live under `Classes`.
 
-### 4.6 `src-subfolders` and the `Objects` key
+### 4.6 `subfolders` config
 
-The existing `src-subfolders` project config controls where new files are
+The `subfolders` key in `[src-properties]` controls where new files are
 placed on disk (used by `vba add` and `vba export`). It supports four keys:
 
 ```toml
-[project]
-name = "my-project"
-target = "xlsm"
-src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Class Modules", Objects = "Excel Objects" }
+[src-properties]
+subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Class Modules", Objects = "Excel Objects" }
 ```
 
 | Key | Component type | Default (no config) |

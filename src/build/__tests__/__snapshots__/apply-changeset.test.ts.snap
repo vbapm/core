@@ -70,7 +70,6 @@ Object {
     "sortedByTypes": false,
     "unstructured": true,
   },
-  "srcSubfolders": undefined,
   "target": Object {
     "filename": "complex.xlsm",
     "name": "complex",
