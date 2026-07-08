@@ -1,0 +1,52 @@
+# TEMPORARY: Generate missing packages for the v0.9.0 release.
+# Delete this workflow after the artifacts have been downloaded and attached to the release.
+
+name: Rebuild v0.9.0 Packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-packages:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v0.9.0
+
+      - uses: DecimalTurn/setup-vba@abad6bed4025d3d709cbd9c9281f856d298bd68d # v0.1.2
+        with:
+          office-apps: Excel
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: pnpm run build:cli
+
+      - name: Build addins
+        run: pnpm run build:addins
+
+      - name: Create packages
+        run: node scripts/create-packages
+
+      - name: Upload vbapm-win.zip
+        uses: actions/upload-artifact@v5
+        with:
+          name: vbapm-win.zip
+          path: dist/vbapm-win.zip
+
+      - name: Upload vbapm-mac.tar.gz
+        uses: actions/upload-artifact@v5
+        with:
+          name: vbapm-mac.tar.gz
+          path: dist/vbapm-mac.tar.gz
