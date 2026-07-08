@@ -67,8 +67,8 @@ Object {
     "grouped": false,
     "sortedAlphabetically": false,
     "sortedByTypeThenAlphabetically": false,
-    "sortedByTypes": false,
-    "unstructured": true,
+    "sortedByTypes": true,
+    "unstructured": false,
   },
   "target": Object {
     "filename": "complex.xlsm",

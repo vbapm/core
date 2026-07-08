@@ -239,7 +239,7 @@ The tool detects which sorting convention (if any) is in use via
 | Detected pattern | `sortedByTypes` | `sortedAlphabetically` | Description |
 |---|---|---|---|
 | By type, then name | `true` | `true` | Document objects contiguous, then all `.bas` contiguous, all `.frm` contiguous, all `.cls` contiguous, and alphabetical within each group. |
-| By type only | `true` | `false` | Files grouped by extension but in **insertion order** within each group — the order files were added to the project. When creating a new config with `--individual`, the initial listing is alphabetical within each type, but subsequent additions append to the end of the type section unless `sort.alphabetical` enforcement is active. |
+| By type only | `true` | `false` | Files grouped by extension but in **insertion order** within each group — the order files were added to the project. When creating a new config with `--list-all`, the initial listing is alphabetical within each type, but subsequent additions append to the end of the type section unless `sort.alphabetical` enforcement is active. |
 | Alphabetical only | `false` | `true` | Globally alphabetical, ignoring type boundaries. |
 | Unstructured | `false` | `false` | No detectable pattern — files are in ad-hoc order. |
 
@@ -263,7 +263,7 @@ Blank lines between type groups are a **presentation detail** — the tool
 tolerates and preserves them but does not enforce them. There is no config
 key for this.
 
-- **New file, `--individual`:** A blank line is inserted between each type
+- **New file, `--list-all`:** A blank line is inserted between each type
   group as a presentation default. This is a one-time formatting choice at
   creation time.
 - **Existing file:** `patchToml()` preserves whatever blank lines are already
@@ -355,7 +355,7 @@ Called by:
 | 2 | Write `[src]` with the 3 grouped keys and default globs: `Modules = "src/**/*.bas"`, `Forms = "src/**/*.frm"`, `Classes = "src/**/*.cls"`. No `[src-properties]` section is written — the grouped convention speaks for itself. |
 | 3 | Save the extracted source files to disk under `src/`. |
 
-If the user explicitly passes `--individual` (or sets a flag in an answer
+If the user explicitly passes `--list-all` (or sets a flag in an answer
 file), the tool uses individual listing instead: sort components by type then
 name, write individual entries, and insert blank lines between type groups.
 
@@ -409,7 +409,7 @@ one. The TOML spec does not define key ordering or spacing.
 | Scenario | Mechanism |
 |---|---|
 | **New file, grouped** (`vba init`, `vba new` — the default) | Only 3 keys in `[src]`; no blank-line post-processing needed. |
-| **New file, individual** (`vba init --individual`) | After `stringify()`, post-process the `[src]` section to insert blank lines between type groups (a one-time presentation default). |
+| **New file, individual** (`vba init --list-all`) | After `stringify()`, post-process the `[src]` section to insert blank lines between type groups (a one-time presentation default). |
 | **Existing file** (`vba export`, `vba add`) | `patch()` preserves whatever blank lines are already present. If the user removes them, they stay removed. |
 
 ### 8.3 Post-processing for new files
@@ -448,8 +448,8 @@ A helper `insertTypeGroupBlankLines(toml: string): string`:
 | # | File | Change |
 |---|---|---|
 | 9 | `src/actions/init-project.ts` | When generating a fresh manifest, write the 3 grouped keys in `[src]` with default globs. Do **not** write a `[src-properties]` section (the convention is self-evident). |
-| 10 | `src/bin/vbapm-init.ts` | Accept `--individual` flag to use individual listing at init time instead of the grouped default. |
-| 11 | `src/bin/vbapm-new.ts` | Same `--individual` flag. |
+| 10 | `src/bin/vbapm-init.ts` | Accept `--list-all` flag to use individual listing at init time instead of the grouped default. |
+| 11 | `src/bin/vbapm-new.ts` | Same `--list-all` flag. |
 
 ### Phase 4 — Tests
 
@@ -460,7 +460,7 @@ A helper `insertTypeGroupBlankLines(toml: string): string`:
 | 14 | `src/manifest/__tests__/` | `formatSrc()` output for each mode. |
 | 15 | `src/build/__tests__/` | `applyChangeset` insertion position (structured vs unstructured). |
 | 16 | `src/build/__tests__/` | Build graph internal sort unaffected by user-facing settings. |
-| 17 | E2E | `vba init --from` generates grouped `[src]` by default (3 keys, no `[src-properties]`); `vba init --from --individual` generates individual listing with blank-line separators. |
+| 17 | E2E | `vba init --from` generates grouped `[src]` by default (3 keys, no `[src-properties]`); `vba init --from --list-all` generates individual listing with blank-line separators. |
 
 ### Phase 5 — Migration
 
@@ -495,7 +495,7 @@ A helper `insertTypeGroupBlankLines(toml: string): string`:
   configured; inserts at sorted position when enforcement is active; skips
   entirely for grouped convention.
 - A new `detectSrcStructure()` helper analyses the current `[src]` order.
-- Users can opt into individual listing at init time with `--individual`.
+- Users can opt into individual listing at init time with `--list-all`.
 - `[src-properties]` is now purely an enforcement/validation mechanism, not
   a descriptor of what the file already looks like.
 

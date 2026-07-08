@@ -194,7 +194,7 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 /**
  * Post-process a TOML string to insert blank lines between type groups
  * in the `[src]` section. Only used for initial creation of individual-listing
- * manifests (`vba init --individual`).
+ * manifests (`vba init --list-all`).
  */
 export function insertTypeGroupBlankLines(toml: string): string {
 	const lines = toml.split("\n");

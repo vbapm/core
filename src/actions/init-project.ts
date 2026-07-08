@@ -32,7 +32,7 @@ export interface InitOptions {
 	pkg: boolean;
 	git: boolean;
 	configTemplates: boolean;
-	individual?: boolean;
+	listAll?: boolean;
 }
 
 export async function initProject(options: InitOptions) {
@@ -44,7 +44,7 @@ export async function initProject(options: InitOptions) {
 		pkg: asPackage,
 		git,
 		configTemplates,
-		individual
+		listAll
 	} = options;
 
 	if (await pathExists(join(dir, "vbaproject.toml"))) {
@@ -101,7 +101,7 @@ export async function initProject(options: InitOptions) {
 
 	// Default to grouped convention for new projects.
 	// Set srcStructure before addTarget so applyChangeset skips manifest updates.
-	if (!individual) {
+	if (!listAll) {
 		project.manifest.srcStructure = {
 			grouped: true,
 			sortedByTypes: false,
@@ -138,7 +138,7 @@ export async function initProject(options: InitOptions) {
 	}
 
 	// Write the grouped [src] entries for new projects
-	if (!individual) {
+	if (!listAll) {
 		project.manifest.src = [
 			{ name: "Modules", path: join(dir, "src/**/*.bas") },
 			{ name: "Forms", path: join(dir, "src/**/*.frm") },
