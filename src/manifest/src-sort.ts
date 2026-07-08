@@ -31,10 +31,13 @@ export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type
 	if (!subfolders) return "";
 
 	const key =
-		type === "object" ? "Objects" :
-		type === "class" ? "Classes" :
-		type === "form" ? "Forms" :
-		"Modules";
+		type === "object"
+			? "Objects"
+			: type === "class"
+				? "Classes"
+				: type === "form"
+					? "Forms"
+					: "Modules";
 	return subfolders[key] || "";
 }
 

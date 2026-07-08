@@ -115,14 +115,15 @@ const TYPE_ORDER_INSERT: Record<string, number> = {
 	class: 4
 };
 
-function compareByTypeThenName(
-	typeA: string, nameA: string,
-	typeB: string, nameB: string
-): number {
+function compareByTypeThenName(typeA: string, nameA: string, typeB: string, nameB: string): number {
 	const orderA = TYPE_ORDER_INSERT[typeA] ?? 99;
 	const orderB = TYPE_ORDER_INSERT[typeB] ?? 99;
 	if (orderA !== orderB) return orderA - orderB;
-	return nameA.toLowerCase() < nameB.toLowerCase() ? -1 : nameA.toLowerCase() > nameB.toLowerCase() ? 1 : 0;
+	return nameA.toLowerCase() < nameB.toLowerCase()
+		? -1
+		: nameA.toLowerCase() > nameB.toLowerCase()
+			? 1
+			: 0;
 }
 
 async function writeComponent(path: string, component: Component) {

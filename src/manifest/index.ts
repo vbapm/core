@@ -6,7 +6,14 @@ import { convert as convertToToml, parse as parseToml, patch as patchToml } from
 import { Dependency, formatDependencies, parseDependencies } from "./dependency";
 import { formatReferences, parseReferences, Reference } from "./reference";
 import { formatSrc, parseSrc, Source } from "./source";
-import { detectSrcStructure, parseSrcProperties, resolveSrcSubfolders, SrcProperties, SrcStructure, SrcSubfolders } from "./src-sort";
+import {
+	detectSrcStructure,
+	parseSrcProperties,
+	resolveSrcSubfolders,
+	SrcProperties,
+	SrcStructure,
+	SrcSubfolders
+} from "./src-sort";
 import { formatTarget, parseTarget, Target } from "./target";
 import { DEFAULT_VERSION, Version } from "./version";
 
