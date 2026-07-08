@@ -8,7 +8,7 @@ import { ensureDir, remove, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { dirname, join } from "../utils/path";
 import { Changeset } from "./changeset";
-import { byComponentTypeThenName, Component, ComponentType, extensionToType } from "./component";
+import { Component, ComponentType, extensionToType } from "./component";
 import { codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
 export async function applyChangeset(project: Project, changeset: Changeset) {
@@ -64,19 +64,42 @@ async function updateManifest(project: Project, changeset: Changeset) {
 			path: join(project.paths.dir, srcPath)
 		};
 
-		if (enforcement?.sort?.["by-types"] || enforcement?.sort?.alphabetical) {
-			// Enforcement active: insert at sorted position
+		if (enforcement?.sort?.alphabetical && enforcement?.sort?.["by-types"]) {
+			// Both: type-then-alphabetical insertion
 			const src = project.manifest.src;
 			let insertAt = src.length;
 			for (let i = 0; i < src.length; i++) {
 				const existingExt = src[i].path.split(".").pop()?.toLowerCase() || "";
 				const newExt = component.filename.split(".").pop()?.toLowerCase() || "";
-				// Compare by type then name
 				const existingType = extensionToType[`.${existingExt}`] || "class";
 				const newType = extensionToType[`.${newExt}`] || "class";
 				const cmp = compareByTypeThenName(newType, component.name, existingType, src[i].name);
 				if (cmp < 0) {
 					insertAt = i;
+					break;
+				}
+			}
+			src.splice(insertAt, 0, source);
+		} else if (enforcement?.sort?.alphabetical) {
+			// Alphabetical only (global, ignoring type boundaries)
+			const src = project.manifest.src;
+			let insertAt = src.length;
+			for (let i = 0; i < src.length; i++) {
+				if (component.name.toLowerCase() < src[i].name.toLowerCase()) {
+					insertAt = i;
+					break;
+				}
+			}
+			src.splice(insertAt, 0, source);
+		} else if (enforcement?.sort?.["by-types"]) {
+			// Type grouping only: insert after last entry of same type
+			const src = project.manifest.src;
+			const newExt = component.filename.split(".").pop()?.toLowerCase() || "";
+			let insertAt = src.length;
+			for (let i = src.length - 1; i >= 0; i--) {
+				const existingExt = src[i].path.split(".").pop()?.toLowerCase() || "";
+				if (existingExt === newExt) {
+					insertAt = i + 1;
 					break;
 				}
 			}

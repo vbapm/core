@@ -285,63 +285,30 @@ operations (add, export) can respect the existing convention.
 ### 6.1 `SrcStructure` type
 
 ```ts
-/** Describes how the [src] section is currently organised. */
 export interface SrcStructure {
-    /** true when [src] uses the 3 reserved grouped keys (Modules, Forms, Classes). */
-    grouped: boolean;
-
-    /** true when all .bas files are contiguous, all .frm contiguous, all .cls contiguous.
-     *  The order of the type groups themselves is not prescribed
-     *  (e.g. Forms before Modules is still "sorted by types"). */
     sortedByTypes: boolean;
-
-    /** true when all entries are in alphabetical order, globally. */
     sortedAlphabetically: boolean;
-
-    /** Convenience: true when both sortedByTypes AND within-each-type alphabetical. */
     sortedByTypeThenAlphabetically: boolean;
-
-    /** true when none of the above patterns are detected.
-     *  NEW files are appended to the end when unstructured. */
     unstructured: boolean;
-
-    /** When grouped, the raw glob strings keyed by type. */
-    groupedPatterns?: Record<"Modules" | "Forms" | "Classes", string | string[]>;
 }
 ```
 
 ### 6.2 Detection logic
 
-```
-function detectSrcStructure(src: Source[]): SrcStructure
-```
+1. **SortedByTypes check:** Walk the array tracking file extensions. Reject
+   non-contiguous extensions (e.g. `.bas → .frm → .bas` is not type-sorted).
+   At most 4 segments.
 
-1. **Grouped check:** If `src` has exactly 3 entries named `Modules`, `Forms`,
-   `Classes` (case-insensitive), and each value looks like a path/glob (not a
-   concrete `.bas`/`.frm`/`.cls` file path), then `grouped = true`. All other
-   flags are `false` / irrelevant.
+2. **SortedAlphabetically check:** Every entry's name ≥ previous.
 
-2. **SortedByTypes check:** Walk the array. Track the current component type
-   (document, module, form, class). Each time the type changes, record a new
-   "segment". If at most 4 segments exist and each segment contains only one
-   type, `sortedByTypes = true`. (Note: until `"document"` type detection is
-   implemented, only 3 segments are possible — `.bas`, `.frm`, `.cls`.)
+3. **SortedByTypeThenAlphabetically:** Both checks pass and within each
+   segment entries are alphabetical.
 
-3. **SortedAlphabetically check:** Walk the array. If every entry's name is
-   `>=` the previous entry's name (case-insensitive), `sortedAlphabetically = true`.
-
-4. **SortedByTypeThenAlphabetically:** `sortedByTypes && sortedAlphabetically
-   && withinEachSegmentAlphabetical`.
-
-5. **Unstructured**: None of the above patterns match.
+4. **Unstructured**: None of the above.
 
 ### 6.3 Usage
 
-Called by:
-- `parseManifest()` in `src/manifest/index.ts` — stores the result on the
-  `Manifest` object as `manifest.srcStructure`.
-- `applyChangeset()` in `src/build/apply-changeset.ts` — reads
-  `manifest.srcStructure` to decide where to insert new entries.
+Called by `parseManifest()` and stored as `manifest.srcStructure`.
 
 ---
 
@@ -349,135 +316,25 @@ Called by:
 
 ### 7.1 `vba init --from` / `vba new`
 
-| Step | Action |
-|---|---|
-| 1 | Export all components from the source workbook/add-in. |
-| 2 | Write `[src]` with the 3 grouped keys and default globs: `Modules = "src/**/*.bas"`, `Forms = "src/**/*.frm"`, `Classes = "src/**/*.cls"`. No `[src-properties]` section is written — the grouped convention speaks for itself. |
-| 3 | Save the extracted source files to disk under `src/`. |
-
-If the user explicitly passes `--list-all` (or sets a flag in an answer
-file), the tool uses individual listing instead: sort components by type then
-name, write individual entries, and insert blank lines between type groups.
+Writes wildcard entries by default:
+`Modules = "src/**/*.bas"`, `Forms = "src/**/*.frm"`, `Classes = "src/**/*.cls"`.
+Use `--list-all` for individual listing.
 
 ### 7.2 `vba export`
 
-| Step | Action |
-|---|---|
-| 1 | Load the existing manifest and detect its convention via `detectSrcStructure()`. |
-| 2 | Compare with the freshly exported build graph. |
-| 3 | **Grouped convention:** No changes to `[src]` needed (the globs still cover all files). Only add/remove individual source files on disk. |
-| 4 | **Individual convention, no enforcement:** Append new entries at the end; remove deleted entries. The user can reorder manually. |
-| 5 | **Individual convention, with enforcement:** Insert new entries at the correct position per `[src-properties]`; remove deleted entries. |
-| 6 | Write back with `patchToml()` — this preserves blank lines and comments already in the file. |
+Detects convention; appends new entries without enforcement, inserts at
+sorted position with enforcement. `patchToml()` preserves existing formatting.
 
 ### 7.3 `vba add`
 
-| Convention | `[src-properties]` present? | Action |
-|---|---|---|
-| Grouped | N/A | Create the file on disk; the glob already covers it. No manifest change. |
-| Individual | No | Detect convention, append new entry at end. No reordering. |
-| Individual | Yes (enforcement) | Insert at the correct sorted position per `sort.*` settings, rewrite `[src]`. |
+Wildcard coverage check (new file already matched by existing glob → skip
+manifest update). Without enforcement, append. With enforcement, insert at
+sorted position.
 
 ### 7.4 `vba build`
 
-No changes. The build graph is always assembled by loading all source files
-resolved from the manifest. Internal ordering of the build graph is
-**deterministic but not a user-facing sort** — it exists solely so that
-two builds of the same source produce byte-identical output. It does **not**
-reorder the user's manifest entries or override `[src-properties]` settings.
-
-The principle: the tool never imposes an ordering the user didn't ask for.
-If `[src-properties]` is absent, no reordering is enforced — files are used
-as they are found or listed.
-
----
-
-## 8. TOML Formatting: Blank Lines
-
-### 8.1 How blank lines work today
-
-The project uses `@decimalturn/toml-patch`:
-- **`patch(existing, value)`** — merges changes into an existing TOML string,
-  preserving comments, blank lines, and key order.
-- **`stringify(value)`** — generates a TOML string from scratch for new files.
-
-Blank lines between type groups are a *presentation* concern, not a semantic
-one. The TOML spec does not define key ordering or spacing.
-
-### 8.2 Strategy
-
-| Scenario | Mechanism |
-|---|---|
-| **New file, grouped** (`vba init`, `vba new` — the default) | Only 3 keys in `[src]`; no blank-line post-processing needed. |
-| **New file, individual** (`vba init --list-all`) | After `stringify()`, post-process the `[src]` section to insert blank lines between type groups (a one-time presentation default). |
-| **Existing file** (`vba export`, `vba add`) | `patch()` preserves whatever blank lines are already present. If the user removes them, they stay removed. |
-
-### 8.3 Post-processing for new files
-
-A helper `insertTypeGroupBlankLines(toml: string): string`:
-1. Split the TOML string into lines.
-2. Identify the `[src]` section boundaries.
-3. Scan entries within `[src]`; whenever the file extension changes (`.bas` →
-   `.frm` or `.frm` → `.cls`), insert an empty line before that entry.
-4. Rejoin.
-
----
-
-## 9. Implementation Plan
-
-### Phase 1 — Foundation
-
-| # | File | Change |
-|---|---|---|
-| 1 | `src/manifest/src-sort.ts` | **New file.** Define `SrcStructure`, `SrcProperties`, `detectSrcStructure()`, `insertTypeGroupBlankLines()`. |
-| 2 | `src/manifest/index.ts` | Parse `[src-properties]` in `parseManifest()`. Add `srcProperties` and `srcStructure` fields to `Manifest`. Export them in `formatManifest()`. |
-| 3 | `src/manifest/source.ts` | Update `formatSrc()` to accept `SrcProperties` and `SrcStructure`. When grouped, emit the 3 reserved keys. When individual, sort according to properties. |
-| 4 | `src/build/component.ts` | Keep `byComponentName` and `byComponentTypeThenName`. Add `byComponentType` (type-only, no alphabetical tiebreak) for the `sort.by-types=true, sort.alphabetical=false` case. |
-
-### Phase 2 — Consumers
-
-| # | File | Change |
-|---|---|---|
-| 5 | `src/build/apply-changeset.ts` | In `updateManifest()`, read `manifest.srcStructure`. For structured mode, insert at sorted position. For unstructured, append. For grouped, skip manifest update. |
-| 6 | `src/build/load-from-export.ts` | After loading, apply sort based on `manifest.srcProperties` (not hardcoded `byComponentTypeThenName`). |
-| 7 | `src/build/load-from-project.ts` | Same as above — use configurable sort. |
-| 8 | `src/build/compare-build-graphs.ts` | Keep internal `byComponentTypeThenName` for deterministic changeset ordering (this is an internal concern, not user-facing). |
-
-### Phase 3 — Wiring & init
-
-| # | File | Change |
-|---|---|---|
-| 9 | `src/actions/init-project.ts` | When generating a fresh manifest, write the 3 grouped keys in `[src]` with default globs. Do **not** write a `[src-properties]` section (the convention is self-evident). |
-| 10 | `src/bin/vbapm-init.ts` | Accept `--list-all` flag to use individual listing at init time instead of the grouped default. |
-| 11 | `src/bin/vbapm-new.ts` | Same `--list-all` flag. |
-
-### Phase 4 — Tests
-
-| # | Area | What to test |
-|---|---|---|
-| 12 | `src/manifest/__tests__/` | Parsing `[src-properties]` (all keys, defaults, invalid values). |
-| 13 | `src/manifest/__tests__/` | `detectSrcStructure()` — grouped, sorted-by-types, sorted-alphabetical, combo, unstructured. |
-| 14 | `src/manifest/__tests__/` | `formatSrc()` output for each mode. |
-| 15 | `src/build/__tests__/` | `applyChangeset` insertion position (structured vs unstructured). |
-| 16 | `src/build/__tests__/` | Build graph internal sort unaffected by user-facing settings. |
-| 17 | E2E | `vba init --from` generates grouped `[src]` by default (3 keys, no `[src-properties]`); `vba init --from --list-all` generates individual listing with blank-line separators. |
-
-### Phase 5 — Migration
-
-| # | Action |
-|---|---|
-| 18 | Existing projects without `[src-properties]` are left untouched; `detectSrcStructure()` infers their convention on read. |
-| 19 | Update the `vbapm add` command to read `srcStructure`: skip manifest update when grouped; append (don't reorder) when individual without enforcement. |
-| 20 | Update `vba export` to use `patchToml()` and respect detected convention (no enforcement unless `[src-properties]` is present). |
-
----
-
-## 10. Migration from Current Implementation
-
-### What stays the same
-
-- `byComponentName()` and `byComponentTypeThenName()` remain in
-  `src/build/component.ts` and continue to be used for **internal** build-graph
+Internal ordering is deterministic for byte-identical output. Does not
+reorder manifest entries or override `[src-properties]`.
   ordering (deterministic component order during build).
 - `patchToml()` continues to preserve existing formatting in the user's
   `vbaproject.toml`.

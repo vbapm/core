@@ -60,8 +60,8 @@ Object {
   "srcStructure": Object {
     "sortedAlphabetically": false,
     "sortedByTypeThenAlphabetically": false,
-    "sortedByTypes": true,
-    "unstructured": false,
+    "sortedByTypes": false,
+    "unstructured": true,
   },
   "target": Object {
     "filename": "standard.xlsm",

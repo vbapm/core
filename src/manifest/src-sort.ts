@@ -79,14 +79,21 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 	let sortedByTypes = true;
 	let currentExt = "";
 	let segmentCount = 0;
+	const seenExts = new Set<string>();
 	for (const s of src) {
 		const ext = extname(s.path).toLowerCase();
 		if (ext !== currentExt) {
+			// Same extension appearing again after a different type → not contiguous
+			if (seenExts.has(ext)) {
+				sortedByTypes = false;
+				break;
+			}
+			seenExts.add(currentExt);
 			segmentCount++;
 			currentExt = ext;
 		}
 	}
-	if (segmentCount > 4) sortedByTypes = false;
+	if (sortedByTypes && segmentCount > 4) sortedByTypes = false;
 
 	// ---- sortedAlphabetically check ----
 	let sortedAlphabetically = true;
