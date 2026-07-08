@@ -1,13 +1,14 @@
 import dedent from "@timhall/dedent";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
-import { Manifest, writeManifest } from "../manifest";
+import { Manifest, formatManifest } from "../manifest";
 import { TargetType } from "../manifest/target";
 import { initProject as init } from "../project";
 import { addTarget } from "../targets/add-target";
-import { copy, ensureDir, pathExists } from "../utils/fs";
+import { copy, ensureDir, pathExists, writeFile } from "../utils/fs";
 import { init as git_init } from "../utils/git";
 import { basename, dirname, extname, join } from "../utils/path";
+import { convert as convertToToml } from "../utils/toml";
 import { detectImportEncoding } from "./detect-encoding";
 
 const TEMPLATE_FILES = [
@@ -120,7 +121,10 @@ export async function initProject(options: InitOptions) {
 		await detectSourceEncoding(project);
 	}
 
-	// Write default wildcard [src] entries for new projects
+	// Write default wildcard [src] entries for new projects.
+	// Write as a fresh TOML file (not patch) since applyChangeset already
+	// wrote individual entries — patching from individual to wildcard keys
+	// produces garbled output.
 	if (!listAll) {
 		project.manifest.src = [
 			{ name: "Modules", path: "src/**/*.bas" },
@@ -129,7 +133,8 @@ export async function initProject(options: InitOptions) {
 		];
 	}
 
-	await writeManifest(project.manifest, project.paths.dir);
+	const toml = await convertToToml(formatManifest(project.manifest, project.paths.dir));
+	await writeFile(join(project.paths.dir, "vbaproject.toml"), toml);
 }
 
 /**
