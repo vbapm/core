@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-08
+
 ### Added
 - `codename` field in `[project]` section of `vbaproject.toml` to set a custom VBA project name in the VBE. Defaults to `"VBAProject"` when omitted.
 - `build-dir` field in `vbaproject.toml` to specify where the built `.xlsm`/`.xlam` is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
