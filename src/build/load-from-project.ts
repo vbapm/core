@@ -78,7 +78,12 @@ export async function loadFromProject(
 	}
 
 	const components = (await Promise.all(loadingComponents)).sort(byComponentName);
-	const graph = { name: "VBAProject", components, references, fromDependencies };
+	const graph = {
+		name: project.manifest.codename || "VBAProject",
+		components,
+		references,
+		fromDependencies
+	};
 
 	await validateEncoding(project, graph);
 	validateGraph(project, graph);

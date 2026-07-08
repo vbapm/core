@@ -32,3 +32,19 @@ test("should ignore dev-* for --release", async () => {
 
 	expect(normalizeBuildGraph(graph)).toMatchSnapshot();
 });
+
+test("should use codename for BuildGraph name when set", async () => {
+	const { project, dependencies } = await setup(complex);
+	project.manifest.codename = "MyProjectName";
+	const graph = await loadFromProject(project, dependencies);
+
+	expect(graph.name).toBe("MyProjectName");
+});
+
+test("should default BuildGraph name to VBAProject when codename not set", async () => {
+	const { project, dependencies } = await setup(complex);
+	project.manifest.codename = undefined;
+	const graph = await loadFromProject(project, dependencies);
+
+	expect(graph.name).toBe("VBAProject");
+});
