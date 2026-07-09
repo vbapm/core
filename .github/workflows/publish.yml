@@ -61,7 +61,8 @@ jobs:
           fi
 
       - name: Publish to npm
-        run: pnpm publish --provenance --tag ${{ steps.npm-tag.outputs.tag }}
-
+        # Note: --no-git-checks is used to avoid errors when publishing from a tag (detached HEAD) in CI.
+        run: pnpm publish --provenance --no-git-checks --tag ${{ steps.npm-tag.outputs.tag }}
+        
       - name: Check git status
         run: git status && git diff
