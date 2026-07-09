@@ -247,10 +247,14 @@ version = \\"0.0.0\\"
 authors = []
 license = \\"UNLICENSED\\"
 
+[src-properties]
+subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
+
 [src]
-Modules = \\"src/**/*.bas\\"
-Forms = \\"src/**/*.frm\\"
-Classes = \\"src/**/*.cls\\"
+Objects = \\"src/Excel Objects/**/*.cls\\"
+Forms = \\"src/Forms/**/*.frm\\"
+Modules = \\"src/Modules/**/*.bas\\"
+Classes = \\"src/Class Modules/**/*.cls\\"
 ",
 }
 `;
@@ -283,17 +287,21 @@ Object {
   "target/xl/worksheets/shtSheet3.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
   "vbaproject.toml":
   "[project]
-Modules\\"=x\\"src/**/*.bas\\"
-Formso= \\"src/**/*.frm\\"
-Classes = \\"src/**/*.cls\\"
+name = \\"existing-target\\"
+version = \\"0.0.0\\"
+authors = []
 license = \\"UNLICENSED\\"
 target = { type = \\"xlsm\\", name = \\"standard\\" }
 
 [src]
-
-
-
-
+JsonConverter = \\"src/JsonConverter.bas\\"
+Validation = \\"src/Validation.bas\\"
+Class1 = \\"src/Class1.cls\\"
+Dictionary = \\"src/Dictionary.cls\\"
+Sheet1 = \\"src/Sheet1.cls\\"
+Sheet2 = \\"src/Sheet2.cls\\"
+Sheet3 = \\"src/Sheet3.cls\\"
+ThisWorkbook = \\"src/ThisWorkbook.cls\\"
 
 [references]
 VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
@@ -324,10 +332,14 @@ authors = []
 license = \\"UNLICENSED\\"
 target = \\"xlsm\\"
 
+[src-properties]
+subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
+
 [src]
-Modules = \\"src/**/*.bas\\"
-Forms = \\"src/**/*.frm\\"
-Classes = \\"src/**/*.cls\\"
+Objects = \\"src/Excel Objects/**/*.cls\\"
+Forms = \\"src/Forms/**/*.frm\\"
+Modules = \\"src/Modules/**/*.bas\\"
+Classes = \\"src/Class Modules/**/*.cls\\"
 ",
 }
 `;
@@ -344,10 +356,14 @@ version = \\"0.1.0-beta.0\\"
 authors = []
 license = \\"UNLICENSED\\"
 
+[src-properties]
+subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
+
 [src]
-Modules = \\"src/**/*.bas\\"
-Forms = \\"src/**/*.frm\\"
-Classes = \\"src/**/*.cls\\"
+Objects = \\"src/Excel Objects/**/*.cls\\"
+Forms = \\"src/Forms/**/*.frm\\"
+Modules = \\"src/Modules/**/*.bas\\"
+Classes = \\"src/Class Modules/**/*.cls\\"
 ",
 }
 `;
@@ -364,10 +380,14 @@ version = \\"2.0.0\\"
 authors = []
 license = \\"UNLICENSED\\"
 
+[src-properties]
+subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
+
 [src]
-Modules = \\"src/**/*.bas\\"
-Forms = \\"src/**/*.frm\\"
-Classes = \\"src/**/*.cls\\"
+Objects = \\"src/Excel Objects/**/*.cls\\"
+Forms = \\"src/Forms/**/*.frm\\"
+Modules = \\"src/Modules/**/*.bas\\"
+Classes = \\"src/Class Modules/**/*.cls\\"
 ",
 }
 `;

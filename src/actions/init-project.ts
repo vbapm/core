@@ -121,15 +121,27 @@ export async function initProject(options: InitOptions) {
 		await detectSourceEncoding(project);
 	}
 
-	// Write default wildcard [src] entries for new projects.
+	// Write default wildcard [src] entries and [src-properties] for new
+	// projects.  Skip when --list-all (explicit individual listing) or
+	// --from (importing from existing workbook, which already has
+	// individual entries from addTarget).
 	// Write as a fresh TOML file (not patch) since applyChangeset already
 	// wrote individual entries — patching from individual to wildcard keys
 	// produces garbled output.
-	if (!listAll) {
+	if (!listAll && !from) {
+		project.manifest.srcProperties = {
+			subfolders: {
+				Objects: "Excel Objects",
+				Forms: "Forms",
+				Modules: "Modules",
+				Classes: "Class Modules"
+			}
+		};
 		project.manifest.src = [
-			{ name: "Modules", path: "src/**/*.bas" },
-			{ name: "Forms", path: "src/**/*.frm" },
-			{ name: "Classes", path: "src/**/*.cls" }
+			{ name: "Objects", path: "src/Excel Objects/**/*.cls" },
+			{ name: "Forms", path: "src/Forms/**/*.frm" },
+			{ name: "Modules", path: "src/Modules/**/*.bas" },
+			{ name: "Classes", path: "src/Class Modules/**/*.cls" }
 		];
 	}
 
