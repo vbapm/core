@@ -62,6 +62,7 @@ If `[src-properties]` is present, the tool enforces what the keys say.
 | `grouping` | `boolean` | Enforce grouped mode: `[src]` must have exactly the 3 reserved keys. If a user accidentally adds an individual entry, the tool flags it. |
 | `sort.by-types` | `boolean` | (Individual mode) Enforce type grouping: Objects → Modules → Forms → Classes. On add/export, insert new entries into the correct type section. |
 | `sort.alphabetical` | `boolean` | (Individual mode) Enforce alphabetical order. When combined with `sort.by-types`, alphabetical is *within* each type group; alone, it's global. |
+| `subfolders` | `{ Modules?, Forms?, Classes?, Objects? }` | Maps component types to subdirectories under `src/` (§4.6). |
 
 All keys default to `false` when the `[src-properties]` table is present but
 a key is omitted — i.e., you opt in to each enforcement individually.
