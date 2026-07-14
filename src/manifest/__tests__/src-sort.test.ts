@@ -1,4 +1,4 @@
-import { detectSrcStructure, parseSrcProperties} from "../src-sort";
+import { detectSrcStructure, parseSrcProperties } from "../src-sort";
 import { Source } from "../source";
 
 function src(name: string, path: string): Source {
