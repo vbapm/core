@@ -130,7 +130,6 @@ export async function initProject(options: InitOptions) {
 	// produces garbled output.
 	if (!listAll && !from) {
 		project.manifest.srcProperties = {
-			"empty-objects": true,
 			subfolders: {
 				Objects: "Excel Objects",
 				Forms: "Forms",
