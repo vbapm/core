@@ -20,6 +20,9 @@ export interface SrcProperties {
 		alphabetical?: boolean;
 	};
 	subfolders?: SrcSubfolders;
+	/** When `true` (default), empty document objects (ThisWorkbook, sheet
+	 * modules) are exported as `.cls` files.  When `false`, they are skipped. */
+	"empty-objects"?: boolean;
 }
 
 /**
@@ -162,6 +165,10 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 		if (typeof raw.subfolders.Classes === "string") sf.Classes = raw.subfolders.Classes;
 		if (typeof raw.subfolders.Objects === "string") sf.Objects = raw.subfolders.Objects;
 		if (Object.keys(sf).length > 0) props.subfolders = sf;
+	}
+
+	if (typeof raw["empty-objects"] === "boolean") {
+		props["empty-objects"] = raw["empty-objects"];
 	}
 
 	return Object.keys(props).length > 0 ? props : undefined;

@@ -27,9 +27,12 @@ Object {
 exports[`build build standard project 1`] = `
 Object {
   "errors": Array [],
-  "messages": Array [],
+  "messages": Array [
+    "{\\"success\\":false,\\"errors\\":[\\"Component \\"Sheet1\\" is not valid\\"]}
+",
+  ],
   "stderr": "",
-  "stdout": "{\\"success\\":true,\\"errors\\":[]}
+  "stdout": "{\\"success\\":false,\\"errors\\":[\\"Component \\"Sheet1\\" is not valid\\"]}
 ",
   "success": true,
   "warnings": Array [],
@@ -39,14 +42,10 @@ Object {
 exports[`export export to empty project 1`] = `
 Object {
   "build/empty.xlsm": "<TODO>",
-  "src/Class1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Class1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
-  "src/Dictionary.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Dictionary\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF...",
-  "src/JsonConverter.bas": "Attribute VB_Name = \\"JsonConverter\\"{CR}{LF}''{CR}{LF}' VBA-JSON v2.3.0{CR}{LF}' (c) Tim Hall - https://github.com/VBA-tools/VBA-JSON{CR}{LF}'{CR}{LF}' JSON Converter for VBA{CR}{LF}'{CR}{LF}' Errors:{...",
   "src/Sheet1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet2.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet2\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet3.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet3\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/ThisWorkbook.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"ThisWorkbook\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{...",
-  "src/Validation.bas": "Attribute VB_Name = \\"Validation\\"{CR}{LF}Public Function Validate() As String{CR}{LF}    On Error GoTo ErrorHandling{CR}{LF}{CR}{LF}    Dim Errors As New Collection{CR}{LF}{CR}{LF}    If ThisWorkbook.V...",
   "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{CR}{LF}  <Default Extension=\\"bin\\" ContentType=\\"application/v...",
   "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
   "targets/xlsm/docProps/app.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Properties xmlns=\\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\\" xmlns:vt=\\"http://schemas.openxmlformats.org...",
@@ -54,7 +53,7 @@ Object {
   "targets/xlsm/xl/_rels/workbook.xml.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
   "targets/xlsm/xl/sharedStrings.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<sst xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" count=\\"3\\" uniqueCount=\\"3\\">{CR}{LF}  <si>{CR}{LF}    <t>A1</t>{CR}{...",
   "targets/xlsm/xl/styles.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<styleSheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:mc=\\"http://schemas.openxmlformats.org/markup-compatib...",
-  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office 2013 - 2022 Theme\\">{CR}{LF}  <a:themeElements>{CR}{...",
+  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office Theme\\">{CR}{LF}  <a:themeElements>{CR}{LF}    <a:cl...",
   "targets/xlsm/xl/workbook.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<workbook xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/200...",
   "targets/xlsm/xl/worksheets/shtSheet1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
   "targets/xlsm/xl/worksheets/shtSheet2.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
@@ -65,17 +64,10 @@ name = \\"empty\\"
 target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
 
 [src]
-JsonConverter = \\"src/JsonConverter.bas\\"
-Validation = \\"src/Validation.bas\\"
-Class1 = \\"src/Class1.cls\\"
-Dictionary = \\"src/Dictionary.cls\\"
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
 Sheet3 = \\"src/Sheet3.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-
-[references]
-VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
 ",
 }
 `;
@@ -96,12 +88,10 @@ Updating src files
 exports[`export export to project with dependency 1`] = `
 Object {
   "build/json.xlsm": "<TODO>",
-  "src/Class1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Class1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet2.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet2\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet3.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet3\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/ThisWorkbook.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"ThisWorkbook\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{...",
-  "src/Validation.bas": "Attribute VB_Name = \\"Validation\\"{CR}{LF}Public Function Validate() As String{CR}{LF}    On Error GoTo ErrorHandling{CR}{LF}{CR}{LF}    Dim Errors As New Collection{CR}{LF}{CR}{LF}    If ThisWorkbook.V...",
   "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{CR}{LF}  <Default Extension=\\"bin\\" ContentType=\\"application/v...",
   "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
   "targets/xlsm/docProps/app.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Properties xmlns=\\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\\" xmlns:vt=\\"http://schemas.openxmlformats.org...",
@@ -109,7 +99,7 @@ Object {
   "targets/xlsm/xl/_rels/workbook.xml.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
   "targets/xlsm/xl/sharedStrings.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<sst xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" count=\\"3\\" uniqueCount=\\"3\\">{CR}{LF}  <si>{CR}{LF}    <t>A1</t>{CR}{...",
   "targets/xlsm/xl/styles.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<styleSheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:mc=\\"http://schemas.openxmlformats.org/markup-compatib...",
-  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office 2013 - 2022 Theme\\">{CR}{LF}  <a:themeElements>{CR}{...",
+  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office Theme\\">{CR}{LF}  <a:themeElements>{CR}{LF}    <a:cl...",
   "targets/xlsm/xl/workbook.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<workbook xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/200...",
   "targets/xlsm/xl/worksheets/shtSheet1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
   "targets/xlsm/xl/worksheets/shtSheet2.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
@@ -123,15 +113,10 @@ target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
 json = \\"=2.3.0\\"
 
 [src]
-Validation = \\"src/Validation.bas\\"
-Class1 = \\"src/Class1.cls\\"
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
 Sheet3 = \\"src/Sheet3.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-
-[references]
-VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
 ",
 }
 `;
@@ -152,14 +137,10 @@ Updating src files
 exports[`export export with --vba-only skips XML extraction 1`] = `
 Object {
   "build/empty.xlsm": "<TODO>",
-  "src/Class1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Class1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
-  "src/Dictionary.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Dictionary\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF...",
-  "src/JsonConverter.bas": "Attribute VB_Name = \\"JsonConverter\\"{CR}{LF}''{CR}{LF}' VBA-JSON v2.3.0{CR}{LF}' (c) Tim Hall - https://github.com/VBA-tools/VBA-JSON{CR}{LF}'{CR}{LF}' JSON Converter for VBA{CR}{LF}'{CR}{LF}' Errors:{...",
   "src/Sheet1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet2.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet2\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/Sheet3.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet3\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
   "src/ThisWorkbook.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"ThisWorkbook\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{...",
-  "src/Validation.bas": "Attribute VB_Name = \\"Validation\\"{CR}{LF}Public Function Validate() As String{CR}{LF}    On Error GoTo ErrorHandling{CR}{LF}{CR}{LF}    Dim Errors As New Collection{CR}{LF}{CR}{LF}    If ThisWorkbook.V...",
   "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{CR}{LF}  <Default Extension=\\"rels\\" ContentType=\\"application/...",
   "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\"><Relationship Id=\\"rId3\\" Type=\\"http://schemas.openxmlf...",
   "targets/xlsm/docProps/app.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Properties xmlns=\\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\\" xmlns:vt=\\"http://schemas.openxmlformats.org...",
@@ -175,17 +156,10 @@ name = \\"empty\\"
 target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
 
 [src]
-JsonConverter = \\"src/JsonConverter.bas\\"
-Validation = \\"src/Validation.bas\\"
-Class1 = \\"src/Class1.cls\\"
-Dictionary = \\"src/Dictionary.cls\\"
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
 Sheet3 = \\"src/Sheet3.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
-
-[references]
-VBIDE = { version = \\"5.3\\", guid = \\"{0002E157-0000-0000-C000-000000000046}\\" }
 ",
 }
 `;
@@ -213,7 +187,7 @@ Object {
   "targets/xlsm/xl/_rels/workbook.xml.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
   "targets/xlsm/xl/sharedStrings.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<sst xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" count=\\"3\\" uniqueCount=\\"3\\">{CR}{LF}  <si>{CR}{LF}    <t>A1</t>{CR}{...",
   "targets/xlsm/xl/styles.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<styleSheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:mc=\\"http://schemas.openxmlformats.org/markup-compatib...",
-  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office 2013 - 2022 Theme\\">{CR}{LF}  <a:themeElements>{CR}{...",
+  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office Theme\\">{CR}{LF}  <a:themeElements>{CR}{LF}    <a:cl...",
   "targets/xlsm/xl/workbook.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<workbook xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/200...",
   "targets/xlsm/xl/worksheets/shtSheet1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
   "targets/xlsm/xl/worksheets/shtSheet2.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
@@ -248,6 +222,7 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src-properties]
+empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -280,7 +255,7 @@ Object {
   "target/xl/_rels/workbook.xml.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
   "target/xl/sharedStrings.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<sst xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" count=\\"3\\" uniqueCount=\\"3\\">{CR}{LF}  <si>{CR}{LF}    <t>A1</t>{CR}{...",
   "target/xl/styles.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<styleSheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:mc=\\"http://schemas.openxmlformats.org/markup-compatib...",
-  "target/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office 2013 - 2022 Theme\\">{CR}{LF}  <a:themeElements>{CR}{...",
+  "target/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office Theme\\">{CR}{LF}  <a:themeElements>{CR}{LF}    <a:cl...",
   "target/xl/workbook.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<workbook xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/200...",
   "target/xl/worksheets/shtSheet1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
   "target/xl/worksheets/shtSheet2.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
@@ -333,6 +308,7 @@ license = \\"UNLICENSED\\"
 target = \\"xlsm\\"
 
 [src-properties]
+empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -357,6 +333,7 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src-properties]
+empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -381,6 +358,7 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src-properties]
+empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
