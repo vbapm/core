@@ -187,14 +187,14 @@ export function insertTypeGroupBlankLines(toml: string): string {
 
 	for (const line of lines) {
 		// Detect entering [src] section
-		if (/^\[src\]/.test(line.trim())) {
+		if (line.trim().startsWith("[src]")) {
 			inSrc = true;
 			result.push(line);
 			continue;
 		}
 
 		// Detect leaving [src] section (next section header or end)
-		if (inSrc && /^\[/.test(line.trim())) {
+		if (inSrc && line.trim().startsWith("[")) {
 			inSrc = false;
 		}
 
