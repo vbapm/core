@@ -22,7 +22,7 @@ export interface SrcProperties {
 	subfolders?: SrcSubfolders;
 	/** When `true` (default), empty document objects (ThisWorkbook, sheet
 	 * modules) are exported as `.cls` files.  When `false`, they are skipped. */
-	"empty-objects"?: boolean;
+	"include-empty-objects"?: boolean;
 }
 
 /**
@@ -167,8 +167,8 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 		if (Object.keys(sf).length > 0) props.subfolders = sf;
 	}
 
-	if (typeof raw["empty-objects"] === "boolean") {
-		props["empty-objects"] = raw["empty-objects"];
+	if (typeof raw["include-empty-objects"] === "boolean") {
+		props["include-empty-objects"] = raw["include-empty-objects"];
 	}
 
 	return Object.keys(props).length > 0 ? props : undefined;

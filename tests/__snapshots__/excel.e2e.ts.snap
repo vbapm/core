@@ -248,7 +248,6 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src-properties]
-empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -334,7 +333,6 @@ license = \\"UNLICENSED\\"
 target = \\"xlsm\\"
 
 [src-properties]
-empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -359,7 +357,6 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src-properties]
-empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -384,7 +381,6 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [src-properties]
-empty-objects = true
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]

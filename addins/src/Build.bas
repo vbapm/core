@@ -91,10 +91,10 @@ Public Function ExportTo(Info As Variant) As String
     Staging = Values("staging")
 
     ' Respect [src-properties] "empty-objects" flag (default: true)
-    Dim EmptyObjects As Boolean
-    EmptyObjects = True
-    If Values.Exists("emptyObjects") Then
-        EmptyObjects = Values("emptyObjects")
+    Dim IncludeEmptyObjects As Boolean
+    IncludeEmptyObjects = True
+    If Values.Exists("includeEmptyObjects") Then
+        IncludeEmptyObjects = Values("includeEmptyObjects")
     End If
 
     ' Iterate through all components in document and export directly to staging
@@ -117,7 +117,7 @@ Public Function ExportTo(Info As Variant) As String
 
         ' Skip empty document objects when empty-objects = false
         If Extension <> "" Then
-            If EmptyObjects = False And Component.Type = vbext_ComponentType.vbext_ct_Document And ComponentIsBlank(Component) Then
+            If IncludeEmptyObjects = False And Component.Type = vbext_ComponentType.vbext_ct_Document And ComponentIsBlank(Component) Then
                 ' Skip this blank document object
             Else
                 Path = FileSystem.JoinPath(Staging, Component.Name & Extension)

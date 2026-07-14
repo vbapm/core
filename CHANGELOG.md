@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `empty-objects` option under `[src-properties]` (default: `true`). When `false`, blank document objects (`ThisWorkbook`, sheet modules) are skipped during export, matching the pre-0.10 behavior. When `true`, all document objects are exported regardless of content.
+- `include-empty-objects` option under `[src-properties]` (default: `true`). When `false`, blank document objects (`ThisWorkbook`, sheet modules) are skipped during export, matching the pre-0.10 behavior. When `true`, all document objects are exported regardless of content.
 
 ## [0.10.0] - 2026-07-08
 
