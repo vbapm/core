@@ -6,7 +6,9 @@ on:
       - main*
     paths-ignore:
       - "**/*.md"
-  pull_request:
+  # The pull_request trigger is disabled to reduce CI usage, but when doing a PR involving encoding changes, 
+  # you can temporarily enable this trigger to run the multilingual encoding tests on the PR.
+  # pull_request:
   workflow_dispatch:
 
 permissions:

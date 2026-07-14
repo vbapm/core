@@ -62,7 +62,13 @@ Object {
     },
   ],
   "srcEncoding": undefined,
-  "srcSubfolders": undefined,
+  "srcProperties": undefined,
+  "srcStructure": Object {
+    "sortedAlphabetically": false,
+    "sortedByTypeThenAlphabetically": false,
+    "sortedByTypes": false,
+    "unstructured": true,
+  },
   "target": Object {
     "filename": "complex.xlsm",
     "name": "complex",

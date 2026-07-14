@@ -11,7 +11,7 @@ import {
 } from "./encoding-sniffer";
 import * as iconv from "iconv-lite";
 
-export type ComponentType = "module" | "class" | "form" | "document";
+export type ComponentType = "module" | "class" | "form" | "object";
 
 export interface ComponentDetails {
 	path?: string;
@@ -136,4 +136,23 @@ export function byComponentName(a: Component, b: Component): number {
 	if (a.name < b.name) return -1;
 	if (a.name > b.name) return 1;
 	return 0;
+}
+
+/** Order for sorting components by type: Objects → Modules → Forms → Classes. */
+const TYPE_ORDER: Record<ComponentType, number> = {
+	object: 1,
+	module: 2,
+	form: 3,
+	class: 4
+};
+
+/**
+ * Sort components by type (Objects → Modules → Forms → Classes),
+ * then alphabetically by name within each type.
+ */
+export function byComponentTypeThenName(a: Component, b: Component): number {
+	const orderA = TYPE_ORDER[a.type] ?? 99;
+	const orderB = TYPE_ORDER[b.type] ?? 99;
+	if (orderA !== orderB) return orderA - orderB;
+	return byComponentName(a, b);
 }

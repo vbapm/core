@@ -1,14 +1,16 @@
 import dedent from "@timhall/dedent";
+import walk from "walk-sync";
 import { CliError, ErrorCode } from "../errors";
 import { Manifest } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
 import { readFile } from "../utils/fs";
+import { join, relative } from "../utils/path";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
 import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
-import { byComponentName, Component } from "./component";
+import { byComponentTypeThenName, Component } from "./component";
 
 import jschardet from "jschardet";
 
@@ -38,16 +40,36 @@ export async function loadFromProject(
 			const declaredLabel = source.encoding ?? manifest.srcEncoding;
 			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 
-			loadingComponents.push(
-				Component.load(source.path, codepage, { binary_path: source.binary }).then(component => {
-					component.details.sourceEncoding = declaredLabel;
-					if (manifest !== project.manifest) {
-						fromDependencies.components.set(component, manifest.name);
-					}
-
-					return component;
-				})
-			);
+			// Expand wildcards against the project directory
+			if (source.path.includes("*")) {
+				const baseDir = project.paths.dir;
+				const pattern = source.path.startsWith(baseDir)
+					? relative(baseDir, source.path)
+					: source.path;
+				const matched = walk(baseDir, { globs: [pattern], directories: false });
+				for (const file of matched) {
+					const absPath = join(baseDir, file);
+					loadingComponents.push(
+						Component.load(absPath, codepage, {}).then(component => {
+							component.details.sourceEncoding = declaredLabel;
+							if (manifest !== project.manifest) {
+								fromDependencies.components.set(component, manifest.name);
+							}
+							return component;
+						})
+					);
+				}
+			} else {
+				loadingComponents.push(
+					Component.load(source.path, codepage, { binary_path: source.binary }).then(component => {
+						component.details.sourceEncoding = declaredLabel;
+						if (manifest !== project.manifest) {
+							fromDependencies.components.set(component, manifest.name);
+						}
+						return component;
+					})
+				);
+			}
 		}
 		for (const reference of manifest.references) {
 			const nameGuid = `${reference.name}_${reference.guid}`;
@@ -64,9 +86,23 @@ export async function loadFromProject(
 
 	if (!options.release) {
 		for (const source of project.manifest.devSrc) {
-			loadingComponents.push(
-				Component.load(source.path, Codepage.Unknown, { binary_path: source.binary })
-			);
+			if (source.path.includes("*")) {
+				const baseDir = project.paths.dir;
+				const pattern = source.path.startsWith(baseDir)
+					? relative(baseDir, source.path)
+					: source.path;
+				const matched = walk(baseDir, { globs: [pattern], directories: false });
+				for (const file of matched) {
+					const absPath = join(baseDir, file);
+					loadingComponents.push(
+						Component.load(absPath, Codepage.Unknown, { binary_path: source.binary })
+					);
+				}
+			} else {
+				loadingComponents.push(
+					Component.load(source.path, Codepage.Unknown, { binary_path: source.binary })
+				);
+			}
 		}
 		for (const reference of project.manifest.devReferences) {
 			const nameGuid = `${reference.name}_${reference.guid}`;
@@ -77,7 +113,7 @@ export async function loadFromProject(
 		}
 	}
 
-	const components = (await Promise.all(loadingComponents)).sort(byComponentName);
+	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
 	const graph = {
 		name: project.manifest.codename || "VBAProject",
 		components,

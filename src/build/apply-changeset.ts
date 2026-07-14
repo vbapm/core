@@ -8,7 +8,7 @@ import { ensureDir, remove, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { dirname, join } from "../utils/path";
 import { Changeset } from "./changeset";
-import { Component } from "./component";
+import { Component, ComponentType, extensionToType } from "./component";
 import { codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
 export async function applyChangeset(project: Project, changeset: Changeset) {
@@ -31,7 +31,7 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 	await parallel(
 		changeset.components.added,
 		async component => {
-			const sub = resolveSrcSubfolders(project.manifest.srcSubfolders, component.type);
+			const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
 			const path = join(project.paths.dir, "src", sub, component.filename);
 			component.details.path = path;
 
@@ -54,20 +54,67 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 }
 
 async function updateManifest(project: Project, changeset: Changeset) {
+	const enforcement = project.manifest.srcProperties;
+
 	for (const component of changeset.components.added) {
-		const sub = resolveSrcSubfolders(project.manifest.srcSubfolders, component.type);
+		const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
 		const srcPath = sub ? `src/${sub}/${component.filename}` : `src/${component.filename}`;
 		const source: Source = {
 			name: component.name,
 			path: join(project.paths.dir, srcPath)
 		};
-		project.manifest.src.push(source);
+
+		if (enforcement?.sort?.alphabetical && enforcement?.sort?.["by-types"]) {
+			// Both: type-then-alphabetical insertion
+			const src = project.manifest.src;
+			let insertAt = src.length;
+			for (let i = 0; i < src.length; i++) {
+				const existingExt = src[i].path.split(".").pop()?.toLowerCase() || "";
+				const newExt = component.filename.split(".").pop()?.toLowerCase() || "";
+				const existingType = extensionToType[`.${existingExt}`] || "class";
+				const newType = extensionToType[`.${newExt}`] || "class";
+				const cmp = compareByTypeThenName(newType, component.name, existingType, src[i].name);
+				if (cmp < 0) {
+					insertAt = i;
+					break;
+				}
+			}
+			src.splice(insertAt, 0, source);
+		} else if (enforcement?.sort?.alphabetical) {
+			// Alphabetical only (global, ignoring type boundaries)
+			const src = project.manifest.src;
+			let insertAt = src.length;
+			for (let i = 0; i < src.length; i++) {
+				if (component.name.toLowerCase() < src[i].name.toLowerCase()) {
+					insertAt = i;
+					break;
+				}
+			}
+			src.splice(insertAt, 0, source);
+		} else if (enforcement?.sort?.["by-types"]) {
+			// Type grouping only: insert after last entry of same type
+			const src = project.manifest.src;
+			const newExt = component.filename.split(".").pop()?.toLowerCase() || "";
+			let insertAt = src.length;
+			for (let i = src.length - 1; i >= 0; i--) {
+				const existingExt = src[i].path.split(".").pop()?.toLowerCase() || "";
+				if (existingExt === newExt) {
+					insertAt = i + 1;
+					break;
+				}
+			}
+			src.splice(insertAt, 0, source);
+		} else {
+			// No enforcement: append
+			project.manifest.src.push(source);
+		}
 	}
+
 	for (const component of changeset.components.removed) {
 		const index = project.manifest.src.findIndex(
 			(source: Source) => source.name === component.name
 		);
-		project.manifest.src.splice(index, 1);
+		if (index >= 0) project.manifest.src.splice(index, 1);
 	}
 
 	for (let reference of changeset.references.added) {
@@ -77,10 +124,29 @@ async function updateManifest(project: Project, changeset: Changeset) {
 		const index = project.manifest.references.findIndex(
 			(ref: Reference) => ref.name === reference.name
 		);
-		project.manifest.references.splice(index, 1);
+		if (index >= 0) project.manifest.references.splice(index, 1);
 	}
 
 	await writeManifest(project.manifest, project.paths.dir);
+}
+
+/** Type order for insertion sorting (Objects → Modules → Forms → Classes). */
+const TYPE_ORDER_INSERT: Record<string, number> = {
+	object: 1,
+	module: 2,
+	form: 3,
+	class: 4
+};
+
+function compareByTypeThenName(typeA: string, nameA: string, typeB: string, nameB: string): number {
+	const orderA = TYPE_ORDER_INSERT[typeA] ?? 99;
+	const orderB = TYPE_ORDER_INSERT[typeB] ?? 99;
+	if (orderA !== orderB) return orderA - orderB;
+	return nameA.toLowerCase() < nameB.toLowerCase()
+		? -1
+		: nameA.toLowerCase() > nameB.toLowerCase()
+			? 1
+			: 0;
 }
 
 async function writeComponent(path: string, component: Component) {

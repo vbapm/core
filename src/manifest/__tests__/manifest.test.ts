@@ -1,6 +1,8 @@
 import { formatManifest, loadManifest, parseManifest } from "../";
 import { dev, dir as FIXTURES, invalidManifest, standard } from "../../../tests/__fixtures__";
 import { normalizeManifest } from "../../__helpers__/manifest";
+import { parse as parseToml } from "../../utils/toml";
+import dedent from "@timhall/dedent";
 
 const BASE_MANIFEST: {
 	package: {
@@ -295,5 +297,51 @@ describe("section key validation", () => {
 		};
 
 		expect(() => parseManifest(value, FIXTURES)).toThrow(/Did you mean "build-dir"/);
+	});
+	test("parses wildcard entries as regular source paths", async () => {
+		const toml = dedent`
+			[project]
+			name = "wildcard-test"
+			target = "xlsm"
+
+			[src]
+			MyStuff = "src/**/*.cls"
+			Validation = "src/Validation.bas"
+		`;
+
+		const value = await parseToml(toml);
+		const manifest = parseManifest(value, FIXTURES);
+
+		// Wildcard stored as literal path, not expanded at parse time
+		expect(manifest.src).toHaveLength(2);
+		expect(manifest.src[0].name).toBe("MyStuff");
+		expect(manifest.src[0].path).toContain("src/**/*.cls");
+	});
+
+	test("parses [src-properties] with sort and subfolders", async () => {
+		const toml = dedent`
+			[project]
+			name = "with-props"
+			target = "xlsm"
+
+			[src-properties]
+			sort.by-types = true
+			sort.alphabetical = true
+
+			[src-properties.subfolders]
+			Modules = "Modules"
+			Classes = "Class Modules"
+
+			[src]
+			ModuleA = "src/ModuleA.bas"
+		`;
+
+		const value = await parseToml(toml);
+		const manifest = parseManifest(value, FIXTURES);
+
+		expect(manifest.srcProperties?.sort?.["by-types"]).toBe(true);
+		expect(manifest.srcProperties?.sort?.alphabetical).toBe(true);
+		expect(manifest.srcProperties?.subfolders?.Modules).toBe("Modules");
+		expect(manifest.srcProperties?.subfolders?.Classes).toBe("Class Modules");
 	});
 });

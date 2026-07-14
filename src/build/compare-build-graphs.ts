@@ -1,7 +1,7 @@
 import { Reference } from "../manifest/reference";
 import { BuildGraph } from "./build-graph";
 import { Changeset } from "./changeset";
-import { byComponentName, Component } from "./component";
+import { byComponentTypeThenName, Component } from "./component";
 
 export function compareBuildGraphs(before: BuildGraph, after: BuildGraph): Changeset {
 	const changeset: Changeset = {
@@ -51,9 +51,9 @@ export function compareBuildGraphs(before: BuildGraph, after: BuildGraph): Chang
 		changeset.components.removed.push(component);
 	}
 
-	changeset.components.added.sort(byComponentName);
-	changeset.components.changed.sort(byComponentName);
-	changeset.components.removed.sort(byComponentName);
+	changeset.components.added.sort(byComponentTypeThenName);
+	changeset.components.changed.sort(byComponentTypeThenName);
+	changeset.components.removed.sort(byComponentTypeThenName);
 
 	// Determine reference changes
 	for (const reference of after.references) {

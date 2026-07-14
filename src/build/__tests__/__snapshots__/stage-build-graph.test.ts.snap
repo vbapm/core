@@ -4,6 +4,22 @@ exports[`should stage BuildGraph 1`] = `
 Object {
   "components": Array [
     Object {
+      "name": "JsonConverter",
+      "path": ".vbapm/staging/standard/import/JsonConverter.bas",
+    },
+    Object {
+      "name": "Validation",
+      "path": ".vbapm/staging/standard/import/Validation.bas",
+    },
+    Object {
+      "name": "WebHelpers",
+      "path": ".vbapm/staging/standard/import/WebHelpers.bas",
+    },
+    Object {
+      "name": "UserForm1",
+      "path": ".vbapm/staging/standard/import/UserForm1.frm",
+    },
+    Object {
       "name": "Class1",
       "path": ".vbapm/staging/standard/import/Class1.cls",
     },
@@ -14,10 +30,6 @@ Object {
     Object {
       "name": "IWebAuthenticator",
       "path": ".vbapm/staging/standard/import/IWebAuthenticator.cls",
-    },
-    Object {
-      "name": "JsonConverter",
-      "path": ".vbapm/staging/standard/import/JsonConverter.bas",
     },
     Object {
       "name": "Sheet1",
@@ -36,20 +48,8 @@ Object {
       "path": ".vbapm/staging/standard/import/ThisWorkbook.cls",
     },
     Object {
-      "name": "UserForm1",
-      "path": ".vbapm/staging/standard/import/UserForm1.frm",
-    },
-    Object {
-      "name": "Validation",
-      "path": ".vbapm/staging/standard/import/Validation.bas",
-    },
-    Object {
       "name": "WebClient",
       "path": ".vbapm/staging/standard/import/WebClient.cls",
-    },
-    Object {
-      "name": "WebHelpers",
-      "path": ".vbapm/staging/standard/import/WebHelpers.bas",
     },
     Object {
       "name": "WebRequest",

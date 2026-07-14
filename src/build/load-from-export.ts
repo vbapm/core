@@ -6,7 +6,7 @@ import { pathExists, readFile, readJson } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, extname, join } from "../utils/path";
 import { BuildGraph } from "./build-graph";
-import { byComponentName, Component, extensionToType } from "./component";
+import { byComponentTypeThenName, Component, extensionToType } from "./component";
 import { getSystemCodepage } from "./encoding-sniffer";
 
 const binary_extensions = [".frx"];
@@ -65,7 +65,7 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 		},
 		{ progress: env.reporter.progress("Loading exported components") }
 	);
-	components.sort(byComponentName);
+	components.sort(byComponentTypeThenName);
 
 	return {
 		name,

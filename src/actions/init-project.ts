@@ -1,13 +1,14 @@
 import dedent from "@timhall/dedent";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
-import { Manifest, writeManifest } from "../manifest";
+import { Manifest, formatManifest } from "../manifest";
 import { TargetType } from "../manifest/target";
 import { initProject as init } from "../project";
 import { addTarget } from "../targets/add-target";
-import { copy, ensureDir, pathExists } from "../utils/fs";
+import { copy, ensureDir, pathExists, writeFile } from "../utils/fs";
 import { init as git_init } from "../utils/git";
 import { basename, dirname, extname, join } from "../utils/path";
+import { convert as convertToToml } from "../utils/toml";
 import { detectImportEncoding } from "./detect-encoding";
 
 const TEMPLATE_FILES = [
@@ -32,6 +33,7 @@ export interface InitOptions {
 	pkg: boolean;
 	git: boolean;
 	configTemplates: boolean;
+	listAll?: boolean;
 }
 
 export async function initProject(options: InitOptions) {
@@ -42,7 +44,8 @@ export async function initProject(options: InitOptions) {
 		from,
 		pkg: asPackage,
 		git,
-		configTemplates
+		configTemplates,
+		listAll
 	} = options;
 
 	if (await pathExists(join(dir, "vbaproject.toml"))) {
@@ -118,7 +121,32 @@ export async function initProject(options: InitOptions) {
 		await detectSourceEncoding(project);
 	}
 
-	await writeManifest(project.manifest, project.paths.dir);
+	// Write default wildcard [src] entries and [src-properties] for new
+	// projects.  Skip when --list-all (explicit individual listing) or
+	// --from (importing from existing workbook, which already has
+	// individual entries from addTarget).
+	// Write as a fresh TOML file (not patch) since applyChangeset already
+	// wrote individual entries — patching from individual to wildcard keys
+	// produces garbled output.
+	if (!listAll && !from) {
+		project.manifest.srcProperties = {
+			subfolders: {
+				Objects: "Excel Objects",
+				Forms: "Forms",
+				Modules: "Modules",
+				Classes: "Class Modules"
+			}
+		};
+		project.manifest.src = [
+			{ name: "Objects", path: "src/Excel Objects/**/*.cls" },
+			{ name: "Forms", path: "src/Forms/**/*.frm" },
+			{ name: "Modules", path: "src/Modules/**/*.bas" },
+			{ name: "Classes", path: "src/Class Modules/**/*.cls" }
+		];
+	}
+
+	const toml = await convertToToml(formatManifest(project.manifest, project.paths.dir));
+	await writeFile(join(project.paths.dir, "vbaproject.toml"), toml);
 }
 
 /**
