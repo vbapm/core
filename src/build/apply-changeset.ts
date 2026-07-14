@@ -8,7 +8,7 @@ import { ensureDir, remove, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { dirname, join } from "../utils/path";
 import { Changeset } from "./changeset";
-import { Component, ComponentType, extensionToType } from "./component";
+import { Component, extensionToType } from "./component";
 import { codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
 export async function applyChangeset(project: Project, changeset: Changeset) {
