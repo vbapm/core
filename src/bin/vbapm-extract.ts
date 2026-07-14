@@ -1,19 +1,16 @@
 import dedent from "@timhall/dedent";
-import { yellowBright } from "@timhall/ansi-colors";
 import { Args } from "mri";
 import { exportProject } from "../actions/export-project";
 
 const help = dedent`
-  (deprecated) Use "vbapm extract" instead.
+  Extract built project, including src, references, and target.
 
-  Export built project, including src, references, and target.
-
-  Usage: vbapm export
+  Usage: vbapm extract
 
   Options:
-    --target=TYPE   Export target of type TYPE
-    --xml-only      Only extract the target XML, skip VBA source export
-    --vba-only      Only export the VBA source, skip target XML extraction
+    --target=TYPE   Extract target of type TYPE
+    --xml-only      Only extract the target XML, skip VBA source extraction
+    --vba-only      Only extract the VBA source, skip target XML extraction
 
   Debugging options:
     --skip-sheet-name-normalization   Skip sheet name normalization (keep sheetN.xml names)`;
@@ -23,10 +20,6 @@ export default async function (args: Args) {
 		console.log(help);
 		return;
 	}
-
-	console.warn(
-		`\n${yellowBright("WARN:")} "vbapm export" is deprecated. Use "vbapm extract" instead.\n`
-	);
 
 	const target = <string | undefined>args.target;
 	const completed = <string | undefined>args.completed;

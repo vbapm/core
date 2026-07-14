@@ -101,7 +101,7 @@ my-project/
 
 vbapm automates two extraction steps:
 
-1. **VBA source code** — The vbapm add-in runs a macro that exports every `VBComponent` in the workbook as its native file type, along with a `project.json` listing non-built-in references.
+1. **VBA source code** — The vbapm add-in runs a macro that extracts every `VBComponent` from the workbook as its native file type, along with a `project.json` listing non-built-in references.
 
 2. **XML structure** — The workbook is unzipped and its internal XML (sheets, styles, ribbon, etc.) is extracted to `target/`.
 
@@ -114,7 +114,7 @@ Once your project is initialized, the day-to-day loop is:
 1. **Edit** your source files in `src/` and register new ones with [`vba add`](#add)
 2. **Build** the workbook with [`vba build`](#build)
 3. **Test** your macros in Excel, or use [`vba run`](#run) from the command line
-4. **Export** changes back to source with [`vba export`](#export), then `git diff` and commit
+4. **Extract** changes back to source with [`vba extract`](#extract), then `git diff` and commit
 
 ### Putting it together
 
@@ -127,7 +127,7 @@ cd expense-tracker
 vba build --open
 
 # After tweaking in Excel, capture the changes
-vba export
+vba extract
 
 # Commit your work
 git add . && git commit -m "Add expense tracker project"
@@ -277,33 +277,35 @@ Build a project, excluding any development src, dependencies, or references:
 vba build --release
 ```
 
-### `export`
+### `extract`
 
-Once you've completed your edits and are ready to commit your changes, export your project with `vba export`.
+Once you've completed your edits and are ready to commit your changes, extract your project with `vba extract`.
 
-Export a project:
-
-```txt
-vba export
-```
-
-Export a previously-built package:
+Extract a project:
 
 ```txt
-vba export --target xlsm
+vba extract
 ```
 
-Only extract the XML files (skip VBA source export):
+Extract a previously-built package:
 
 ```txt
-vba export --xml-only
+vba extract --target xlsm
 ```
 
-Only export the VBA source (skip XML extraction):
+Only extract the XML files (skip VBA source extraction):
 
 ```txt
-vba export --vba-only
+vba extract --xml-only
 ```
+
+Only extract the VBA source (skip XML extraction):
+
+```txt
+vba extract --vba-only
+```
+
+> **Note:** `vba export` is deprecated and will be removed in a future version. Use `vba extract` instead.
 
 ### `update`
 
@@ -483,7 +485,7 @@ End Function
 ## Tips
 
 - **Build before running** — `vba run` targets the built workbook in `build/`, not the source files.
-- **Export after manipulation** — Changes made by macros (new sheets, cell values) live in the built workbook. Run `vba export` to persist them back to source.
+- **Extract after manipulation** — Changes made by macros (new sheets, cell values) live in the built workbook. Run `vba extract` to persist them back to source.
 - **Close before rebuilding** — If a workbook is open in Excel, close it with `vba close --save` before running `vba build` again.
 - **Run from the project root** — Commands expect `vbaproject.toml` in the current directory, unless you use `--file` to target a specific workbook.
 - **Quote arguments with spaces** — Shell escaping is handled by vbapm, but wrap arguments containing spaces in quotes.
@@ -624,7 +626,7 @@ Scripting = { version = "1.0", guid = "{...}" }
 1. Run `pnpm test`
    <br>It will run unit tests
 2. Run `pnpm run test:e2e`
-   <br>It will run the end-to-end CLI scenarios in excel.e2e.ts, covering workflows like build, export, new, and version against fixtures.
+   <br>It will run the end-to-end CLI scenarios in excel.e2e.ts, covering workflows like build, extract, new, and version against fixtures.
    <br>To keep temporary e2e work folders for manual inspection, set `KEEP_E2E_TMP=1` before running (PowerShell: `$env:KEEP_E2E_TMP=1; pnpm run test:e2e`, cmd: `set KEEP_E2E_TMP=1 && pnpm run test:e2e`).
    <br>To echo each e2e command output even on successful runs, use `--verbose` (PowerShell: `pnpm run test:e2e:background -- --verbose`) or set `E2E_VERBOSE=1` (PowerShell: `$env:E2E_VERBOSE=1; pnpm run test:e2e:background`).
 
