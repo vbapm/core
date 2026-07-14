@@ -22,6 +22,7 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	add: async () => (await import("./vbapm-add")).default,
 	build: async () => (await import("./vbapm-build")).default,
 	test: async () => (await import("./vbapm-test")).default,
+	extract: async () => (await import("./vbapm-extract")).default,
 	export: async () => (await import("./vbapm-export")).default,
 	update: async () => (await import("./vbapm-update")).default,
 	open: async () => (await import("./vbapm-open")).default,
@@ -59,7 +60,8 @@ const help = dedent`
     - add           Create and register a new src file in vbaproject.toml
     - build         Build project from manifest
     - test          Run tests for built target
-    - export        Export src from built target
+    - extract       Extract src from built target
+    - export        (deprecated) Extract src from built target
     - update        Update VBA source in a built target
     - open          Open the current built target file
     - close         Close the current built target file
@@ -106,7 +108,7 @@ main()
 		// interrupted. All other commands exit immediately via
 		// process.exit(0) as before.
 		// TODO: Remove once nodejs/node#61999 is merged and released.
-		if (command === "export" && process.platform === "win32") {
+		if ((command === "extract" || command === "export") && process.platform === "win32") {
 			// Let the event loop drain naturally — no process.exit()
 			return;
 		}

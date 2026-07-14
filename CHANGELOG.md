@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `vba extract` command as the new canonical name for extracting source from a built target (replaces `vba export`).
 - `include-empty-objects` option under `[src-properties]` (default: `true`). When `false`, blank document objects (`ThisWorkbook`, sheet modules) are skipped during export, matching the pre-0.10 behavior. When `true`, all document objects are exported regardless of content.
+
+### Deprecated
+- `vba export` command is deprecated in favor of `vba extract`. It still functions but prints a deprecation warning and will be removed in a future version.
 
 ## [0.10.0] - 2026-07-08
 

@@ -1,7 +1,7 @@
 export { addSource } from "./actions/add-source";
 export { buildProject } from "./actions/build-project";
 export { createProject } from "./actions/create-project";
-export { exportProject } from "./actions/export-project";
+export { exportProject, exportProject as extractProject } from "./actions/export-project";
 export { initProject } from "./actions/init-project";
 export { runMacro } from "./actions/run-macro";
 export { testProject } from "./actions/test-project";
