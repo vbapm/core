@@ -220,6 +220,27 @@ describe("export", () => {
 			expect(updatedToml).toContain('Classes = "Classes"');
 		});
 	});
+
+	test("export skips empty document objects when include-empty-objects = false", async () => {
+		await tmp("export-no-empty-objs", async cwd => {
+			// 1. Create a blank xlsm project (empty Sheet1 + ThisWorkbook)
+			await execute(cwd, "new blank.xlsm");
+			const dir = join(cwd, "blank");
+
+			// 2. Add include-empty-objects = false
+			let toml = await readFile(join(dir, "vbaproject.toml"), "utf-8");
+			toml = toml.replace("[src-properties]", "[src-properties]\ninclude-empty-objects = false");
+			await writeFile(join(dir, "vbaproject.toml"), toml);
+
+			// 3. Export — empty document objects should be skipped
+			await execute(dir, "export --target xlsm");
+
+			// 4. Verify empty objects are NOT present
+			const objDir = join(dir, "src", "Excel Objects");
+			await expect(pathExists(join(objDir, "Sheet1.cls"))).resolves.toBe(false);
+			await expect(pathExists(join(objDir, "ThisWorkbook.cls"))).resolves.toBe(false);
+		});
+	});
 });
 
 describe("update", () => {

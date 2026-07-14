@@ -90,6 +90,13 @@ Public Function ExportTo(Info As Variant) As String
     Set Document = App.GetDocument(Values("file"))
     Staging = Values("staging")
 
+    ' Respect [src-properties] "empty-objects" flag (default: true)
+    Dim IncludeEmptyObjects As Boolean
+    IncludeEmptyObjects = True
+    If Values.Exists("includeEmptyObjects") Then
+        IncludeEmptyObjects = Values("includeEmptyObjects")
+    End If
+
     ' Iterate through all components in document and export directly to staging
     Dim Component As VBComponent
     Dim Path As String
@@ -108,11 +115,14 @@ Public Function ExportTo(Info As Variant) As String
             Output.Warnings.Add "Unknown component type: " & Component.Type
         End Select
 
-        ' Avoid exporting built-in modules / classes that are blank
-        ' User-added modules / classes that are blank are assumed to be intentional
-        If Extension <> "" And Not (Component.Type = vbext_ComponentType.vbext_ct_Document And ComponentIsBlank(Component)) Then
-            Path = FileSystem.JoinPath(Staging, Component.Name & Extension)
-            Installer.Export Document.VBProject, Component.Name, Path, Overwrite:=True
+        ' Skip empty document objects when empty-objects = false
+        If Extension <> "" Then
+            If IncludeEmptyObjects = False And Component.Type = vbext_ComponentType.vbext_ct_Document And ComponentIsBlank(Component) Then
+                ' Skip this blank document object
+            Else
+                Path = FileSystem.JoinPath(Staging, Component.Name & Extension)
+                Installer.Export Document.VBProject, Component.Name, Path, Overwrite:=True
+            End If
         End If
     Next Component
 

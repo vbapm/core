@@ -20,6 +20,9 @@ export interface SrcProperties {
 		alphabetical?: boolean;
 	};
 	subfolders?: SrcSubfolders;
+	/** When `true` (default), empty document objects (ThisWorkbook, sheet
+	 * modules) are exported as `.cls` files.  When `false`, they are skipped. */
+	"include-empty-objects"?: boolean;
 }
 
 /**
@@ -164,6 +167,10 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 		if (Object.keys(sf).length > 0) props.subfolders = sf;
 	}
 
+	if (typeof raw["include-empty-objects"] === "boolean") {
+		props["include-empty-objects"] = raw["include-empty-objects"];
+	}
+
 	return Object.keys(props).length > 0 ? props : undefined;
 }
 
@@ -180,14 +187,14 @@ export function insertTypeGroupBlankLines(toml: string): string {
 
 	for (const line of lines) {
 		// Detect entering [src] section
-		if (/^\[src\]/.test(line.trim())) {
+		if (line.trim().startsWith("[src]")) {
 			inSrc = true;
 			result.push(line);
 			continue;
 		}
 
 		// Detect leaving [src] section (next section header or end)
-		if (inSrc && /^\[/.test(line.trim())) {
+		if (inSrc && line.trim().startsWith("[")) {
 			inSrc = false;
 		}
 

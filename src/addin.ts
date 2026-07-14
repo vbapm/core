@@ -84,7 +84,8 @@ export async function exportTo(
 	await run(application, options.addin || addin, "Build.ExportTo", [
 		JSON.stringify({
 			file,
-			staging
+			staging,
+			includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
 		})
 	]);
 }
