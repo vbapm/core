@@ -14,6 +14,13 @@
             "problemMatcher": [],
             "label": "npm: test:e2e:background:updateSnapshots",
             "detail": "cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand --updateSnapshot"
+        },
+        {
+            "type": "npm",
+            "script": "format",
+            "problemMatcher": [],
+            "label": "npm: format",
+            "detail": "oxfmt --write \"**/*.{ts,js}\""
         }
     ]
 }
