@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Setup VBA runtime
         uses: DecimalTurn/setup-vba@797e4a232699a98507cb4411d5bea3697427ad57 # v0.3.0
