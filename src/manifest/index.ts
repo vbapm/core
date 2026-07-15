@@ -82,7 +82,6 @@ const KNOWN_SECTION_KEYS = new Set([
 	"authors",
 	"publish",
 	"target",
-	"src-encoding",
 	"build-dir",
 	"codename"
 ]);
@@ -161,12 +160,20 @@ export function parseManifest(value: any, dir: string): Manifest {
 			...projectMetadata
 		} = value.project;
 
+		// src-encoding now lives under [src-properties], not [project]
+		if (projectSrcEncoding !== undefined) {
+			manifestOk(
+				false,
+				`"src-encoding" should be set in the [src-properties] section, not in [project].` +
+					`\n\nMove it to [src-properties]:\n\n  [src-properties]\n  encoding = "${projectSrcEncoding}"`
+			);
+		}
+
 		type = "project";
 		name = projectName;
 		version = projectVersion || DEFAULT_VERSION;
 		authors = projectAuthors;
 		publish = projectPublish;
-		srcEncoding = projectSrcEncoding;
 		codename = projectCodename;
 		sectionMetadata = projectMetadata;
 
@@ -194,12 +201,20 @@ export function parseManifest(value: any, dir: string): Manifest {
 			...packageMetadata
 		} = value.package;
 
+		// src-encoding now lives under [src-properties], not [package]
+		if (packageSrcEncoding !== undefined) {
+			manifestOk(
+				false,
+				`"src-encoding" should be set in the [src-properties] section, not in [package].` +
+					`\n\nMove it to [src-properties]:\n\n  [src-properties]\n  encoding = "${packageSrcEncoding}"`
+			);
+		}
+
 		type = "package";
 		name = packageName;
 		version = packageVersion;
 		authors = packageAuthors;
 		publish = packagePublish;
-		srcEncoding = packageSrcEncoding;
 		sectionMetadata = packageMetadata;
 
 		manifestOk(name, `[package] name is a required field. \n\n${EXAMPLE}`);
@@ -219,6 +234,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 
 	const src = parseSrc(value.src || {}, dir);
 	const srcProperties = parseSrcProperties(value["src-properties"]);
+	srcEncoding = srcProperties?.encoding;
 	const srcStructure = detectSrcStructure(src);
 	const dependencies = parseDependencies(value.dependencies || {}, dir);
 	const references = parseReferences(value.references || {});
@@ -329,10 +345,6 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 
 	if (manifest.buildDir != null && manifest.buildDir !== "build") {
 		values["build-dir"] = manifest.buildDir;
-	}
-
-	if (manifest.srcEncoding) {
-		values["src-encoding"] = manifest.srcEncoding;
 	}
 
 	if (manifest.codename != null && manifest.codename !== "VBAProject") {

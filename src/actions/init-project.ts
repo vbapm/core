@@ -168,7 +168,10 @@ async function detectSourceEncoding(project: import("../project").Project): Prom
 	const encoding = await detectImportEncoding(join(project.paths.dir, firstSource.path));
 	if (!encoding) return;
 
-	project.manifest.srcEncoding = encoding;
+	project.manifest.srcProperties = {
+		...(project.manifest.srcProperties || {}),
+		encoding
+	};
 	if (project.manifest.target) {
 		project.manifest.target.encoding = encoding;
 	}

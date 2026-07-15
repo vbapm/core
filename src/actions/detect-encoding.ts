@@ -10,7 +10,7 @@ import {
 import jschardet from "jschardet";
 
 /**
- * Decide which encoding to declare for a newly imported VBA project.
+ * Decide which encoding to declare for a newly downloaded VBA project.
  *
  * a higher-level policy decision.
  *
