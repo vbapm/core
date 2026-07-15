@@ -20,13 +20,15 @@ codepage as a fallback, but this fails when:
 Hello = { path = "src/Hello.bas", encoding = "cp1252" }
 ```
 
-If all sources share the same encoding, a shorthand may be used at the project level:
+If all sources share the same encoding, a shorthand may be used under `[src-properties]`:
 
 ```toml
 [project]
 name = "multilingual-cp1252"
 target = { type = "xlsm", path = "targets/xlsm" }
-src-encoding = "cp1252"
+
+[src-properties]
+encoding = "cp1252"
 
 [src]
 Hello = "src/Hello.bas"
@@ -63,7 +65,8 @@ can preserve them correctly.
 
 Suggested change:
 
-  src-encoding = "cp1252"
+  [src-properties]
+  encoding = "cp1252"
 
 (Detection by jschardet, confidence: 95%)
 ```
@@ -158,7 +161,7 @@ export interface Source {
 2. **Extend `Source` interface** with optional `encoding` field
 3. **Extend `Target` interface** with optional `encoding` field
 4. **Parse `encoding` from TOML** in `parseSource` and `parseTarget`
-5. **Add `src-encoding` project-level key** as a default for all sources
+5. **Add `encoding` key under `[src-properties]`** as a default for all sources
 6. **Add non-ASCII check + encoding validation** in `loadFromProject` or a
    new pre-build validation step
 7. **Implement transcoding** in `stageBuildGraph` when source ≠ target encoding
