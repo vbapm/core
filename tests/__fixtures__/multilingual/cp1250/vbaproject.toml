@@ -2,7 +2,9 @@
 [project]
 name = "multilingual-cp1250"
 target = { type = "xlsm", path = "targets/xlsm" }
-src-encoding = "cp1250"
+
+[src-properties]
+encoding = "cp1250"
 
 [src]
 Hello = "src/Hello.bas"

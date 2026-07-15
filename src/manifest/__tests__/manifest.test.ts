@@ -55,7 +55,7 @@ test("loads valid sources", () => {
 	expect(normalizeManifest(parseManifest(value, FIXTURES))).toMatchSnapshot();
 });
 
-test("loads src-encoding from [project]", () => {
+test("rejects src-encoding in [project] with suggestion to move to [src-properties]", () => {
 	const value = {
 		...BASE_MANIFEST,
 		package: {
@@ -65,8 +65,21 @@ test("loads src-encoding from [project]", () => {
 		src: { A: "src/a.bas" }
 	};
 
+	expect(() => parseManifest(value, FIXTURES)).toThrow(/\[src-properties\]/);
+});
+
+test("loads encoding from [src-properties]", () => {
+	const value = {
+		...BASE_MANIFEST,
+		"src-properties": {
+			encoding: "cp1252"
+		},
+		src: { A: "src/a.bas" }
+	};
+
 	const manifest = parseManifest(value, FIXTURES);
 	expect(manifest.srcEncoding).toBe("cp1252");
+	expect(manifest.srcProperties?.encoding).toBe("cp1252");
 });
 
 test("loads per-source encoding", () => {

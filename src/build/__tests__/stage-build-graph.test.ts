@@ -47,7 +47,9 @@ test("transcodes when source encoding differs from target", async () => {
 name = "transcode-test"
 version = "1.0.0"
 authors = ["Test"]
-src-encoding = "cp1252"
+
+[src-properties]
+encoding = "cp1252"
 
 [src]
 Module1 = "src/Module1.bas"

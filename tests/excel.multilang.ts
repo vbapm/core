@@ -216,8 +216,8 @@ describeML("multilingual encoding", () => {
 		}
 	);
 
-	// This fixture intentionally lacks src-encoding and should fail the build
-	test("non-ASCII without src-encoding fails with helpful error", async () => {
+	// This fixture intentionally lacks encoding in [src-properties] and should fail the build
+	test("non-ASCII without encoding fails with helpful error", async () => {
 		const noEncDir = join(fixturesDir, "no-encoding");
 
 		await setup(noEncDir, "ml-no-enc", async cwd => {

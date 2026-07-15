@@ -37,7 +37,7 @@ export async function loadFromProject(
 	for (const manifest of manifests) {
 		for (const source of manifest.src) {
 			// Resolve encoding: per-source override > project-level > Unknown
-			const declaredLabel = source.encoding ?? manifest.srcEncoding;
+			const declaredLabel = source.encoding ?? manifest.srcProperties?.encoding;
 			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 
 			// Expand wildcards against the project directory
@@ -169,12 +169,12 @@ function validateGraph(project: Project, graph: BuildGraph) {
 
 /**
  * Validate that any source file containing non-ASCII characters has
- * an encoding declared (src-encoding in the project or encoding on
+ * an encoding declared (encoding in [src-properties] or encoding on
  * the individual source entry). If not, fail with a jschardet
  * suggestion.
  */
 async function validateEncoding(project: Project, graph: BuildGraph) {
-	const srcEncoding = project.manifest.srcEncoding;
+	const srcEncoding = project.manifest.srcProperties?.encoding;
 
 	for (const component of graph.components) {
 		// Only check project-owned components, not dependency components
@@ -207,7 +207,7 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 				if (results.length > 0 && results[0].confidence >= 0.5) {
 					const label = results[0].encoding.toLowerCase();
 					suggestion =
-						`\nSuggested change:\n\n  src-encoding = "${label}"` +
+						`\nSuggested change:\n\n  [src-properties]\n  encoding = "${label}"` +
 						`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
 				}
 			} catch (err) {

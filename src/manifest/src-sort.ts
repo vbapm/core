@@ -15,6 +15,9 @@ export interface SrcSubfolders {
 
 /** Parsed form of the optional `[src-properties]` TOML section. */
 export interface SrcProperties {
+	/** Global source-file encoding (e.g. "cp1252", "utf-8").
+	 * Can be overridden per-source with the `encoding` key in `[src]`. */
+	encoding?: string;
 	sort?: {
 		"by-types"?: boolean;
 		alphabetical?: boolean;
@@ -150,6 +153,10 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 	if (!raw || typeof raw !== "object") return undefined;
 
 	const props: SrcProperties = {};
+
+	if (typeof raw.encoding === "string") {
+		props.encoding = raw.encoding;
+	}
 
 	if (raw.sort && typeof raw.sort === "object") {
 		const sort: SrcProperties["sort"] = {};
