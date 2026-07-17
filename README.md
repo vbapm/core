@@ -547,9 +547,9 @@ build-dir = "."    # output to project root instead of build/
 
 Will contain the list of source code files to be included in the VBA-Enabled Document at build time.
 
-`name = "path"` or
+Two listing modes are supported:
 
-- `path`
+**Individual entries** — each file is listed explicitly by name (`name = "path"` or `{ path }`):
 
 ```toml
 [src]
@@ -557,6 +557,22 @@ A = "src/A.bas"
 B = "src/B.cls"
 C = { path = "src/C.bas" }
 ```
+
+Use this mode with `vba init --list-all` or `vba init --from <workbook>` for full control over which files are tracked.
+
+**Wildcard entries** — groups of files are discovered by glob pattern (the default for `vba init`):
+
+```toml
+[src]
+Objects = "src/Excel Objects/**/*.cls"
+Forms = "src/Forms/**/*.frm"
+Modules = "src/Modules/**/*.bas"
+Classes = "src/Class Modules/**/*.cls"
+```
+
+Wildcards are expanded at build time — any file on disk matching the glob is picked up automatically, so you don't need to run `vba add` after creating a new module. When you delete a module in the VBE and run `vba extract`, the corresponding file on disk is removed automatically.
+
+> **Note:** Wildcard and individual entries can coexist. After the first `vba extract` individual entries are added alongside the wildcards automatically.
 
 #### [src-subfolders]
 `src-subfolders` organizes exported source files into subdirectories under `src/` based on component type. Without it, all files land flat in `src/`.
