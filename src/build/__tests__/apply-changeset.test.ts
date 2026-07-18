@@ -37,11 +37,13 @@ test("should write new files to subfolders without adding individual entries whe
 	await applyChangeset(project, changeset);
 
 	// New source files should be written to type-based subfolders
-	const writeCalls = (writeFile as jest.Mock).mock.calls.map(
-		(call: any[]) => call[0]
-	);
+	const writeCalls = (writeFile as jest.Mock).mock.calls.map((call: any[]) => call[0]);
 	const addedPaths = writeCalls.filter(
-		(p: string) => p.includes("Added.bas") || p.includes("WebHelpers.bas") || p.includes("UserForm1.frm") || p.includes("IWebAuthenticator.cls")
+		(p: string) =>
+			p.includes("Added.bas") ||
+			p.includes("WebHelpers.bas") ||
+			p.includes("UserForm1.frm") ||
+			p.includes("IWebAuthenticator.cls")
 	);
 
 	expect(addedPaths).toEqual(
@@ -49,14 +51,12 @@ test("should write new files to subfolders without adding individual entries whe
 			expect.stringContaining("src/Modules/Added.bas"),
 			expect.stringContaining("src/Modules/WebHelpers.bas"),
 			expect.stringContaining("src/Forms/UserForm1.frm"),
-			expect.stringContaining("src/Class Modules/IWebAuthenticator.cls"),
+			expect.stringContaining("src/Class Modules/IWebAuthenticator.cls")
 		])
 	);
 
 	// Removed components should be deleted from disk
-	expect(remove).toHaveBeenCalledWith(
-		expect.stringContaining("src/Modules/Validation.bas")
-	);
+	expect(remove).toHaveBeenCalledWith(expect.stringContaining("src/Modules/Validation.bas"));
 
 	// Manifest should keep only the 4 wildcard entries — no individual
 	// entries for components already covered by wildcard patterns
