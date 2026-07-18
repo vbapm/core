@@ -63,6 +63,24 @@ export async function exportTarget(
 
 		const targets = resolveTargetPaths(project, projectComponents);
 		const classified = classifyByPath(sources, targets);
+
+		// Compare references by name (unchanged from original compareBuildGraphs logic)
+		const existingRefs = new Map(
+			project.manifest.references.map(r => [r.name, r])
+		);
+		for (const ref of transformed_build_graph.references) {
+			const existing = existingRefs.get(ref.name);
+			if (existing) {
+				existingRefs.delete(ref.name);
+			} else {
+				classified.references.added.push(ref);
+			}
+		}
+		// Remaining in existingRefs are no longer in the workbook
+		for (const ref of existingRefs.values()) {
+			classified.references.removed.push(ref);
+		}
+
 		await applyExtract(project, classified);
 	}
 

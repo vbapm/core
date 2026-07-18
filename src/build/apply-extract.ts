@@ -102,6 +102,10 @@ export interface ClassifiedExtract {
 	modified: ClassifiedComponent[];
 	created: ClassifiedComponent[];
 	orphaned: ClassifiedComponent[];
+	references: {
+		added: Reference[];
+		removed: Reference[];
+	};
 }
 
 /**
@@ -120,7 +124,8 @@ export function classifyByPath(
 	const result: ClassifiedExtract = {
 		modified: [],
 		created: [],
-		orphaned: []
+		orphaned: [],
+		references: { added: [], removed: [] }
 	};
 
 	for (const [path, component] of targets) {
@@ -188,7 +193,7 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 	}
 
 	// --- Update manifest ---
-	updateManifestForExtract(project, needsEntry, classified.orphaned);
+	updateManifestForExtract(project, needsEntry, classified.orphaned, classified.references);
 
 	await writeManifest(project.manifest, project.paths.dir);
 }
@@ -204,7 +209,8 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 function updateManifestForExtract(
 	project: Project,
 	needsEntry: ClassifiedComponent[],
-	orphaned: ClassifiedComponent[]
+	orphaned: ClassifiedComponent[],
+	references: { added: Reference[]; removed: Reference[] }
 ): void {
 	const src = project.manifest.src;
 
@@ -229,5 +235,18 @@ function updateManifestForExtract(
 	for (const item of orphaned) {
 		const index = src.findIndex((s: Source) => s.name === item.component.name);
 		if (index >= 0) src.splice(index, 1);
+	}
+
+	// Add new references
+	for (const ref of references.added) {
+		project.manifest.references.push(ref);
+	}
+
+	// Remove orphaned references
+	for (const ref of references.removed) {
+		const index = project.manifest.references.findIndex(
+			(r: Reference) => r.name === ref.name
+		);
+		if (index >= 0) project.manifest.references.splice(index, 1);
 	}
 }
