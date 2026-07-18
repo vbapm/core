@@ -39,7 +39,16 @@
 import { copy, pathExists, readFile, writeFile } from "fs-extra";
 import { join } from "path";
 import { promisify } from "util";
-import { dev, empty, json, single, standard, targetless, withDrawing } from "./__fixtures__";
+import {
+	dev,
+	empty,
+	json,
+	single,
+	standard,
+	targetless,
+	wildcard,
+	withDrawing
+} from "./__fixtures__";
 import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
 
 const exec = promisify(require("child_process").exec);
@@ -466,6 +475,26 @@ describe("normalize-worksheet-names", () => {
 			const relsDir = join(cwd, "targets/xlsm/xl/worksheets/_rels");
 			expect(await pathExists(join(relsDir, "shtSheet1.xml.rels"))).toBe(true);
 			expect(await pathExists(join(relsDir, "sheet1.xml.rels"))).toBe(false);
+		});
+	});
+});
+describe("wildcard extract", () => {
+	test("extract does not add individual entries for wildcard-covered modules", async () => {
+		await setup(wildcard, "extract-wildcard", async cwd => {
+			await setup(standard, "build-standard-for-wildcard", async built => {
+				// 1. Build standard project to get a .xlsm
+				await execute(built, "build");
+
+				// 2. Copy built .xlsm into wildcard project
+				await copy(join(built, "build/standard.xlsm"), join(cwd, "build/wildcard.xlsm"));
+
+				// 3. Extract from wildcard
+				await execute(cwd, "extract --target xlsm");
+
+				// 4. Verify vbaproject.toml is unchanged (no individual entries added)
+				const result = await readdir(cwd);
+				expect(result).toMatchSnapshot();
+			});
 		});
 	});
 });
