@@ -59,31 +59,35 @@ end run
 on run_excel_macro(command, args)
 	set result to ""
 
-	tell application "Microsoft Excel"
-		if (count of args) = 0 then
-			set result to result & (run VB macro command)
-		else if (count of args) = 1 then
-			set result to result & (run VB macro command arg1 (item 1 of args))
-		else if (count of args) = 2 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args))
-		else if (count of args) = 3 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args))
-		else if (count of args) = 4 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args))
-		else if (count of args) = 5 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args))
-		else if (count of args) = 6 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args))
-		else if (count of args) = 7 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args))
-		else if (count of args) = 8 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args) arg8 (item 8 of args))
-		else if (count of args) = 9 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args) arg8 (item 8 of args) arg9 (item 9 of args))
-		else if (count of args) = 10 then
-			set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args) arg8 (item 8 of args) arg9 (item 9 of args) arg10 (item 10 of args))
-		end if
-	end tell
+	try
+		tell application "Microsoft Excel"
+			if (count of args) = 0 then
+				set result to result & (run VB macro command)
+			else if (count of args) = 1 then
+				set result to result & (run VB macro command arg1 (item 1 of args))
+			else if (count of args) = 2 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args))
+			else if (count of args) = 3 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args))
+			else if (count of args) = 4 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args))
+			else if (count of args) = 5 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args))
+			else if (count of args) = 6 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args))
+			else if (count of args) = 7 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args))
+			else if (count of args) = 8 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args) arg8 (item 8 of args))
+			else if (count of args) = 9 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args) arg8 (item 8 of args) arg9 (item 9 of args))
+			else if (count of args) = 10 then
+				set result to result & (run VB macro command arg1 (item 1 of args) arg2 (item 2 of args) arg3 (item 3 of args) arg4 (item 4 of args) arg5 (item 5 of args) arg6 (item 6 of args) arg7 (item 7 of args) arg8 (item 8 of args) arg9 (item 9 of args) arg10 (item 10 of args))
+			end if
+		end tell
+	on error errMsg
+		set result to "{\"success\":false,\"errors\":[\"" & errMsg & "\"]}"
+	end try
 
 	return result
 end run_macro

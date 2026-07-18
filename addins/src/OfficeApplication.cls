@@ -14,9 +14,8 @@ Attribute VB_Exposed = True
 '
 ' ## Errors
 '
-' 10200 - Unrecognized extension
-' 10201 - Failed to open document
-' 10202 - Document already exists
+' Errors are surfaced through the Output module rather than Err.Raise
+' so they propagate reliably through the COM boundary to the CLI.
 '
 ' @module OfficeApplication
 ' @author Tim Hall <tim.hall.engr@gmail.com>
@@ -58,7 +57,8 @@ Public Function GetDocument(Path As String) As Object
     End Select
 
     If Doc Is Nothing Then
-        Err.Raise 10201, Description:="[10201] Failed to open document  at """ & Path & """"
+        Output.Errors.Add "[10201] Failed to open document at """ & Path & """"
+        Exit Function
     End If
 
     Dim Instance As New Dictionary
@@ -79,7 +79,8 @@ Public Function CreateDocument(Path As String) As Object
     Path = FileSystem.NormalizePath(Path)
 
     If FileSystem.FileExists(Path) Then
-        Err.Raise 10202, Description:="[10202] Document already exists at """ & Path & """"
+        Output.Errors.Add "[10202] Document already exists at """ & Path & """"
+        Exit Function
     End If
 
     Dim AppType As String
@@ -217,7 +218,8 @@ Private Function GetType(Path As String) As String
         GetType = "excel"
     ' TODO Remaining extensions
     Case Default
-        Err.Raise 10200, "OfficeApplication", "[10200] Unrecognized extension """ & Extension & """ for path """ & Path & """"
+        Output.Errors.Add "[10200] Unrecognized extension """ & Extension & """ for path """ & Path & """"
+        GetType = ""
     End Select
 End Function
 

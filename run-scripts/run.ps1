@@ -220,6 +220,9 @@ function Run {
 			$excel = [Excel]::new()
 			try {
 				$result = $excel.Run($FilePath, $MacroName, $MacroArgValues)
+			} catch {
+				$msg = $_.Exception.Message -replace '"', '\"'
+				$result = "{""success"":false,""errors"":[""$msg""]}"
 			} finally {
 				$excel.Dispose($KeepOpen)
 			}

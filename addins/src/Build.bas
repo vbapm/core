@@ -19,6 +19,10 @@ Public Function ImportGraph(Graph As Variant) As String
 
     Set Values = JsonConverter.ParseJson(Graph)
     Set Document = App.GetDocument(Values("file"))
+    If Document Is Nothing Then
+        ImportGraph = Output.Result
+        Exit Function
+    End If
 
     DebugLog.Clear
     DebugLog.Log "ImportGraph", "Starting import for: " & Values("file")
@@ -88,6 +92,10 @@ Public Function ExportTo(Info As Variant) As String
 
     Set Values = JsonConverter.ParseJson(Info)
     Set Document = App.GetDocument(Values("file"))
+    If Document Is Nothing Then
+        ExportTo = Output.Result
+        Exit Function
+    End If
     Staging = Values("staging")
 
     ' Respect [src-properties] "empty-objects" flag (default: true)
@@ -182,7 +190,12 @@ Public Function CreateDocument(Info As Variant) As String
     Dim App As New OfficeApplication
 
     Set Values = JsonConverter.ParseJson(Info)
-    App.CreateDocument Values("path")
+    Dim Doc As Object
+    Set Doc = App.CreateDocument(Values("path"))
+    If Doc Is Nothing Then
+        CreateDocument = Output.Result
+        Exit Function
+    End If
 
     CreateDocument = Output.Result
     Exit Function
