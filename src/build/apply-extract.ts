@@ -86,3 +86,63 @@ export function resolveTargetPaths(
 
 	return map;
 }
+
+// ---------------------------------------------------------------------------
+// Classification
+// ---------------------------------------------------------------------------
+
+export interface ClassifiedComponent {
+	component: Component;
+	/** Present when the file is orphaned — records the original Source entry. */
+	source?: Source;
+}
+
+export interface ClassifiedExtract {
+	modified: ClassifiedComponent[];
+	created: ClassifiedComponent[];
+	orphaned: ClassifiedComponent[];
+}
+
+/**
+ * Classify components by comparing the on-disk source map with the resolved
+ * target paths from the export.
+ *
+ * - Path in both maps, same code → unchanged (not included)
+ * - Path in both maps, different code → **modified**
+ * - Path only in targets → **created**
+ * - Path only in sources → **orphaned**
+ */
+export function classifyByPath(
+	sources: Map<string, ResolvedSource>,
+	targets: Map<string, Component>
+): ClassifiedExtract {
+	const result: ClassifiedExtract = {
+		modified: [],
+		created: [],
+		orphaned: []
+	};
+
+	for (const [path, component] of targets) {
+		const resolved = sources.get(path);
+		if (resolved) {
+			// Same path — check if code changed
+			if (component.code !== resolved.component.code) {
+				result.modified.push({ component });
+			}
+			sources.delete(path);
+		} else {
+			// New file
+			result.created.push({ component });
+		}
+	}
+
+	// Remaining sources are orphaned (no matching target)
+	for (const [path, resolved] of sources) {
+		result.orphaned.push({
+			component: resolved.component,
+			source: resolved.source
+		});
+	}
+
+	return result;
+}

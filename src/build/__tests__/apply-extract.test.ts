@@ -1,6 +1,6 @@
 import { wildcard } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
-import { resolveSourceFiles, resolveTargetPaths } from "../apply-extract";
+import { resolveSourceFiles, resolveTargetPaths, classifyByPath, ResolvedSource } from "../apply-extract";
 import { Component, ComponentType } from "../component";
 import { Codepage } from "../encoding-sniffer";
 
@@ -109,5 +109,102 @@ describe("resolveTargetPaths", () => {
 		const [path] = [...map.keys()];
 		expect(path).toEqual(expect.stringContaining("src/MyModule.bas"));
 		expect(path).not.toEqual(expect.stringContaining("src/Modules/"));
+	});
+});
+
+describe("classifyByPath", () => {
+	function makeComponent(
+		type: ComponentType,
+		name: string,
+		code?: string
+	): Component {
+		const body =
+			code ??
+			(type === "form"
+				? `VERSION 5.00\r\nBegin Form\r\nEnd\r\nAttribute VB_Name = "${name}"\r\n`
+				: `Attribute VB_Name = "${name}"\r\n`);
+		return new Component(type, Buffer.from(body), Codepage.Unknown, {});
+	}
+
+	function makeResolved(name: string, type: ComponentType, code?: string): ResolvedSource {
+		const component = makeComponent(type, name, code);
+		return {
+			source: { name, path: component.details.path! },
+			component
+		};
+	}
+
+	const PROJ = "/project";
+
+	test("unchanged files are not listed", () => {
+		const sources = new Map<string, ResolvedSource>();
+		const targets = new Map<string, Component>();
+
+		const src = makeResolved("Module1", "module", "Attribute VB_Name = \"Module1\"\r\n");
+		src.component.details.path = PROJ + "/src/Modules/Module1.bas";
+		src.source.path = PROJ + "/src/Modules/Module1.bas";
+		sources.set(PROJ + "/src/Modules/Module1.bas", src);
+
+		const tgt = makeComponent("module", "Module1", "Attribute VB_Name = \"Module1\"\r\n");
+		targets.set(PROJ + "/src/Modules/Module1.bas", tgt);
+
+		const result = classifyByPath(sources, targets);
+
+		expect(result.modified).toHaveLength(0);
+		expect(result.created).toHaveLength(0);
+		expect(result.orphaned).toHaveLength(0);
+	});
+
+	test("detects modified files (same path, different code)", () => {
+		const sources = new Map<string, ResolvedSource>();
+		const targets = new Map<string, Component>();
+
+		const src = makeResolved("Module1", "module", 'Attribute VB_Name = "Module1"\r\nold code\r\n');
+		src.component.details.path = PROJ + "/src/Modules/Module1.bas";
+		src.source.path = PROJ + "/src/Modules/Module1.bas";
+		sources.set(PROJ + "/src/Modules/Module1.bas", src);
+
+		const tgt = makeComponent("module", "Module1", 'Attribute VB_Name = "Module1"\r\nnew code\r\n');
+		targets.set(PROJ + "/src/Modules/Module1.bas", tgt);
+
+		const result = classifyByPath(sources, targets);
+
+		expect(result.modified).toHaveLength(1);
+		expect(result.modified[0].component.name).toBe("Module1");
+		expect(result.created).toHaveLength(0);
+		expect(result.orphaned).toHaveLength(0);
+	});
+
+	test("detects created files (only in targets)", () => {
+		const sources = new Map<string, ResolvedSource>();
+		const targets = new Map<string, Component>();
+
+		const tgt = makeComponent("module", "NewModule");
+		targets.set(PROJ + "/src/Modules/NewModule.bas", tgt);
+
+		const result = classifyByPath(sources, targets);
+
+		expect(result.created).toHaveLength(1);
+		expect(result.created[0].component.name).toBe("NewModule");
+		expect(result.modified).toHaveLength(0);
+		expect(result.orphaned).toHaveLength(0);
+	});
+
+	test("detects orphaned files (only in sources)", () => {
+		const sources = new Map<string, ResolvedSource>();
+		const targets = new Map<string, Component>();
+
+		const src = makeResolved("OldModule", "module");
+		src.component.details.path = PROJ + "/src/Modules/OldModule.bas";
+		src.source.path = PROJ + "/src/Modules/OldModule.bas";
+		sources.set(PROJ + "/src/Modules/OldModule.bas", src);
+
+		const result = classifyByPath(sources, targets);
+
+		expect(result.orphaned).toHaveLength(1);
+		expect(result.orphaned[0].component.name).toBe("OldModule");
+		expect(result.orphaned[0].source?.name).toBe("OldModule");
+		expect(result.modified).toHaveLength(0);
+		expect(result.created).toHaveLength(0);
 	});
 });
