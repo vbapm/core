@@ -9,6 +9,7 @@ import { formatSrc, parseSrc, Source } from "./source";
 import {
 	detectSrcStructure,
 	parseSrcProperties,
+	resolveSrcFolder,
 	resolveSrcSubfolders,
 	SrcProperties,
 	SrcStructure,
@@ -18,7 +19,7 @@ import { formatTarget, parseTarget, Target } from "./target";
 import { DEFAULT_VERSION, Version } from "./version";
 
 // Re-export for consumers
-export { resolveSrcSubfolders, SrcSubfolders };
+export { resolveSrcFolder, resolveSrcSubfolders, SrcSubfolders };
 
 /**
  * Snapshot is the minimal manifest needed to support both Manifest

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `vba extract` command as the new canonical name for extracting source from a built target (replaces `vba export`).
 - `include-empty-objects` option under `[src-properties]` (default: `true`). When `false`, blank document objects (`ThisWorkbook`, sheet modules) are skipped during export, matching the pre-0.10 behavior. When `true`, all document objects are exported regardless of content.
+- `folder` key in `[src-properties]` (default: `"src"`). Controls the base directory for all source files. Set to a relative path like `"src/WorkbookName"` to nest sources under a subfolder. When absent, `"src"` is used implicitly — the key only needs to be written when overriding the default.
 - `[src-properties]` table in `vbaproject.toml` for optional enforcement of source file ordering. Keys: `sort.by-types`, `sort.alphabetical`, `subfolders`. When absent, the tool detects and respects the existing convention without enforcement via `detectSrcStructure()`.
   - The `subfolders` key controls where new source files are placed (supports `Modules`, `Forms`, `Classes`, and `Objects` for document-type components like `ThisWorkbook` and `Sheet` modules). Example: `subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Class Modules", Objects = "Excel Objects" }`.
   - The `sort.by-types` option will ensure that all Modules, Classes, Forms and Objects are kept together in `[src]`.
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - New projects (`vba init`, `vba new`) now default to wildcard entries (e.g. `Modules = "src/**/*.bas"`) instead of listing every source file individually.
+- Wildcard entries in `[src]` now suppress duplicate individual entries on extract. When a component's path is already covered by an existing wildcard pattern, no redundant individual `[src]` listing is added — keeping `vbaproject.toml` clean.
 - `src-encoding` has moved from `[project]`/`[package]` to `[src-properties]` as `encoding`. Existing `vbaproject.toml` files with `src-encoding` under `[project]` or `[package]` will now receive a clear error message suggesting the migration. Per-source `encoding` on `[src]` entries is unchanged.
 
 ## [0.9.0-pre] - 2026-07-06

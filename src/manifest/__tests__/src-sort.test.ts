@@ -1,4 +1,4 @@
-import { detectSrcStructure, parseSrcProperties } from "../src-sort";
+import { detectSrcStructure, parseSrcProperties, resolveSrcFolder } from "../src-sort";
 import { Source } from "../source";
 
 function src(name: string, path: string): Source {
@@ -131,5 +131,39 @@ describe("parseSrcProperties", () => {
 			sort: "not-an-object"
 		});
 		expect(result).toBeUndefined();
+	});
+
+	test("parses folder", () => {
+		const result = parseSrcProperties({ folder: "src/MyWorkbook" });
+		expect(result).toEqual({ folder: "src/MyWorkbook" });
+	});
+
+	test("parses folder alongside other options", () => {
+		const result = parseSrcProperties({
+			folder: "src/MyWorkbook",
+			sort: { "by-types": true }
+		});
+		expect(result).toEqual({
+			folder: "src/MyWorkbook",
+			sort: { "by-types": true }
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// resolveSrcFolder
+// ---------------------------------------------------------------------------
+
+describe("resolveSrcFolder", () => {
+	test('returns "src" when srcProperties is undefined', () => {
+		expect(resolveSrcFolder(undefined)).toBe("src");
+	});
+
+	test('returns "src" when folder is not set', () => {
+		expect(resolveSrcFolder({})).toBe("src");
+	});
+
+	test("returns the explicit folder value", () => {
+		expect(resolveSrcFolder({ folder: "lib" })).toBe("lib");
 	});
 });
