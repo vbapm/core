@@ -1,8 +1,15 @@
-import { wildcard } from "../../../tests/__fixtures__";
+import { wildcard, standardChangesExport } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
-import { resolveSourceFiles, resolveTargetPaths, classifyByPath, ResolvedSource } from "../apply-extract";
+import { resolveSourceFiles, resolveTargetPaths, classifyByPath, applyExtract, ResolvedSource } from "../apply-extract";
 import { Component, ComponentType } from "../component";
 import { Codepage } from "../encoding-sniffer";
+import { loadFromExport } from "../load-from-export";
+import { toSrc } from "../transform-build-graph";
+import { writeFile, remove } from "../../utils/fs";
+
+beforeEach(() => {
+	jest.clearAllMocks();
+});
 
 afterEach(reset);
 
@@ -207,4 +214,41 @@ describe("classifyByPath", () => {
 		expect(result.modified).toHaveLength(0);
 		expect(result.created).toHaveLength(0);
 	});
+});
+
+describe("applyExtract", () => {
+	test("writes created files to subfolders and deletes orphaned files", async () => {
+		jest.spyOn(console, "log").mockImplementation(() => {});
+
+		const { project, dependencies } = await setup(wildcard, { silent: false });
+		const sources = await resolveSourceFiles(project);
+
+		// Build the export graph (standard changes export has added, changed,
+		// and removed components relative to the wildcard fixture)
+		const exported = await loadFromExport(standardChangesExport);
+		const transformed = await toSrc(exported);
+
+		const targets = resolveTargetPaths(project, transformed.components);
+		const classified = classifyByPath(sources, targets);
+
+		await applyExtract(project, classified);
+
+		// Created files should be written to type-based subfolders
+		const writeCalls = (writeFile as jest.Mock).mock.calls.map((c: any[]) => c[0] as string);
+		expect(writeCalls.some(p => p.includes("src/Modules/Added.bas"))).toBe(true);
+		expect(writeCalls.some(p => p.includes("src/Modules/WebHelpers.bas"))).toBe(true);
+		expect(writeCalls.some(p => p.includes("src/Class Modules/IWebAuthenticator.cls"))).toBe(true);
+
+		// Orphaned files should be deleted (Validation is in wildcard but not in standard-changes)
+		const removeCalls = (remove as jest.Mock).mock.calls.map((c: any[]) => c[0] as string);
+		expect(removeCalls.some(p => p.includes("src/Modules/Validation.bas"))).toBe(true);
+
+		// Manifest should keep wildcard entries — no individual entries
+		// for components already covered by wildcards
+		const wildcardNames = project.manifest.src
+			.filter(s => s.path.includes("*"))
+			.map(s => s.name)
+			.sort();
+		expect(wildcardNames).toEqual(["Classes", "Forms", "Modules", "Objects"]);
+	}, 15000);
 });

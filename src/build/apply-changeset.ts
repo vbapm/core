@@ -166,7 +166,7 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
  * Supports glob `*` (matches anything except `/`) and `**` (matches anything
  * including `/`).  `** /` matches zero or more path segments.
  */
-function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
+export function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
 	for (const source of sources) {
 		if (!source.path.includes("*")) continue;
 
@@ -194,7 +194,7 @@ function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: str
 	return false;
 }
 
-async function writeComponent(path: string, component: Component) {
+export async function writeComponent(path: string, component: Component) {
 	const dir = dirname(path);
 	await ensureDir(dir);
 

@@ -1,10 +1,14 @@
 import walk from "walk-sync";
-import { resolveSrcFolder, resolveSrcSubfolders } from "../manifest";
+import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
+import { Reference } from "../manifest/reference";
 import { Source } from "../manifest/source";
 import { Project } from "../project";
+import { remove } from "../utils/fs";
+import { parallel } from "../utils/parallel";
 import { join, relative } from "../utils/path";
 import { Codepage, labelToCodepage } from "./encoding-sniffer";
-import { Component } from "./component";
+import { Component, extensionToType } from "./component";
+import { isCoveredByWildcard, writeComponent } from "./apply-changeset";
 
 export interface ResolvedSource {
 	source: Source;
@@ -145,4 +149,124 @@ export function classifyByPath(
 	}
 
 	return result;
+}
+
+// ---------------------------------------------------------------------------
+// Execution
+// ---------------------------------------------------------------------------
+
+/**
+ * Execute a classified extract: write modified/created files, delete orphaned
+ * files, re-scan wildcards to decide which created files need individual
+ * `[src]` entries, and update the manifest.
+ */
+export async function applyExtract(
+	project: Project,
+	classified: ClassifiedExtract
+): Promise<void> {
+	// --- Write modified files ---
+	await parallel(
+		classified.modified,
+		item => writeComponent(item.component.details.path!, item.component)
+	);
+
+	// --- Write created files ---
+	await parallel(
+		classified.created,
+		item => writeComponent(item.component.details.path!, item.component)
+	);
+
+	// --- Delete orphaned files ---
+	await parallel(
+		classified.orphaned,
+		async item => {
+			await remove(item.component.details.path!);
+			// Also remove binary companion (.frx) if present
+			if (item.component.binaryPath) {
+				const dir = item.component.details.path!.replace(
+					/[/\\][^/\\]*$/,
+					""
+				);
+				await remove(join(dir, item.component.binaryPath));
+			}
+		}
+	);
+
+	// --- Re-scan wildcards for coverage ---
+	const covered = getWildcardCoverage(
+		project.manifest.src,
+		project.paths.dir
+	);
+	const needsEntry: ClassifiedComponent[] = [];
+	for (const item of classified.created) {
+		const relPath = relative(project.paths.dir, item.component.details.path!);
+		if (!isCoveredByWildcard(relPath, project.manifest.src, project.paths.dir)) {
+			needsEntry.push(item);
+		}
+	}
+
+	// --- Update manifest ---
+	updateManifestForExtract(project, needsEntry, classified.orphaned);
+
+	await writeManifest(project.manifest, project.paths.dir);
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Expand wildcard `[src]` entries to get the set of paths they cover on disk.
+ */
+function getWildcardCoverage(sources: Source[], projectDir: string): Set<string> {
+	const covered = new Set<string>();
+	for (const source of sources) {
+		if (!source.path.includes("*")) continue;
+
+		const pattern = source.path.startsWith(projectDir)
+			? relative(projectDir, source.path)
+			: source.path;
+		const matched = walk(projectDir, { globs: [pattern], directories: false });
+		for (const file of matched) {
+			covered.add(join(projectDir, file));
+		}
+	}
+	return covered;
+}
+
+/**
+ * Update the project manifest: add individual `[src]` entries for created
+ * files that aren't covered by wildcards, and remove entries for orphaned files.
+ */
+function updateManifestForExtract(
+	project: Project,
+	needsEntry: ClassifiedComponent[],
+	orphaned: ClassifiedComponent[]
+): void {
+	const src = project.manifest.src;
+
+	// Add individual entries for uncovered created files
+	for (const item of needsEntry) {
+		const sub = resolveSrcSubfolders(
+			project.manifest.srcProperties?.subfolders,
+			item.component.type
+		);
+		const folder = resolveSrcFolder(project.manifest.srcProperties);
+		const srcPath = sub
+			? `${folder}/${sub}/${item.component.filename}`
+			: `${folder}/${item.component.filename}`;
+
+		src.push({
+			name: item.component.name,
+			path: join(project.paths.dir, srcPath)
+		});
+	}
+
+	// Remove entries for orphaned files
+	for (const item of orphaned) {
+		const index = src.findIndex(
+			(s: Source) => s.name === item.component.name
+		);
+		if (index >= 0) src.splice(index, 1);
+	}
 }
