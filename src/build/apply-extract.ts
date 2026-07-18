@@ -1,4 +1,6 @@
 import walk from "walk-sync";
+import { env } from "../env";
+import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Source } from "../manifest/source";
@@ -53,6 +55,17 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 			// Single path — load directly
 			const component = await Component.load(source.path, codepage, { binary_path: source.binary });
 			component.details.sourceEncoding = declaredLabel;
+
+			// Detect name mismatch: the manifest key differs from the
+			// component's actual Attribute VB_Name in the file.
+			if (source.name !== component.name && !source.path.includes("*")) {
+				env.reporter.log(
+					Message.SourceNameMismatch,
+					`"${source.name}" in [src] was renamed to "${component.name}" ` +
+						`(file has Attribute VB_Name = "${component.name}")`
+				);
+			}
+
 			map.set(source.path, { source, component });
 		}
 	}
@@ -102,6 +115,8 @@ export interface ClassifiedExtract {
 	modified: ClassifiedComponent[];
 	created: ClassifiedComponent[];
 	orphaned: ClassifiedComponent[];
+	/** Entries whose manifest name differs from the actual component name. */
+	renamed: { source: Source; newName: string }[];
 	references: {
 		added: Reference[];
 		removed: Reference[];
@@ -125,6 +140,7 @@ export function classifyByPath(
 		modified: [],
 		created: [],
 		orphaned: [],
+		renamed: [],
 		references: { added: [], removed: [] }
 	};
 
@@ -134,6 +150,17 @@ export function classifyByPath(
 			// Same path — check if code changed
 			if (component.code !== resolved.component.code) {
 				result.modified.push({ component });
+			}
+			// Detect name mismatch: manifest key differs from Attribute VB_Name.
+			// Only for individual entries — wildcard group names are intentional.
+			if (
+				!resolved.source.path.includes("*") &&
+				resolved.source.name !== resolved.component.name
+			) {
+				result.renamed.push({
+					source: resolved.source,
+					newName: resolved.component.name
+				});
 			}
 			sources.delete(path);
 		} else {
@@ -193,7 +220,7 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 	}
 
 	// --- Update manifest ---
-	updateManifestForExtract(project, needsEntry, classified.orphaned, classified.references);
+	updateManifestForExtract(project, needsEntry, classified.orphaned, classified.renamed, classified.references);
 
 	await writeManifest(project.manifest, project.paths.dir);
 }
@@ -210,9 +237,20 @@ function updateManifestForExtract(
 	project: Project,
 	needsEntry: ClassifiedComponent[],
 	orphaned: ClassifiedComponent[],
+	renamed: { source: Source; newName: string }[],
 	references: { added: Reference[]; removed: Reference[] }
 ): void {
 	const src = project.manifest.src;
+
+	// Rename entries whose manifest key differs from the actual component name
+	for (const { source, newName } of renamed) {
+		const index = src.findIndex(
+			(s: Source) => s.name === source.name && s.path === source.path
+		);
+		if (index >= 0) {
+			src[index] = { ...source, name: newName };
+		}
+	}
 
 	// Add individual entries for uncovered created files
 	for (const item of needsEntry) {
@@ -224,11 +262,22 @@ function updateManifestForExtract(
 		const srcPath = sub
 			? `${folder}/${sub}/${item.component.filename}`
 			: `${folder}/${item.component.filename}`;
-
-		src.push({
+		const entry: Source = {
 			name: item.component.name,
 			path: join(project.paths.dir, srcPath)
-		});
+		};
+
+		// Replace an existing entry with the same name if it points
+		// to a different file (e.g. Module1 was "src/Validation.bas"
+		// but the workbook now has a real Module1 component).
+		const existingIndex = src.findIndex(
+			(s: Source) => s.name === item.component.name
+		);
+		if (existingIndex >= 0) {
+			src[existingIndex] = entry;
+		} else {
+			src.push(entry);
+		}
 	}
 
 	// Remove entries for orphaned files
