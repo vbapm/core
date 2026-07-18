@@ -1,9 +1,10 @@
 import dedent from "@timhall/dedent";
 import {
-	applyChangeset,
-	compareBuildGraphs,
+	applyExtract,
+	classifyByPath,
 	loadFromExport,
-	loadFromProject,
+	resolveSourceFiles,
+	resolveTargetPaths,
 	toSrc
 } from "../build";
 import { env } from "../env";
@@ -51,12 +52,22 @@ export async function exportTarget(
 
 	if (!xmlOnly) {
 		// Compare project and exported and apply changes to project
-		const project_build_graph = await loadFromProject(project, dependencies);
+		const sources = await resolveSourceFiles(project);
 		const exported_build_graph = await loadFromExport(staging);
 		const transformed_build_graph = await toSrc(exported_build_graph);
 
-		const changeset = compareBuildGraphs(project_build_graph, transformed_build_graph);
-		await applyChangeset(project, changeset);
+		// Exclude dependency-owned components from the export so they
+		// aren't treated as project files
+		const depNames = new Set(
+			dependencies.flatMap(m => m.src.map(s => s.name))
+		);
+		const projectComponents = transformed_build_graph.components.filter(
+			c => !depNames.has(c.name)
+		);
+
+		const targets = resolveTargetPaths(project, projectComponents);
+		const classified = classifyByPath(sources, targets);
+		await applyExtract(project, classified);
 	}
 
 	// Move target to dest
