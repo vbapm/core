@@ -1,4 +1,5 @@
 import walk from "walk-sync";
+import { yellowBright } from "@timhall/ansi-colors";
 import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
@@ -61,8 +62,10 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 			if (source.name !== component.name && !source.path.includes("*")) {
 				env.reporter.log(
 					Message.SourceNameMismatch,
-					`"${source.name}" in [src] was renamed to "${component.name}" ` +
-						`(file has Attribute VB_Name = "${component.name}")`
+					yellowBright(
+						`"${source.name}" in [src] was renamed to "${component.name}" ` +
+							`(file has Attribute VB_Name = "${component.name}")`
+					)
 				);
 			}
 
@@ -167,6 +170,13 @@ export function classifyByPath(
 						source: resolved.source,
 						newName: component.name
 					});
+					env.reporter.log(
+						Message.SourceNameMismatch,
+						yellowBright(
+							`"${resolved.source.name}" in [src] was renamed to "${component.name}" ` +
+								`(component in Excel file has Attribute VB_Name = "${component.name}")`
+						)
+					);
 				}
 			}
 			sources.delete(path);
