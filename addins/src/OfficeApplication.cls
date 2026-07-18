@@ -230,7 +230,7 @@ Private Function GetType(Path As String) As String
         GetType = "excel"
     ' TODO Remaining extensions
     Case Default
-        Output.Errors.Add "[10200] Unrecognized extension """ & Extension & """ for path """ & Path & """"
+        Output.Errors.Add "[10200] Unrecognized extension """ & FileSystem.GetExtension(Path) & """ for path """ & Path & """"
         GetType = ""
     End Select
 End Function
