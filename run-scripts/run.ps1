@@ -221,8 +221,7 @@ function Run {
 			try {
 				$result = $excel.Run($FilePath, $MacroName, $MacroArgValues)
 			} catch {
-				$msg = $_.Exception.Message -replace '"', '\"'
-				$result = "{""success"":false,""errors"":[""$msg""]}"
+				$result = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
 			} finally {
 				$excel.Dispose($KeepOpen)
 			}
