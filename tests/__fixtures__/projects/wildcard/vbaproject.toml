@@ -1,0 +1,21 @@
+[project]
+name = "wildcard"
+version = "0.0.0"
+authors = ["Tim Hall"]
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[src]
+Objects = "src/Excel Objects/**/*.cls"
+Forms = "src/Forms/**/*.frm"
+Modules = "src/Modules/**/*.bas"
+Classes = "src/Class Modules/**/*.cls"
+
+[src-properties]
+subfolders = { Objects = "Excel Objects", Forms = "Forms", Modules = "Modules", Classes = "Class Modules" }
+
+[references.VBIDE]
+version = "5.3"
+guid = "{0002E157-0000-0000-C000-000000000046}"
+
+[dependencies]
+json = "=2.3.0"

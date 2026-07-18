@@ -5,7 +5,8 @@ import {
 	dir,
 	standard,
 	standardChangesExport,
-	standardExport
+	standardExport,
+	wildcard
 } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { Changeset } from "../changeset";
@@ -46,6 +47,29 @@ test("should find no changes for dev-src", async () => {
 
 	const before = await loadFromProject(project, dependencies);
 	const after = await loadFromExport(devExport);
+
+	const changeset = compareBuildGraphs(before, after);
+	expect(normalizeChangeset(changeset)).toMatchSnapshot();
+}, 10000);
+
+test("should find no changes with wildcard sources", async () => {
+	const { project, dependencies } = await setup(wildcard);
+
+	const before = await loadFromProject(project, dependencies);
+	const after = await loadFromExport(standardExport);
+
+	const changeset = compareBuildGraphs(before, after);
+
+	expect(changeset.components.added.length).toEqual(0);
+	expect(changeset.components.changed.length).toEqual(0);
+	expect(changeset.components.removed.length).toEqual(0);
+}, 10000);
+
+test("should find added, changed, and removed with wildcard sources", async () => {
+	const { project, dependencies } = await setup(wildcard);
+
+	const before = await loadFromProject(project, dependencies);
+	const after = await loadFromExport(standardChangesExport);
 
 	const changeset = compareBuildGraphs(before, after);
 	expect(normalizeChangeset(changeset)).toMatchSnapshot();

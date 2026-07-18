@@ -79,3 +79,76 @@ Object {
   "version": "0.0.0",
 }
 `;
+
+exports[`should write new files to subfolders without adding individual entries when covered by wildcards 1`] = `
+Object {
+  "buildDir": undefined,
+  "codename": undefined,
+  "dependencies": Array [
+    Object {
+      "name": "json",
+      "registry": "vba-blocks",
+      "version": "=2.3.0",
+    },
+  ],
+  "devDependencies": Array [],
+  "devReferences": Array [],
+  "devSrc": Array [],
+  "metadata": Object {
+    "authors": Array [
+      "Tim Hall",
+    ],
+    "publish": undefined,
+  },
+  "name": "wildcard",
+  "references": Array [
+    Object {
+      "guid": "{0002E157-0000-0000-C000-000000000046}",
+      "major": 5,
+      "minor": 3,
+      "name": "VBIDE",
+    },
+  ],
+  "src": Array [
+    Object {
+      "name": "Objects",
+      "path": "projects/wildcard/src/Excel Objects/**/*.cls",
+    },
+    Object {
+      "name": "Forms",
+      "path": "projects/wildcard/src/Forms/**/*.frm",
+    },
+    Object {
+      "name": "Modules",
+      "path": "projects/wildcard/src/Modules/**/*.bas",
+    },
+    Object {
+      "name": "Classes",
+      "path": "projects/wildcard/src/Class Modules/**/*.cls",
+    },
+  ],
+  "srcEncoding": undefined,
+  "srcProperties": Object {
+    "subfolders": Object {
+      "Classes": "Class Modules",
+      "Forms": "Forms",
+      "Modules": "Modules",
+      "Objects": "Excel Objects",
+    },
+  },
+  "srcStructure": Object {
+    "sortedAlphabetically": false,
+    "sortedByTypeThenAlphabetically": false,
+    "sortedByTypes": false,
+    "unstructured": true,
+  },
+  "target": Object {
+    "filename": "wildcard.xlsm",
+    "name": "wildcard",
+    "path": "projects/wildcard/targets/xlsm",
+    "type": "xlsm",
+  },
+  "type": "project",
+  "version": "0.0.0",
+}
+`;
