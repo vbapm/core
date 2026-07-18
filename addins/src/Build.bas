@@ -140,6 +140,32 @@ Public Function ExportTo(Info As Variant) As String
 
     Project("name") = Document.VBProject.Name
     Set Project("references") = New Collection
+    Set Project("components") = New Collection
+
+    Dim CompInfo As Dictionary
+    Dim CompType As String
+
+    ' Collect component metadata (name + type) so the CLI can distinguish
+    ' document objects (vbext_ct_Document) from class modules (.cls).
+    For Each Component In Document.VBProject.VBComponents
+        Select Case Component.Type
+        Case vbext_ComponentType.vbext_ct_StdModule
+            CompType = "module"
+        Case vbext_ComponentType.vbext_ct_ClassModule
+            CompType = "class"
+        Case vbext_ComponentType.vbext_ct_Document
+            CompType = "object"
+        Case vbext_ComponentType.vbext_ct_MSForm
+            CompType = "form"
+        Case Else
+            CompType = "unknown"
+        End Select
+
+        Set CompInfo = New Dictionary
+        CompInfo("name") = Component.Name
+        CompInfo("type") = CompType
+        Project("components").Add CompInfo
+    Next Component
 
     Dim Ref As Reference
     Dim RefInfo As Dictionary
