@@ -148,9 +148,21 @@ Private Function OpenWorkbook(Path As String, ByRef WB As Object) As Boolean
     If WB Is Nothing Or Err.Number <> 0 Then
         Err.Clear
 
+        ' Disable events so that Workbook_Open / Auto_Open in the target
+        ' workbook do not interrupt the CLI-driven workflow.
+        Dim EventsWereEnabled As Boolean
+        EventsWereEnabled = Application.EnableEvents
+        Application.EnableEvents = False
+
         Set WB = Application.Workbooks.Open(Path)
+
+        ' Restore events before checking errors so the caller always
+        ' runs with the original setting.
+        Application.EnableEvents = EventsWereEnabled
+
         If Err.Number <> 0 Then
             Output.Warnings.Add "Failed to open workbook: " & Err.Description
+            Err.Clear
         End If
 
         OpenWorkbook = False
