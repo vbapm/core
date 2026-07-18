@@ -1,6 +1,12 @@
 import { wildcard, standardChangesExport } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
-import { resolveSourceFiles, resolveTargetPaths, classifyByPath, applyExtract, ResolvedSource } from "../apply-extract";
+import {
+	resolveSourceFiles,
+	resolveTargetPaths,
+	classifyByPath,
+	applyExtract,
+	ResolvedSource
+} from "../apply-extract";
 import { Component, ComponentType } from "../component";
 import { Codepage } from "../encoding-sniffer";
 import { loadFromExport } from "../load-from-export";
@@ -35,14 +41,7 @@ describe("resolveSourceFiles", () => {
 
 		// Verify specific files are present by name
 		const names = [...map.values()].map(e => e.component.name).sort();
-		expect(names).toEqual([
-			"Class1",
-			"Sheet1",
-			"Sheet2",
-			"Sheet3",
-			"ThisWorkbook",
-			"Validation"
-		]);
+		expect(names).toEqual(["Class1", "Sheet1", "Sheet2", "Sheet3", "ThisWorkbook", "Validation"]);
 	});
 
 	test("returns empty map when manifest has no src entries", async () => {
@@ -120,11 +119,7 @@ describe("resolveTargetPaths", () => {
 });
 
 describe("classifyByPath", () => {
-	function makeComponent(
-		type: ComponentType,
-		name: string,
-		code?: string
-	): Component {
+	function makeComponent(type: ComponentType, name: string, code?: string): Component {
 		const body =
 			code ??
 			(type === "form"
@@ -147,12 +142,12 @@ describe("classifyByPath", () => {
 		const sources = new Map<string, ResolvedSource>();
 		const targets = new Map<string, Component>();
 
-		const src = makeResolved("Module1", "module", "Attribute VB_Name = \"Module1\"\r\n");
+		const src = makeResolved("Module1", "module", 'Attribute VB_Name = "Module1"\r\n');
 		src.component.details.path = PROJ + "/src/Modules/Module1.bas";
 		src.source.path = PROJ + "/src/Modules/Module1.bas";
 		sources.set(PROJ + "/src/Modules/Module1.bas", src);
 
-		const tgt = makeComponent("module", "Module1", "Attribute VB_Name = \"Module1\"\r\n");
+		const tgt = makeComponent("module", "Module1", 'Attribute VB_Name = "Module1"\r\n');
 		targets.set(PROJ + "/src/Modules/Module1.bas", tgt);
 
 		const result = classifyByPath(sources, targets);

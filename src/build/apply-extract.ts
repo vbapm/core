@@ -25,9 +25,7 @@ export interface ResolvedSource {
  *
  * @returns Map keyed by absolute file path.
  */
-export async function resolveSourceFiles(
-	project: Project
-): Promise<Map<string, ResolvedSource>> {
+export async function resolveSourceFiles(project: Project): Promise<Map<string, ResolvedSource>> {
 	const map = new Map<string, ResolvedSource>();
 
 	for (const source of project.manifest.src) {
@@ -53,11 +51,7 @@ export async function resolveSourceFiles(
 			}
 		} else {
 			// Single path — load directly
-			const component = await Component.load(
-				source.path,
-				codepage,
-				{ binary_path: source.binary }
-			);
+			const component = await Component.load(source.path, codepage, { binary_path: source.binary });
 			component.details.sourceEncoding = declaredLabel;
 			map.set(source.path, { source, component });
 		}
@@ -163,37 +157,26 @@ export function classifyByPath(
  * files, re-scan wildcards to decide which created files need individual
  * `[src]` entries, and update the manifest.
  */
-export async function applyExtract(
-	project: Project,
-	classified: ClassifiedExtract
-): Promise<void> {
+export async function applyExtract(project: Project, classified: ClassifiedExtract): Promise<void> {
 	// --- Write modified files ---
-	await parallel(
-		classified.modified,
-		item => writeComponent(item.component.details.path!, item.component)
+	await parallel(classified.modified, item =>
+		writeComponent(item.component.details.path!, item.component)
 	);
 
 	// --- Write created files ---
-	await parallel(
-		classified.created,
-		item => writeComponent(item.component.details.path!, item.component)
+	await parallel(classified.created, item =>
+		writeComponent(item.component.details.path!, item.component)
 	);
 
 	// --- Delete orphaned files ---
-	await parallel(
-		classified.orphaned,
-		async item => {
-			await remove(item.component.details.path!);
-			// Also remove binary companion (.frx) if present
-			if (item.component.binaryPath) {
-				const dir = item.component.details.path!.replace(
-					/[/\\][^/\\]*$/,
-					""
-				);
-				await remove(join(dir, item.component.binaryPath));
-			}
+	await parallel(classified.orphaned, async item => {
+		await remove(item.component.details.path!);
+		// Also remove binary companion (.frx) if present
+		if (item.component.binaryPath) {
+			const dir = item.component.details.path!.replace(/[/\\][^/\\]*$/, "");
+			await remove(join(dir, item.component.binaryPath));
 		}
-	);
+	});
 
 	// --- Re-scan wildcards for coverage ---
 	const needsEntry: ClassifiedComponent[] = [];
@@ -244,9 +227,7 @@ function updateManifestForExtract(
 
 	// Remove entries for orphaned files
 	for (const item of orphaned) {
-		const index = src.findIndex(
-			(s: Source) => s.name === item.component.name
-		);
+		const index = src.findIndex((s: Source) => s.name === item.component.name);
 		if (index >= 0) src.splice(index, 1);
 	}
 }

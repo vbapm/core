@@ -166,7 +166,11 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
  * Supports glob `*` (matches anything except `/`) and `**` (matches anything
  * including `/`).  `** /` matches zero or more path segments.
  */
-export function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
+export function isCoveredByWildcard(
+	srcPath: string,
+	sources: Source[],
+	projectDir: string
+): boolean {
 	// Normalise to forward slashes for cross-platform glob matching
 	const normalisedPath = srcPath.replace(/\\/g, "/");
 

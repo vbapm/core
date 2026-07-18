@@ -58,12 +58,8 @@ export async function exportTarget(
 
 		// Exclude dependency-owned components from the export so they
 		// aren't treated as project files
-		const depNames = new Set(
-			dependencies.flatMap(m => m.src.map(s => s.name))
-		);
-		const projectComponents = transformed_build_graph.components.filter(
-			c => !depNames.has(c.name)
-		);
+		const depNames = new Set(dependencies.flatMap(m => m.src.map(s => s.name)));
+		const projectComponents = transformed_build_graph.components.filter(c => !depNames.has(c.name));
 
 		const targets = resolveTargetPaths(project, projectComponents);
 		const classified = classifyByPath(sources, targets);
