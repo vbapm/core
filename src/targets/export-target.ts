@@ -62,7 +62,7 @@ export async function exportTarget(
 		const projectComponents = transformed_build_graph.components.filter(c => !depNames.has(c.name));
 
 		const targets = resolveTargetPaths(project, projectComponents);
-		const classified = classifyByPath(sources, targets);
+		const classified = classifyByPath(new Map(sources), targets);
 
 		// Compare references by name (unchanged from original compareBuildGraphs logic)
 		const existingRefs = new Map(project.manifest.references.map(r => [r.name, r]));
