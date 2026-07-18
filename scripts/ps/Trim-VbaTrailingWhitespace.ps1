@@ -12,7 +12,7 @@ Get-ChildItem -LiteralPath $Path -File -Recurse:$Recurse |
         $file = $_
 
         if (-not $PSCmdlet.ShouldProcess($file.FullName, 'Trim trailing whitespace')) {
-            return
+            continue
         }
 
         # Read as raw bytes to preserve the original encoding (CP1252, etc.)
