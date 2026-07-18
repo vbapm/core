@@ -9,7 +9,7 @@ import { remove } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { join, relative } from "../utils/path";
 import { Codepage, labelToCodepage } from "./encoding-sniffer";
-import { Component, extensionToType } from "./component";
+import { Component } from "./component";
 import { isCoveredByWildcard, writeComponent } from "./apply-changeset";
 
 export interface ResolvedSource {
@@ -151,16 +151,23 @@ export function classifyByPath(
 			if (component.code !== resolved.component.code) {
 				result.modified.push({ component });
 			}
-			// Detect name mismatch: manifest key differs from Attribute VB_Name.
-			// Only for individual entries — wildcard group names are intentional.
-			if (
-				!resolved.source.path.includes("*") &&
-				resolved.source.name !== resolved.component.name
-			) {
-				result.renamed.push({
-					source: resolved.source,
-					newName: resolved.component.name
-				});
+			// Detect name mismatches for individual entries (not wildcards):
+			// - Source name ≠ file Attribute: user renamed manifest key
+			// - Export name ≠ source name: workbook component was renamed
+			if (!resolved.source.path.includes("*")) {
+				if (resolved.source.name !== resolved.component.name) {
+					// Manifest key differs from file content
+					result.renamed.push({
+						source: resolved.source,
+						newName: resolved.component.name
+					});
+				} else if (component.name !== resolved.source.name) {
+					// Export component was renamed; manifest key should follow
+					result.renamed.push({
+						source: resolved.source,
+						newName: component.name
+					});
+				}
 			}
 			sources.delete(path);
 		} else {
@@ -170,7 +177,7 @@ export function classifyByPath(
 	}
 
 	// Remaining sources are orphaned (no matching target)
-	for (const [path, resolved] of sources) {
+	for (const resolved of sources.values()) {
 		result.orphaned.push({
 			component: resolved.component,
 			source: resolved.source
@@ -220,7 +227,13 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 	}
 
 	// --- Update manifest ---
-	updateManifestForExtract(project, needsEntry, classified.orphaned, classified.renamed, classified.references);
+	updateManifestForExtract(
+		project,
+		needsEntry,
+		classified.orphaned,
+		classified.renamed,
+		classified.references
+	);
 
 	await writeManifest(project.manifest, project.paths.dir);
 }
@@ -244,9 +257,7 @@ function updateManifestForExtract(
 
 	// Rename entries whose manifest key differs from the actual component name
 	for (const { source, newName } of renamed) {
-		const index = src.findIndex(
-			(s: Source) => s.name === source.name && s.path === source.path
-		);
+		const index = src.findIndex((s: Source) => s.name === source.name && s.path === source.path);
 		if (index >= 0) {
 			src[index] = { ...source, name: newName };
 		}
@@ -270,9 +281,7 @@ function updateManifestForExtract(
 		// Replace an existing entry with the same name if it points
 		// to a different file (e.g. Module1 was "src/Validation.bas"
 		// but the workbook now has a real Module1 component).
-		const existingIndex = src.findIndex(
-			(s: Source) => s.name === item.component.name
-		);
+		const existingIndex = src.findIndex((s: Source) => s.name === item.component.name);
 		if (existingIndex >= 0) {
 			src[existingIndex] = entry;
 		} else {
@@ -293,9 +302,7 @@ function updateManifestForExtract(
 
 	// Remove orphaned references
 	for (const ref of references.removed) {
-		const index = project.manifest.references.findIndex(
-			(r: Reference) => r.name === ref.name
-		);
+		const index = project.manifest.references.findIndex((r: Reference) => r.name === ref.name);
 		if (index >= 0) project.manifest.references.splice(index, 1);
 	}
 }

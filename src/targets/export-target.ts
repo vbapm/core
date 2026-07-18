@@ -65,9 +65,7 @@ export async function exportTarget(
 		const classified = classifyByPath(sources, targets);
 
 		// Compare references by name (unchanged from original compareBuildGraphs logic)
-		const existingRefs = new Map(
-			project.manifest.references.map(r => [r.name, r])
-		);
+		const existingRefs = new Map(project.manifest.references.map(r => [r.name, r]));
 		for (const ref of transformed_build_graph.references) {
 			const existing = existingRefs.get(ref.name);
 			if (existing) {
