@@ -193,10 +193,6 @@ export async function applyExtract(
 	);
 
 	// --- Re-scan wildcards for coverage ---
-	const covered = getWildcardCoverage(
-		project.manifest.src,
-		project.paths.dir
-	);
 	const needsEntry: ClassifiedComponent[] = [];
 	for (const item of classified.created) {
 		const relPath = relative(project.paths.dir, item.component.details.path!);
@@ -214,25 +210,6 @@ export async function applyExtract(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Expand wildcard `[src]` entries to get the set of paths they cover on disk.
- */
-function getWildcardCoverage(sources: Source[], projectDir: string): Set<string> {
-	const covered = new Set<string>();
-	for (const source of sources) {
-		if (!source.path.includes("*")) continue;
-
-		const pattern = source.path.startsWith(projectDir)
-			? relative(projectDir, source.path)
-			: source.path;
-		const matched = walk(projectDir, { globs: [pattern], directories: false });
-		for (const file of matched) {
-			covered.add(join(projectDir, file));
-		}
-	}
-	return covered;
-}
 
 /**
  * Update the project manifest: add individual `[src]` entries for created

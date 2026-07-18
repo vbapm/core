@@ -167,13 +167,16 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
  * including `/`).  `** /` matches zero or more path segments.
  */
 export function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
+	// Normalise to forward slashes for cross-platform glob matching
+	const normalisedPath = srcPath.replace(/\\/g, "/");
+
 	for (const source of sources) {
 		if (!source.path.includes("*")) continue;
 
 		// Normalise the wildcard pattern to a path relative to the project
-		const pattern = source.path.startsWith(projectDir)
+		const pattern = (source.path.startsWith(projectDir)
 			? relative(projectDir, source.path)
-			: source.path;
+			: source.path).replace(/\\/g, "/");
 
 		// Convert glob to regex:
 		//   **/  → zero or more path segments (e.g. dir/**/*.ext)
@@ -187,7 +190,7 @@ export function isCoveredByWildcard(srcPath: string, sources: Source[], projectD
 			.replace(/<<<GSTARSLASH>>>/g, "(.*/)?")
 			.replace(/<<<GSTAR>>>/g, ".*");
 
-		if (new RegExp(`^${regexStr}$`).test(srcPath)) {
+		if (new RegExp(`^${regexStr}$`).test(normalisedPath)) {
 			return true;
 		}
 	}
