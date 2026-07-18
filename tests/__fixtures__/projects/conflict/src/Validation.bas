@@ -1,4 +1,4 @@
-Attribute VB_Name = "Validation"
+Attribute VB_Name = "Module1"
 Public Function Validate() As String
     On Error GoTo ErrorHandling
 
