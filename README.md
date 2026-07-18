@@ -575,14 +575,23 @@ Wildcards are expanded at build time — any file on disk matching the glob is p
 > **Note:** Wildcard and individual entries can coexist. Components already covered
 > by an existing wildcard pattern do not get duplicate individual entries added which means the wildcard handles discovery on the next build or extract.
 
-#### [src-subfolders]
-`src-subfolders` organizes exported source files into subdirectories under `src/` based on component type. Without it, all files land flat in `src/`.
+### [src-properties]
+
+Optional settings that control how source files are organised and written to disk.
 
 ```toml
-src-subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
+[src-properties]
+# folder = "src"            # Implicit overridable default. 
+subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 ```
 
-This maps `.bas` → `src/Modules/`, `.frm` → `src/Forms/`, `.cls` → `src/Classes/`.
+| Key | Default | Description |
+|---|---|---|
+| `folder` | `"src"` | Base directory for all source files (relative to project root). New components extracted from a workbook are placed under this directory. |
+| `subfolders` | — | Organises source files into type-based subdirectories: `.bas` → `Modules/`, `.frm` → `Forms/`, `.cls` → `Classes/`. `Objects` maps document modules (`ThisWorkbook`, sheets) to a subfolder. |
+| `encoding` | — | Default encoding for source files (e.g. `"cp1252"`, `"utf-8"`). Can be overridden per-source in `[src]`. |
+| `sort` | — | Enforce ordering in the `[src]` section. Options: `by-types` (group by component type), `alphabetical` (sort by name). |
+| `include-empty-objects` | `true` | When `false`, blank document objects (ThisWorkbook, sheet modules) are skipped during export. |
 
 ### [dependencies]
 

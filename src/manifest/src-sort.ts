@@ -15,6 +15,10 @@ export interface SrcSubfolders {
 
 /** Parsed form of the optional `[src-properties]` TOML section. */
 export interface SrcProperties {
+	/** Defaults to `"src"`.  The base directory for source files (relative
+	 * to the project root).  New components are placed here on extract and
+	 * `[src]` wildcard entries are generated relative to it. */
+	folder?: string;
 	/** Global source-file encoding (e.g. "cp1252", "utf-8").
 	 * Can be overridden per-source with the `encoding` key in `[src]`. */
 	encoding?: string;
@@ -29,9 +33,16 @@ export interface SrcProperties {
 }
 
 /**
- * Resolve the subdirectory under `src/` for a given component type.
+ * Resolve the source folder from `[src-properties]`.  Defaults to `"src"`.
+ */
+export function resolveSrcFolder(srcProperties: SrcProperties | undefined): string {
+	return srcProperties?.folder ?? "src";
+}
+
+/**
+ * Resolve the subdirectory under the source folder for a given component type.
  * Uses the `subfolders` config from `[src-properties]` if present,
- * otherwise defaults to placing all files directly in `src/`.
+ * otherwise defaults to placing all files directly under the source folder.
  */
 export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type: string): string {
 	if (!subfolders) return "";
@@ -153,6 +164,10 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 	if (!raw || typeof raw !== "object") return undefined;
 
 	const props: SrcProperties = {};
+
+	if (typeof raw.folder === "string") {
+		props.folder = raw.folder;
+	}
 
 	if (typeof raw.encoding === "string") {
 		props.encoding = raw.encoding;
