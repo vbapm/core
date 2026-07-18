@@ -163,8 +163,8 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
  * entry in the manifest.  If so, the component does not need an individual
  * `[src]` listing — the wildcard will discover it on the next build/extract.
  *
- * Handles glob patterns of the form `baseDir/** /*.ext` (the format used by
- * `vba init` defaults and `[src-properties].subfolders`).
+ * Supports glob `*` (matches anything except `/`) and `**` (matches anything
+ * including `/`).  `** /` matches zero or more path segments.
  */
 function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
 	for (const source of sources) {
@@ -175,16 +175,20 @@ function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: str
 			? relative(projectDir, source.path)
 			: source.path;
 
-		// Split on "/**/" to extract <baseDir> and <*>.ext
-		const globParts = pattern.split("/**/");
-		if (globParts.length === 2) {
-			const baseDir = globParts[0];
-			const extGlob = globParts[1]; // e.g. "*.bas"
-			const ext = extGlob.startsWith("*") ? extGlob.slice(1) : extGlob;
+		// Convert glob to regex:
+		//   **/  → zero or more path segments (e.g. dir/**/*.ext)
+		//   **   → anything including /
+		//   *    → anything except /
+		const regexStr = pattern
+			.replace(/[.+^${}()|[\]\\]/g, "\\$&")
+			.replace(/\*\*\//g, "<<<GSTARSLASH>>>")
+			.replace(/\*\*/g, "<<<GSTAR>>>")
+			.replace(/\*/g, "[^/]*")
+			.replace(/<<<GSTARSLASH>>>/g, "(.*/)?")
+			.replace(/<<<GSTAR>>>/g, ".*");
 
-			if (srcPath.startsWith(baseDir + "/") && srcPath.endsWith(ext)) {
-				return true;
-			}
+		if (new RegExp(`^${regexStr}$`).test(srcPath)) {
+			return true;
 		}
 	}
 	return false;
