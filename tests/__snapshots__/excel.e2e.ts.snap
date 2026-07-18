@@ -438,3 +438,58 @@ json = \\"=2.3.0\\"
 ",
 }
 `;
+
+exports[`wildcard extract extract renames mismatched manifest entries and preserves both 1`] = `
+Object {
+  "build/conflict.xlsm": "<TODO>",
+  "src/Class1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Class1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
+  "src/Module1.bas": "Attribute VB_Name = \\"Module1\\"{CR}{LF}Option Explicit{CR}{LF}{CR}{LF}Sub test(){CR}{LF}    MsgBox \\"123\\"{CR}{LF}End Sub{CR}{LF}",
+  "src/Sheet1.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet1\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
+  "src/Sheet2.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet2\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
+  "src/Sheet3.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"Sheet3\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{LF}Att...",
+  "src/ThisWorkbook.cls": "VERSION 1.0 CLASS{CR}{LF}BEGIN{CR}{LF}  MultiUse = -1  'True{CR}{LF}END{CR}{LF}Attribute VB_Name = \\"ThisWorkbook\\"{CR}{LF}Attribute VB_GlobalNameSpace = False{CR}{LF}Attribute VB_Creatable = False{CR}{...",
+  "src/UserForm1.frm": "VERSION 5.00{CR}{LF}Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UserForm1{CR}{LF}   Caption         =   \\"UserForm1\\"{CR}{LF}   ClientHeight    =   3015{CR}{LF}   ClientLeft      =   120{CR}{LF}   Clie...",
+  "src/UserForm1.frx": "<TODO>",
+  "src/Validation.bas": "Attribute VB_Name = \\"Validation\\"{CR}{LF}Public Function Validate() As String{CR}{LF}    On Error GoTo ErrorHandling{CR}{LF}{CR}{LF}    Dim Errors As New Collection{CR}{LF}{CR}{LF}    If ThisWorkbook.V...",
+  "targets/xlsm/[Content_Types].xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Types xmlns=\\"http://schemas.openxmlformats.org/package/2006/content-types\\">{CR}{LF}  <Default Extension=\\"bin\\" ContentType=\\"application/v...",
+  "targets/xlsm/_rels/.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
+  "targets/xlsm/docProps/app.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Properties xmlns=\\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\\" xmlns:vt=\\"http://schemas.openxmlformats.org...",
+  "targets/xlsm/docProps/core.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<cp:coreProperties xmlns:cp=\\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\\" xmlns:dc=\\"http://purl.org/dc/elemen...",
+  "targets/xlsm/xl/_rels/workbook.xml.rels": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<Relationships xmlns=\\"http://schemas.openxmlformats.org/package/2006/relationships\\">{CR}{LF}  <Relationship Id=\\"rId3\\" Type=\\"http://schema...",
+  "targets/xlsm/xl/sharedStrings.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<sst xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" count=\\"3\\" uniqueCount=\\"3\\">{CR}{LF}  <si>{CR}{LF}    <t>A1</t>{CR}{...",
+  "targets/xlsm/xl/styles.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<styleSheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:mc=\\"http://schemas.openxmlformats.org/markup-compatib...",
+  "targets/xlsm/xl/theme/theme1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<a:theme xmlns:a=\\"http://schemas.openxmlformats.org/drawingml/2006/main\\" name=\\"Office 2013 - 2022 Theme\\">{CR}{LF}  <a:themeElements>{CR}{...",
+  "targets/xlsm/xl/workbook.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<workbook xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/200...",
+  "targets/xlsm/xl/worksheets/shtSheet1.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
+  "targets/xlsm/xl/worksheets/shtSheet2.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
+  "targets/xlsm/xl/worksheets/shtSheet3.xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\" standalone=\\"yes\\"?>{CR}{LF}<worksheet xmlns=\\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\\" xmlns:r=\\"http://schemas.openxmlformats.org/officeDocument/20...",
+  "vbaproject.lock": "[metadata]{LF}version = \\"1\\"{LF}{LF}[root]{LF}name = \\"conflict\\"{LF}dependencies = [{LF}  \\"json 2.3.0 registry+vba-blocks#sha256-3c2760ce2940dd19c16542cead792e0d05e58566155b1fbc72d445fe50a36799\\",{LF}]{L...",
+  "vbaproject.toml":
+  "[project]
+name = \\"conflict\\"
+version = \\"0.0.0\\"
+authors = [\\"Tim Hall\\"]
+target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
+
+[src]
+ThisWorkbook = \\"src/ThisWorkbook.cls\\"
+Sheet1 = \\"src/Sheet1.cls\\"
+Sheet2 = \\"src/Sheet2.cls\\"
+Sheet3 = \\"src/Sheet3.cls\\"
+Module1 = \\"src/Module1.bas\\"
+Class1 = \\"src/Class1.cls\\"
+
+# TODO Windows-only
+# UserForm1 = { path = \\"src/UserForm1.frm\\", binary = \\"src/UserForm1.frx\\" }
+Validation = \\"src/Validation.bas\\"
+
+
+[references.VBIDE]
+version = \\"5.3\\"
+guid = \\"{0002E157-0000-0000-C000-000000000046}\\"
+
+[dependencies]
+json = \\"=2.3.0\\"
+",
+}
+`;

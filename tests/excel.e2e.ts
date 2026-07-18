@@ -40,6 +40,7 @@ import { copy, pathExists, readFile, writeFile } from "fs-extra";
 import { join } from "path";
 import { promisify } from "util";
 import {
+	conflict,
 	dev,
 	empty,
 	json,
@@ -497,4 +498,16 @@ describe("wildcard extract", () => {
 			});
 		});
 	});
-});
+
+        test("extract renames mismatched manifest entries and preserves both", async () => {
+                await setup(conflict, "extract-conflict", async cwd => {
+                        // 1. Extract from the conflict fixture
+                        await execute(cwd, "extract --target xlsm");
+
+                        // 2. Verify both entries exist in vbaproject.toml:
+                        //    Module1 = "src/Module1.bas" (new workbook component)
+                        //    Validation = "src/Validation.bas" (renamed from Module1)
+                        const result = await readdir(cwd);
+                        expect(result).toMatchSnapshot();
+                });
+        });
