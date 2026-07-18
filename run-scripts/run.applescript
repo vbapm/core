@@ -86,8 +86,18 @@ on run_excel_macro(command, args)
 			end if
 		end tell
 	on error errMsg
-		set result to "{\"success\":false,\"errors\":[\"" & errMsg & "\"]}"
+		set escapedMsg to my replace_chars(errMsg, "\"", "\\\"")
+		set result to "{\"success\":false,\"errors\":[\"" & escapedMsg & "\"]}"
 	end try
 
 	return result
-end run_macro
+end run_excel_macro
+
+on replace_chars(theText, searchStr, replaceStr)
+	set AppleScript's text item delimiters to searchStr
+	set textItems to text items of theText
+	set AppleScript's text item delimiters to replaceStr
+	set result to textItems as text
+	set AppleScript's text item delimiters to ""
+	return result
+end replace_chars
