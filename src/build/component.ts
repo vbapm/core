@@ -124,7 +124,8 @@ export const extensionToType: { [extension: string]: ComponentType } = {
 export const typeToExtension: { [type: string]: string } = {
 	module: ".bas",
 	class: ".cls",
-	form: ".frm"
+	form: ".frm",
+	object: ".cls"
 };
 
 function findLine(code: string, search: string): string | undefined {

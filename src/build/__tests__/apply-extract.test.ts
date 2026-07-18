@@ -1,6 +1,8 @@
 import { wildcard } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
-import { resolveSourceFiles } from "../apply-extract";
+import { resolveSourceFiles, resolveTargetPaths } from "../apply-extract";
+import { Component, ComponentType } from "../component";
+import { Codepage } from "../encoding-sniffer";
 
 afterEach(reset);
 
@@ -61,5 +63,51 @@ describe("resolveSourceFiles", () => {
 		const entry = [...map.values()][0];
 		expect(entry.source.name).toBe("Validation");
 		expect(entry.component.name).toBe("Validation");
+	});
+});
+
+describe("resolveTargetPaths", () => {
+	function makeComponent(type: ComponentType, name: string): Component {
+		const ext = type === "module" ? ".bas" : type === "form" ? ".frm" : ".cls";
+		const code =
+			type === "form"
+				? `VERSION 5.00\r\nBegin Form\r\nEnd\r\nAttribute VB_Name = "${name}"\r\n`
+				: `Attribute VB_Name = "${name}"\r\n`;
+		return new Component(type, Buffer.from(code), Codepage.Unknown, {});
+	}
+
+	test("resolves target paths using folder and subfolders from src-properties", async () => {
+		const { project } = await setup(wildcard);
+
+		const components = [
+			makeComponent("module", "NewModule"),
+			makeComponent("class", "NewClass"),
+			makeComponent("form", "NewForm"),
+			makeComponent("object", "Sheet4")
+		];
+
+		const map = await resolveTargetPaths(project, components);
+
+		expect(map.size).toBe(4);
+
+		const paths = [...map.keys()];
+		const pathStr = paths.join("|");
+		expect(pathStr).toContain("src/Modules/NewModule.bas");
+		expect(pathStr).toContain("src/Class Modules/NewClass.cls");
+		expect(pathStr).toContain("src/Forms/NewForm.frm");
+		expect(pathStr).toContain("src/Excel Objects/Sheet4.cls");
+	});
+
+	test("uses default src folder when folder is not set", async () => {
+		const { project } = await setup(wildcard);
+		project.manifest.srcProperties = undefined;
+
+		const components = [makeComponent("module", "MyModule")];
+
+		const map = await resolveTargetPaths(project, components);
+
+		const [path] = [...map.keys()];
+		expect(path).toEqual(expect.stringContaining("src/MyModule.bas"));
+		expect(path).not.toEqual(expect.stringContaining("src/Modules/"));
 	});
 });
