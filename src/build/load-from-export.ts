@@ -117,7 +117,7 @@ async function readInfo(staging: string): Promise<{
 		}
 	}
 
-	return { name: info.name, references: info.references, componentTypes };
+	return { name: info.name, references: info.references ?? [], componentTypes };
 }
 
 function isBinary(file: string): boolean {
