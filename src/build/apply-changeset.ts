@@ -60,7 +60,9 @@ async function updateManifest(project: Project, changeset: Changeset) {
 	for (const component of changeset.components.added) {
 		const folder = resolveSrcFolder(project.manifest.srcProperties);
 		const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
-		const srcPath = sub ? `${folder}/${sub}/${component.filename}` : `${folder}/${component.filename}`;
+		const srcPath = sub
+			? `${folder}/${sub}/${component.filename}`
+			: `${folder}/${component.filename}`;
 		const source: Source = {
 			name: component.name,
 			path: join(project.paths.dir, srcPath)
