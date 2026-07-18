@@ -36,9 +36,12 @@ export async function resolveSourceFiles(
 		const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 
 		if (source.path.includes("*")) {
-			// Wildcard — expand against the project directory
+			// Wildcard — expand against the project directory.
+			// Normalise to forward slashes for startsWith — source.path uses
+			// / but project.paths.dir may use \ on Windows.
 			const baseDir = project.paths.dir;
-			const pattern = source.path.startsWith(baseDir)
+			const baseDirFwd = baseDir.replace(/\\/g, "/");
+			const pattern = source.path.startsWith(baseDirFwd)
 				? relative(baseDir, source.path)
 				: source.path;
 			const matched = walk(baseDir, { globs: [pattern], directories: false });

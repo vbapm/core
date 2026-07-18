@@ -173,10 +173,13 @@ export function isCoveredByWildcard(srcPath: string, sources: Source[], projectD
 	for (const source of sources) {
 		if (!source.path.includes("*")) continue;
 
-		// Normalise the wildcard pattern to a path relative to the project
-		const pattern = (source.path.startsWith(projectDir)
+		// Normalise the wildcard pattern to a path relative to the project.
+		// Normalise to forward slashes — source.path uses / but
+		// projectDir may use \ on Windows.
+		const projectDirFwd = projectDir.replace(/\\/g, "/");
+		const pattern = source.path.startsWith(projectDirFwd)
 			? relative(projectDir, source.path)
-			: source.path).replace(/\\/g, "/");
+			: source.path;
 
 		// Convert glob to regex:
 		//   **/  → zero or more path segments (e.g. dir/**/*.ext)
