@@ -6,7 +6,7 @@ import { Source } from "../manifest/source";
 import { Project } from "../project";
 import { ensureDir, remove, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
-import { dirname, join } from "../utils/path";
+import { dirname, join, relative } from "../utils/path";
 import { Changeset } from "./changeset";
 import { Component, extensionToType } from "./component";
 import { codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
@@ -63,6 +63,11 @@ async function updateManifest(project: Project, changeset: Changeset) {
 			name: component.name,
 			path: join(project.paths.dir, srcPath)
 		};
+
+		// Skip adding individual entry if a wildcard already covers this component
+		if (isCoveredByWildcard(srcPath, project.manifest.src, project.paths.dir)) {
+			continue;
+		}
 
 		if (enforcement?.sort?.alphabetical && enforcement?.sort?.["by-types"]) {
 			// Both: type-then-alphabetical insertion
@@ -147,6 +152,38 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
 		: nameA.toLowerCase() > nameB.toLowerCase()
 			? 1
 			: 0;
+}
+
+/**
+ * Check whether a component's source path is already covered by a wildcard
+ * entry in the manifest.  If so, the component does not need an individual
+ * `[src]` listing — the wildcard will discover it on the next build/extract.
+ *
+ * Handles glob patterns of the form `baseDir/** /*.ext` (the format used by
+ * `vba init` defaults and `[src-properties].subfolders`).
+ */
+function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
+	for (const source of sources) {
+		if (!source.path.includes("*")) continue;
+
+		// Normalise the wildcard pattern to a path relative to the project
+		const pattern = source.path.startsWith(projectDir)
+			? relative(projectDir, source.path)
+			: source.path;
+
+		// Split on "/**/" to extract <baseDir> and <*>.ext
+		const globParts = pattern.split("/**/");
+		if (globParts.length === 2) {
+			const baseDir = globParts[0];
+			const extGlob = globParts[1]; // e.g. "*.bas"
+			const ext = extGlob.startsWith("*") ? extGlob.slice(1) : extGlob;
+
+			if (srcPath.startsWith(baseDir + "/") && srcPath.endsWith(ext)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 async function writeComponent(path: string, component: Component) {
