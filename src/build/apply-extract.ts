@@ -253,6 +253,11 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 			classified.references
 		);
 
+		console.error(
+			"[DEBUG applyExtract] writing manifest, references:",
+			JSON.stringify(project.manifest.references)
+		);
+
 		await writeManifest(project.manifest, project.paths.dir);
 	}
 }
