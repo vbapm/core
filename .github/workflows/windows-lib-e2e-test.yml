@@ -108,21 +108,6 @@ jobs:
         shell: pwsh
         run: .\scripts\ps\Diagnose-VBIDETypeLib.ps1
 
-      - name: Diagnose standard project build and export references
-        shell: pwsh
-        run: |
-          Set-Location tests/__fixtures__/projects/standard
-          Write-Output "=== Building standard project ==="
-          vba build 2>&1
-          Write-Output "`n=== Extracting ==="
-          vba extract --target xlsm 2>&1
-          Write-Output "`n=== vbaproject.toml [references] section ==="
-          Select-String -Pattern '\[references' -Context 0,5 vbaproject.toml
-          Write-Output "`n=== Checking if VBIDE is in project.json ==="
-          # The staging dir is temp, but the extract output would show references
-          Write-Output "`n=== vbaproject.toml full ==="
-          Get-Content vbaproject.toml
-
       - name: Run e2e tests
         shell: pwsh
         run: |
