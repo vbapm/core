@@ -19,6 +19,10 @@ Public Function ImportGraph(Graph As Variant) As String
 
     Set Values = JsonConverter.ParseJson(Graph)
     Set Document = App.GetDocument(Values("file"))
+    If Document Is Nothing Then
+        ImportGraph = Output.Result
+        Exit Function
+    End If
 
     DebugLog.Clear
     DebugLog.Log "ImportGraph", "Starting import for: " & Values("file")
@@ -88,6 +92,10 @@ Public Function ExportTo(Info As Variant) As String
 
     Set Values = JsonConverter.ParseJson(Info)
     Set Document = App.GetDocument(Values("file"))
+    If Document Is Nothing Then
+        ExportTo = Output.Result
+        Exit Function
+    End If
     Staging = Values("staging")
 
     ' Respect [src-properties] "empty-objects" flag (default: true)
@@ -132,6 +140,32 @@ Public Function ExportTo(Info As Variant) As String
 
     Project("name") = Document.VBProject.Name
     Set Project("references") = New Collection
+    Set Project("components") = New Collection
+
+    Dim CompInfo As Dictionary
+    Dim CompType As String
+
+    ' Collect component metadata (name + type) so the CLI can distinguish
+    ' document objects (vbext_ct_Document) from class modules (.cls).
+    For Each Component In Document.VBProject.VBComponents
+        Select Case Component.Type
+        Case vbext_ComponentType.vbext_ct_StdModule
+            CompType = "module"
+        Case vbext_ComponentType.vbext_ct_ClassModule
+            CompType = "class"
+        Case vbext_ComponentType.vbext_ct_Document
+            CompType = "object"
+        Case vbext_ComponentType.vbext_ct_MSForm
+            CompType = "form"
+        Case Else
+            CompType = "unknown"
+        End Select
+
+        Set CompInfo = New Dictionary
+        CompInfo("name") = Component.Name
+        CompInfo("type") = CompType
+        Project("components").Add CompInfo
+    Next Component
 
     Dim Ref As Reference
     Dim RefInfo As Dictionary
@@ -182,7 +216,12 @@ Public Function CreateDocument(Info As Variant) As String
     Dim App As New OfficeApplication
 
     Set Values = JsonConverter.ParseJson(Info)
-    App.CreateDocument Values("path")
+    Dim Doc As Object
+    Set Doc = App.CreateDocument(Values("path"))
+    If Doc Is Nothing Then
+        CreateDocument = Output.Result
+        Exit Function
+    End If
 
     CreateDocument = Output.Result
     Exit Function

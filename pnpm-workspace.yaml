@@ -3,3 +3,5 @@ allowBuilds:
   lefthook: true
   unrs-resolver: true
 minimumReleaseAge: 3
+minimumReleaseAgeExclude:
+  - '@decimalturn/toml-patch@2.0.1'

@@ -1,9 +1,10 @@
 import dedent from "@timhall/dedent";
 import {
-	applyChangeset,
-	compareBuildGraphs,
+	applyExtract,
+	classifyByPath,
 	loadFromExport,
-	loadFromProject,
+	resolveSourceFiles,
+	resolveTargetPaths,
 	toSrc
 } from "../build";
 import { env } from "../env";
@@ -51,12 +52,34 @@ export async function exportTarget(
 
 	if (!xmlOnly) {
 		// Compare project and exported and apply changes to project
-		const project_build_graph = await loadFromProject(project, dependencies);
+		const sources = await resolveSourceFiles(project);
 		const exported_build_graph = await loadFromExport(staging);
 		const transformed_build_graph = await toSrc(exported_build_graph);
 
-		const changeset = compareBuildGraphs(project_build_graph, transformed_build_graph);
-		await applyChangeset(project, changeset);
+		// Exclude dependency-owned components from the export so they
+		// aren't treated as project files
+		const depNames = new Set(dependencies.flatMap(m => m.src.map(s => s.name)));
+		const projectComponents = transformed_build_graph.components.filter(c => !depNames.has(c.name));
+
+		const targets = resolveTargetPaths(project, projectComponents);
+		const classified = classifyByPath(new Map(sources), targets);
+
+		// Compare references by name (unchanged from original compareBuildGraphs logic)
+		const existingRefs = new Map(project.manifest.references.map(r => [r.name, r]));
+		for (const ref of transformed_build_graph.references) {
+			const existing = existingRefs.get(ref.name);
+			if (existing) {
+				existingRefs.delete(ref.name);
+			} else {
+				classified.references.added.push(ref);
+			}
+		}
+		// Remaining in existingRefs are no longer in the workbook
+		for (const ref of existingRefs.values()) {
+			classified.references.removed.push(ref);
+		}
+
+		await applyExtract(project, classified);
 	}
 
 	// Move target to dest

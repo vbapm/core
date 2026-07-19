@@ -18,6 +18,7 @@ export const single = join(projects, "single");
 export const targetless = join(projects, "targetless");
 export const withDrawing = join(projects, "with-drawing");
 export const wildcard = join(projects, "wildcard");
+export const conflict = join(projects, "conflict");
 
 export const staging = join(cache, "staging");
 export const standardImport = join(staging, "standard", "import");

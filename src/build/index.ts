@@ -1,4 +1,10 @@
 export { applyChangeset } from "./apply-changeset";
+export {
+	applyExtract,
+	classifyByPath,
+	resolveSourceFiles,
+	resolveTargetPaths
+} from "./apply-extract";
 export { compareBuildGraphs } from "./compare-build-graphs";
 export { Component } from "./component";
 export { loadFromExport } from "./load-from-export";

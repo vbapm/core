@@ -220,6 +220,8 @@ function Run {
 			$excel = [Excel]::new()
 			try {
 				$result = $excel.Run($FilePath, $MacroName, $MacroArgValues)
+			} catch {
+				$result = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
 			} finally {
 				$excel.Dispose($KeepOpen)
 			}

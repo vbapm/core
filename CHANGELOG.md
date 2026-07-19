@@ -6,10 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-### Added
-
-
 ### Deprecated
 - `vba export` command is deprecated in favor of `vba extract`. It still functions but prints a deprecation warning and will be removed in a future version.
 
@@ -29,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New projects (`vba init`, `vba new`) now default to wildcard entries (e.g. `Modules = "src/**/*.bas"`) instead of listing every source file individually.
 - Wildcard entries in `[src]` now suppress duplicate individual entries on extract. When a component's path is already covered by an existing wildcard pattern, no redundant individual `[src]` listing is added, keeping `vbaproject.toml` clean.
 - `src-encoding` has moved from `[project]`/`[package]` to `[src-properties]` as `encoding`. Existing `vbaproject.toml` files with `src-encoding` under `[project]` or `[package]` will now receive a clear error message suggesting the migration. Per-source `encoding` on `[src]` entries is unchanged.
+
+### Fixed
+- Name conflict resolution on extract: when a `[src]` entry (e.g. `Module1`) points to a different component name (`Validation.bas`) but the workbook also contains a real `Module1`, both entries are preserved with a warning about the rename.
+- VBA addin errors now surface to the CLI via structured JSON output instead of being silently swallowed by `Err.Raise`.
+- Windows path separators are normalized when comparing wildcard-covered paths during extract.
+- Document objects (`ThisWorkbook`, sheet modules) are now placed in the correct subfolder (e.g. `src/Excel Objects/`) instead of being misclassified as class modules.
+- `Workbooks.Open` in the VBA addin no longer triggers VBA events, preventing external addins from interrupting CLI operations.
+
 
 ## [0.9.0-pre] - 2026-07-06
 

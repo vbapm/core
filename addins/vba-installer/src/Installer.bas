@@ -224,7 +224,7 @@ End Function
 Private Function GetReference(Project As VBProject, Guid As String, MajorVersion As Long, MinorVersion As Long) As Reference
     Dim Ref As Reference
     For Each Ref In Project.References
-        If Ref.Guid = Guid And Ref.Major = MajorVersion And Ref.Minor = MinorVersion Then
+        If Ref.Guid = Guid Then
             Set GetReference = Ref
         End If
     Next Ref

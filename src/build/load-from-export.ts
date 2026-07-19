@@ -6,7 +6,7 @@ import { pathExists, readFile, readJson } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, extname, join } from "../utils/path";
 import { BuildGraph } from "./build-graph";
-import { byComponentTypeThenName, Component, extensionToType } from "./component";
+import { byComponentTypeThenName, Component, ComponentType, extensionToType } from "./component";
 import { getSystemCodepage } from "./encoding-sniffer";
 
 const binary_extensions = [".frx"];
@@ -28,7 +28,7 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 			);
 		})
 		.map(file => join(staging, file));
-	const { name, references } = await readInfo(staging);
+	const { name, references, componentTypes } = await readInfo(staging);
 
 	const binaries: { [name: string]: string } = {};
 	const toComponents = files.filter(file => {
@@ -50,7 +50,9 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 		toComponents,
 		async file => {
 			const name = getName(file);
-			const type = extensionToType[extname(file)];
+			// Prefer type from project.json (distinguishes document objects
+			// from class modules) over extension-based detection.
+			const type = componentTypes.get(name) ?? extensionToType[extname(file)];
 			const code = await readFile(file);
 			const binary = <Buffer | undefined>(binaries[name] && (await readFile(binaries[name])));
 
@@ -78,18 +80,44 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 	};
 }
 
+interface ComponentInfo {
+	name: string;
+	type: string;
+}
+
 interface ProjectInfo {
 	name: string;
 	references: Reference[];
+	components?: ComponentInfo[];
 }
 
-async function readInfo(staging: string): Promise<ProjectInfo> {
+async function readInfo(staging: string): Promise<{
+	name: string;
+	references: Reference[];
+	componentTypes: Map<string, ComponentType>;
+}> {
 	const path = join(staging, "project.json");
-	if (!(await pathExists(path))) return { name: "VBAProject", references: [] };
+	if (!(await pathExists(path))) {
+		return { name: "VBAProject", references: [], componentTypes: new Map() };
+	}
 
-	const info = await readJson(path);
+	const info: ProjectInfo = await readJson(path);
+	const componentTypes = new Map<string, ComponentType>();
 
-	return info;
+	if (info.components) {
+		for (const comp of info.components) {
+			if (
+				comp.type === "module" ||
+				comp.type === "class" ||
+				comp.type === "form" ||
+				comp.type === "object"
+			) {
+				componentTypes.set(comp.name, comp.type);
+			}
+		}
+	}
+
+	return { name: info.name, references: info.references ?? [], componentTypes };
 }
 
 function isBinary(file: string): boolean {

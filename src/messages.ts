@@ -27,5 +27,6 @@ export enum Message {
 	RegistrySourceLocalOnly = "registry-source-local-only",
 	RegistrySourceSkipPull = "registry-source-skip-pull",
 
-	EncodingLossWarning = "encoding-loss-warning"
+	EncodingLossWarning = "encoding-loss-warning",
+	SourceNameMismatch = "source-name-mismatch"
 }

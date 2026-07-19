@@ -163,34 +163,48 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
  * entry in the manifest.  If so, the component does not need an individual
  * `[src]` listing — the wildcard will discover it on the next build/extract.
  *
- * Handles glob patterns of the form `baseDir/** /*.ext` (the format used by
- * `vba init` defaults and `[src-properties].subfolders`).
+ * Supports glob `*` (matches anything except `/`) and `**` (matches anything
+ * including `/`).  `** /` matches zero or more path segments.
  */
-function isCoveredByWildcard(srcPath: string, sources: Source[], projectDir: string): boolean {
+export function isCoveredByWildcard(
+	srcPath: string,
+	sources: Source[],
+	projectDir: string
+): boolean {
+	// Normalise to forward slashes for cross-platform glob matching
+	const normalisedPath = srcPath.replace(/\\/g, "/");
+
 	for (const source of sources) {
 		if (!source.path.includes("*")) continue;
 
-		// Normalise the wildcard pattern to a path relative to the project
-		const pattern = source.path.startsWith(projectDir)
+		// Normalise the wildcard pattern to a path relative to the project.
+		// Normalise to forward slashes — source.path uses / but
+		// projectDir may use \ on Windows.
+		const projectDirFwd = projectDir.replace(/\\/g, "/");
+		const pattern = source.path.startsWith(projectDirFwd)
 			? relative(projectDir, source.path)
 			: source.path;
 
-		// Split on "/**/" to extract <baseDir> and <*>.ext
-		const globParts = pattern.split("/**/");
-		if (globParts.length === 2) {
-			const baseDir = globParts[0];
-			const extGlob = globParts[1]; // e.g. "*.bas"
-			const ext = extGlob.startsWith("*") ? extGlob.slice(1) : extGlob;
+		// Convert glob to regex:
+		//   **/  → zero or more path segments (e.g. dir/**/*.ext)
+		//   **   → anything including /
+		//   *    → anything except /
+		const regexStr = pattern
+			.replace(/[.+^${}()|[\]\\]/g, "\\$&")
+			.replace(/\*\*\//g, "<<<GSTARSLASH>>>")
+			.replace(/\*\*/g, "<<<GSTAR>>>")
+			.replace(/\*/g, "[^/]*")
+			.replace(/<<<GSTARSLASH>>>/g, "(.*/)?")
+			.replace(/<<<GSTAR>>>/g, ".*");
 
-			if (srcPath.startsWith(baseDir + "/") && srcPath.endsWith(ext)) {
-				return true;
-			}
+		if (new RegExp(`^${regexStr}$`).test(normalisedPath)) {
+			return true;
 		}
 	}
 	return false;
 }
 
-async function writeComponent(path: string, component: Component) {
+export async function writeComponent(path: string, component: Component) {
 	const dir = dirname(path);
 	await ensureDir(dir);
 

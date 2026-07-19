@@ -104,6 +104,10 @@ jobs:
           where.exe vba
           vba --version
 
+      - name: Diagnose VBIDE type library availability
+        shell: pwsh
+        run: .\scripts\ps\Diagnose-VBIDETypeLib.ps1
+
       - name: Run e2e tests
         shell: pwsh
         run: |
