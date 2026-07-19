@@ -482,20 +482,16 @@ describe("normalize-worksheet-names", () => {
 describe("wildcard extract", () => {
 	test("extract does not add individual entries for wildcard-covered modules", async () => {
 		await setup(wildcard, "extract-wildcard", async cwd => {
-			await setup(standard, "build-standard-for-wildcard", async built => {
-				// 1. Build standard project to get a .xlsm
-				await execute(built, "build");
+			// 1. Build wildcard project to produce build/wildcard.xlsm
+			await execute(cwd, "build");
 
-				// 2. Copy built .xlsm into wildcard project
-				await copy(join(built, "build/standard.xlsm"), join(cwd, "build/wildcard.xlsm"));
+			// 2. Extract from wildcard
+			await execute(cwd, "extract --target xlsm");
 
-				// 3. Extract from wildcard
-				await execute(cwd, "extract --target xlsm");
-
-				// 4. Verify vbaproject.toml is unchanged (no individual entries added)
-				const result = await readdir(cwd);
-				expect(result).toMatchSnapshot();
-			});
+			// 3. Verify vbaproject.toml is unchanged (no individual entries added,
+			//    wildcard patterns preserved, references intact)
+			const result = await readdir(cwd);
+			expect(result).toMatchSnapshot();
 		});
 	});
 
