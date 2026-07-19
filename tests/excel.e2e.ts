@@ -211,11 +211,11 @@ describe("export", () => {
 	});
 	test("export preserves subfolders config in vbaproject.toml", async () => {
 		await setup(standard, "export-subfolder", async cwd => {
-			// 1. Add subfolders config via [src-properties]
+			// 1. Add subfolders config via [source]
 			let toml = await readFile(join(cwd, "vbaproject.toml"), "utf-8");
 			toml = toml.replace(
 				'target = { type = "xlsm", path = "targets/xlsm" }',
-				'target = { type = "xlsm", path = "targets/xlsm" }\n\n[src-properties]\nsubfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }'
+				'target = { type = "xlsm", path = "targets/xlsm" }\n\n[source]\nsubfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }'
 			);
 			await writeFile(join(cwd, "vbaproject.toml"), toml);
 
@@ -239,7 +239,7 @@ describe("export", () => {
 
 			// 2. Add include-empty-objects = false
 			let toml = await readFile(join(dir, "vbaproject.toml"), "utf-8");
-			toml = toml.replace("[src-properties]", "[src-properties]\ninclude-empty-objects = false");
+			toml = toml.replace("[source]", "[source]\ninclude-empty-objects = false");
 			await writeFile(join(dir, "vbaproject.toml"), toml);
 
 			// 3. Export — empty document objects should be skipped

@@ -98,7 +98,7 @@ Public Function ExportTo(Info As Variant) As String
     End If
     Staging = Values("staging")
 
-    ' Respect [src-properties] "empty-objects" flag (default: true)
+    ' Respect [source] "include-empty-objects" flag (default: true)
     Dim IncludeEmptyObjects As Boolean
     IncludeEmptyObjects = True
     If Values.Exists("includeEmptyObjects") Then

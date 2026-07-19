@@ -70,14 +70,14 @@ Module1 = "src/Module1.bas"
 		);
 	});
 
-	test("non-ASCII with encoding in [src-properties] → builds fine", async () => {
+	test("non-ASCII with encoding in [source] → builds fine", async () => {
 		const toml = `\
 [package]
 name = "non-ascii-enc"
 version = "1.0.0"
 authors = ["Test"]
 
-[src-properties]
+[source]
 encoding = "cp1252"
 
 [src]
@@ -104,7 +104,7 @@ name = "per-source-enc"
 version = "1.0.0"
 authors = ["Test"]
 
-[src-properties]
+[source]
 encoding = "cp1252"
 
 [src]

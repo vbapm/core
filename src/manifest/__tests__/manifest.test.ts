@@ -55,7 +55,7 @@ test("loads valid sources", () => {
 	expect(normalizeManifest(parseManifest(value, FIXTURES))).toMatchSnapshot();
 });
 
-test("rejects src-encoding in [project] with suggestion to move to [src-properties]", () => {
+test("rejects src-encoding in [project] with suggestion to move to [source]", () => {
 	const value = {
 		...BASE_MANIFEST,
 		package: {
@@ -65,13 +65,13 @@ test("rejects src-encoding in [project] with suggestion to move to [src-properti
 		src: { A: "src/a.bas" }
 	};
 
-	expect(() => parseManifest(value, FIXTURES)).toThrow(/\[src-properties\]/);
+	expect(() => parseManifest(value, FIXTURES)).toThrow(/\[source\]/);
 });
 
-test("loads encoding from [src-properties]", () => {
+test("loads encoding from [source]", () => {
 	const value = {
 		...BASE_MANIFEST,
-		"src-properties": {
+		source: {
 			encoding: "cp1252"
 		},
 		src: { A: "src/a.bas" }
@@ -331,17 +331,17 @@ describe("section key validation", () => {
 		expect(manifest.src[0].path).toContain("src/**/*.cls");
 	});
 
-	test("parses [src-properties] with sort and subfolders", async () => {
+	test("parses [source] with sort and subfolders", async () => {
 		const toml = dedent`
 			[project]
 			name = "with-props"
 			target = "xlsm"
 
-			[src-properties]
+			[source]
 			sort.by-types = true
 			sort.alphabetical = true
 
-			[src-properties.subfolders]
+			[source.subfolders]
 			Modules = "Modules"
 			Classes = "Class Modules"
 

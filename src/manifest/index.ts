@@ -161,12 +161,12 @@ export function parseManifest(value: any, dir: string): Manifest {
 			...projectMetadata
 		} = value.project;
 
-		// src-encoding now lives under [src-properties], not [project]
+		// src-encoding now lives under [source], not [project]
 		if (projectSrcEncoding !== undefined) {
 			manifestOk(
 				false,
-				`"src-encoding" should be set in the [src-properties] section, not in [project].` +
-					`\n\nMove it to [src-properties]:\n\n  [src-properties]\n  encoding = "${projectSrcEncoding}"`
+				`"src-encoding" should be set in the [source] section, not in [project].` +
+					`\n\nMove it to [source]:\n\n  [source]\n  encoding = "${projectSrcEncoding}"`
 			);
 		}
 
@@ -202,12 +202,12 @@ export function parseManifest(value: any, dir: string): Manifest {
 			...packageMetadata
 		} = value.package;
 
-		// src-encoding now lives under [src-properties], not [package]
+		// src-encoding now lives under [source], not [package]
 		if (packageSrcEncoding !== undefined) {
 			manifestOk(
 				false,
-				`"src-encoding" should be set in the [src-properties] section, not in [package].` +
-					`\n\nMove it to [src-properties]:\n\n  [src-properties]\n  encoding = "${packageSrcEncoding}"`
+				`"src-encoding" should be set in the [source] section, not in [package].` +
+					`\n\nMove it to [source]:\n\n  [source]\n  encoding = "${packageSrcEncoding}"`
 			);
 		}
 
@@ -234,7 +234,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 	}
 
 	const src = parseSrc(value.src || {}, dir);
-	const srcProperties = parseSrcProperties(value["src-properties"]);
+	const srcProperties = parseSrcProperties(value["source"]);
 	srcEncoding = srcProperties?.encoding;
 	const srcStructure = detectSrcStructure(src);
 	const dependencies = parseDependencies(value.dependencies || {}, dir);
@@ -353,7 +353,7 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 	}
 
 	if (manifest.srcProperties) {
-		value["src-properties"] = manifest.srcProperties;
+		value["source"] = manifest.srcProperties;
 	}
 
 	value.src = formatSrc(manifest.src, dir);

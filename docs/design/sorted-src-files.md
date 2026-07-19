@@ -2,7 +2,7 @@
 
 > **Status:** Design (replaces the narrow "Sorted Source Files" plan).
 > The previous implementation of `byComponentTypeThenName` is already in the code;
-> this document expands on it with a configurable `[src-properties]` table.
+> this document expands on it with a configurable `[source]` table.
 
 ---
 
@@ -12,12 +12,12 @@ VBA projects are more like a cohesive collection of scripts than a formally
 compiled assembly. The philosophy of listing every file individually in
 `vbaproject.toml` — inherited from C#-style `.csproj` manifests — is overly
 verbose for VBA. This design introduces **two complementary listing modes**
-controlled by a new `[src-properties]` table:
+controlled by a new `[source]` table:
 
 | Mode | Key | Description |
 |---|---|---|
 | **Grouped** | 4 reserved keys | Use wildcard patterns under up to 4 reserved keys (`Objects`, `Modules`, `Forms`, `Classes`). `Objects` and `Classes` both match `.cls` files and are pooled — the user controls how to split them (e.g. by subdirectory). **The default for new projects.** |
-| **Individual** | one key per file | List every source file by name. The order is governed by the detected convention, optionally enforced via `[src-properties]`. |
+| **Individual** | one key per file | List every source file by name. The order is governed by the detected convention, optionally enforced via `[source]`. |
 
 In *both* modes the manifest remains easy to scan and the tooling knows how to
 add, remove, and reorder entries predictably.
@@ -43,17 +43,17 @@ Once detected, the tool respects this convention on subsequent operations
 
 ---
 
-## 3. The `[src-properties]` Table (Optional Enforcement)
+## 3. The `[source]` Table (Optional Enforcement)
 
-The `[src-properties]` section is **optional**. Its purpose is not to describe
+The `[source]` section is **optional**. Its purpose is not to describe
 what convention is already in place (the tool detects that automatically), but
 to tell the tool to **actively enforce** a specific ordering — reordering
 entries on add/export, validating structure, and so on.
 
-If `[src-properties]` is absent, the tool is hands-off: it detects the
+If `[source]` is absent, the tool is hands-off: it detects the
 convention and works with it, but never reorders.
 
-If `[src-properties]` is present, the tool enforces what the keys say.
+If `[source]` is present, the tool enforces what the keys say.
 
 ### 3.1 Key reference
 
@@ -64,13 +64,13 @@ If `[src-properties]` is present, the tool enforces what the keys say.
 | `sort.alphabetical` | `boolean` | (Individual mode) Enforce alphabetical order. When combined with `sort.by-types`, alphabetical is *within* each type group; alone, it's global. |
 | `subfolders` | `{ Modules?, Forms?, Classes?, Objects? }` | Maps component types to subdirectories under `src/` (§4.6). |
 
-All keys default to `false` when the `[src-properties]` table is present but
+All keys default to `false` when the `[source]` table is present but
 a key is omitted — i.e., you opt in to each enforcement individually.
 
 ### 3.2 Example: enforcement in individual mode
 
 ```toml
-[src-properties]
+[source]
 sort.by-types = true
 sort.alphabetical = true
 ```
@@ -82,7 +82,7 @@ appending at the end.
 ### 3.3 Example: no enforcement (the common case)
 
 ```toml
-# No [src-properties] section at all.
+# No [source] section at all.
 # The tool detects the convention and works with it as-is.
 # No automatic reordering happens.
 
@@ -99,7 +99,7 @@ Classes = "src/**/*.cls"
 ### 4.1 Manifest shape
 
 The grouped convention uses up to four reserved keys in `[src]` — no
-`[src-properties]` needed. The tool detects this convention automatically.
+`[source]` needed. The tool detects this convention automatically.
 `Objects` and `Classes` both match `.cls` files and are pooled; the user
 controls how to split them (typically by subdirectory).
 
@@ -131,7 +131,7 @@ At build time the tool:
 Files within each group are used in the order returned by glob resolution
 (typically filesystem order). **No sorting is applied unless `sort.*` options
 are explicitly set.** Even in grouped mode, the `sort.by-types` and
-`sort.alphabetical` keys from `[src-properties]` are respected for ordering
+`sort.alphabetical` keys from `[source]` are respected for ordering
 within each type group — but the tool never imposes a sort that the user did
 not request.
 
@@ -187,11 +187,11 @@ Access forms, etc.) — all `.cls` variants live under `Classes`.
 
 ### 4.6 `subfolders` config
 
-The `subfolders` key in `[src-properties]` controls where new files are
+The `subfolders` key in `[source]` controls where new files are
 placed on disk (used by `vba add` and `vba export`). It supports four keys:
 
 ```toml
-[src-properties]
+[source]
 subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Class Modules", Objects = "Excel Objects" }
 ```
 
@@ -215,7 +215,7 @@ keywords — the separation is by subdirectory, not by naming convention.
 
 ## 5. Individual Listing Convention
 
-Every source file has its own key in `[src]`. No `[src-properties]` is needed —
+Every source file has its own key in `[src]`. No `[source]` is needed —
 the tool detects the sorting pattern automatically. Document objects
 (`ThisWorkbook`, `Sheet1`, etc.) are listed alongside user classes with
 no special treatment.
@@ -246,14 +246,14 @@ The tool detects which sorting convention (if any) is in use via
 
 ### 5.2 Adding a new file (no enforcement)
 
-Without a `[src-properties]` enforcement table:
+Without a `[source]` enforcement table:
 
 - **Pattern detected** (e.g. sorted-by-type-then-alphabetical): The tool
   respects the convention but does **not** reorder. The new entry is appended
   at the end. The user can manually reposition it.
 - **Unstructured**: Append at the end.
 
-With `[src-properties]` enforcement (§3):
+With `[source]` enforcement (§3):
 
 - The tool actively inserts at the correct sorted position and rewrites
   `[src]`.
@@ -335,33 +335,33 @@ sorted position.
 ### 7.4 `vba build`
 
 Internal ordering is deterministic for byte-identical output. Does not
-reorder manifest entries or override `[src-properties]`.
+reorder manifest entries or override `[source]`.
   ordering (deterministic component order during build).
 - `patchToml()` continues to preserve existing formatting in the user's
   `vbaproject.toml`.
-- Existing projects **without** `[src-properties]` are not modified; the tool
+- Existing projects **without** `[source]` are not modified; the tool
   detects their convention via `detectSrcStructure()` and works with whatever
   pattern it finds.
 
 ### What changes
 
 - New projects (`vba init`, `vba new`) default to the **grouped convention** —
-  3 keys in `[src]` with glob patterns. No `[src-properties]` is written.
+  3 keys in `[src]` with glob patterns. No `[source]` is written.
 - `formatSrc()` becomes aware of both the detected convention and any
-  `[src-properties]` enforcement settings.
+  `[source]` enforcement settings.
 - `updateManifest()` in `apply-changeset.ts`: appends when no enforcement is
   configured; inserts at sorted position when enforcement is active; skips
   entirely for grouped convention.
 - A new `detectSrcStructure()` helper analyses the current `[src]` order.
 - Users can opt into individual listing at init time with `--list-all`.
-- `[src-properties]` is now purely an enforcement/validation mechanism, not
+- `[source]` is now purely an enforcement/validation mechanism, not
   a descriptor of what the file already looks like.
 
 ### Risk: `apply-changeset.ts` currently appends unsorted
 
 The current `updateManifest()` pushes new sources to the end of the array,
 which means after the first build the `[src]` section loses any sorted order
-it may have had. Phase 2, item 5 fixes this: when `[src-properties]`
+it may have had. Phase 2, item 5 fixes this: when `[source]`
 enforcement is active, entries are inserted at the correct sorted position;
 otherwise, the detected convention is respected but no reordering is forced.
 

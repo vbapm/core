@@ -244,7 +244,7 @@ version = \\"0.0.0\\"
 authors = []
 license = \\"UNLICENSED\\"
 
-[src-properties]
+[source]
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -329,7 +329,7 @@ authors = []
 license = \\"UNLICENSED\\"
 target = \\"xlsm\\"
 
-[src-properties]
+[source]
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -353,7 +353,7 @@ version = \\"0.1.0-beta.0\\"
 authors = []
 license = \\"UNLICENSED\\"
 
-[src-properties]
+[source]
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -377,7 +377,7 @@ version = \\"2.0.0\\"
 authors = []
 license = \\"UNLICENSED\\"
 
-[src-properties]
+[source]
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [src]
@@ -422,7 +422,7 @@ Forms = \\"src/Forms/**/*.frm\\"
 Modules = \\"src/Modules/**/*.bas\\"
 Classes = \\"src/Class Modules/**/*.cls\\"
 
-[src-properties]
+[source]
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [references.VBIDE]

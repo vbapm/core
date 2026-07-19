@@ -586,12 +586,12 @@ Wildcards are expanded at build time — any file on disk matching the glob is p
 > **Note:** Wildcard and individual entries can coexist. Components already covered
 > by an existing wildcard pattern do not get duplicate individual entries added which means the wildcard handles discovery on the next build or extract.
 
-### [src-properties]
+### [source]
 
 Optional settings that control how source files are organised and written to disk.
 
 ```toml
-[src-properties]
+[source]
 # folder = "src"            # Implicit overridable default. 
 subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 ```

@@ -82,7 +82,7 @@ describe("resolveTargetPaths", () => {
 		return new Component(type, Buffer.from(code), Codepage.Unknown, {});
 	}
 
-	test("resolves target paths using folder and subfolders from src-properties", async () => {
+	test("resolves target paths using folder and subfolders from [source]", async () => {
 		const { project } = await setup(wildcard);
 
 		const components = [

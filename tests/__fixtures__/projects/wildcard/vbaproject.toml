@@ -10,7 +10,7 @@ Forms = "src/Forms/**/*.frm"
 Modules = "src/Modules/**/*.bas"
 Classes = "src/Class Modules/**/*.cls"
 
-[src-properties]
+[source]
 subfolders = { Objects = "Excel Objects", Forms = "Forms", Modules = "Modules", Classes = "Class Modules" }
 
 [references.VBIDE]
