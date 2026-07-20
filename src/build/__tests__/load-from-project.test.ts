@@ -1,5 +1,6 @@
-import { complex, dev, empty } from "../../../tests/__fixtures__";
+import { complex, dev, empty, nameMismatch } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
+import { env } from "../../env";
 import { loadFromProject } from "../load-from-project";
 import { normalizeBuildGraph } from "../__helpers__/build-graph";
 
@@ -47,4 +48,23 @@ test("should default BuildGraph name to VBAProject when codename not set", async
 	const graph = await loadFromProject(project, dependencies);
 
 	expect(graph.name).toBe("VBAProject");
+});
+
+test("should warn when [src] key does not match Attribute VB_Name", async () => {
+	const log = jest.spyOn(env.reporter, "log");
+	const { project, dependencies } = await setup(nameMismatch);
+
+	const graph = await loadFromProject(project, dependencies);
+
+	// Build should still succeed despite the mismatch
+	expect(graph.components).toHaveLength(1);
+	expect(graph.components[0].name).toBe("Bonjour");
+
+	// Warning should be emitted
+	expect(log).toHaveBeenCalledWith(
+		expect.any(String), // Message.SourceNameMismatch
+		expect.stringContaining('"Hello" in [src] does not match Attribute VB_Name = "Bonjour"')
+	);
+
+	log.mockRestore();
 });
