@@ -80,7 +80,8 @@ export enum ErrorCode {
 	InvalidVersion = "invalid-version",
 	OpenTargetNotBuilt = "open-target-not-built",
 	OpenTargetFailed = "open-target-failed",
-	CloseTargetUnsavedChanges = "close-target-unsaved-changes"
+	CloseTargetUnsavedChanges = "close-target-unsaved-changes",
+	SourceNameMismatch = "source-name-mismatch"
 }
 
 export function manifestOk(value: any, message: string) {
