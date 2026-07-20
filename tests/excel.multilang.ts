@@ -121,7 +121,7 @@ const FIXTURES: MultilingualFixture[] = [
 	{
 		codepage: "1252",
 		dir: join(fixturesDir, "cp1252"),
-		filename: "Hello.bas",
+		filename: "Bonjour.bas",
 		expectedStrings: [
 			"é è ê ë à â ä ù û ü ç",
 			"É È Ê Ë À Â Ä Ù Û Ü Ç",
@@ -134,43 +134,43 @@ const FIXTURES: MultilingualFixture[] = [
 	{
 		codepage: "1251",
 		dir: join(fixturesDir, "cp1251"),
-		filename: "Hello.bas",
+		filename: "Privet.bas",
 		expectedStrings: ["Привет мир", "А Б В Г Д Е"]
 	},
 	{
 		codepage: "1250",
 		dir: join(fixturesDir, "cp1250"),
-		filename: "Hello.bas",
+		filename: "Witaj.bas",
 		expectedStrings: ["ą ć ę ł ń ó ś ź ż", "Ą Ć Ę Ł Ń Ó Ś Ź Ż", "Witaj świecie"]
 	},
 	{
 		codepage: "932",
 		dir: join(fixturesDir, "cp932"),
-		filename: "Hello.bas",
+		filename: "Konnichiwa.bas",
 		expectedStrings: ["こんにちは世界", "日本語", "漢字"]
 	},
 	{
 		codepage: "936",
 		dir: join(fixturesDir, "cp936"),
-		filename: "Hello.bas",
+		filename: "NiHao.bas",
 		expectedStrings: ["你好世界", "简体中文", "汉字"]
 	},
 	{
 		codepage: "874",
 		dir: join(fixturesDir, "cp874"),
-		filename: "Hello.bas",
+		filename: "Sawasdee.bas",
 		expectedStrings: ["สวัสดี", "ไทย", "ภาษาไทย"]
 	},
 	{
 		codepage: "949",
 		dir: join(fixturesDir, "cp949"),
-		filename: "Hello.bas",
+		filename: "Annyeong.bas",
 		expectedStrings: ["안녕하세요", "한국어", "한글"]
 	},
 	{
 		codepage: "950",
 		dir: join(fixturesDir, "cp950"),
-		filename: "Hello.bas",
+		filename: "NiHao.bas",
 		expectedStrings: ["你好世界", "繁體中文", "漢字", "臺灣"]
 	}
 ];

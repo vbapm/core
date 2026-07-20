@@ -1,9 +1,9 @@
 Attribute VB_Name = "NiHao"
 Option Explicit
 
-' ä¸­æ–‡æµ‹è¯• : ä½ å¥½ä¸–ç•Œï¼
-' ç®€ä½“ä¸­æ–‡ æ±‰å­—
+' ÖĞÎÄ²âÊÔ : ÄãºÃÊÀ½ç£¡
+' ¼òÌåÖĞÎÄ ºº×Ö
 
 Public Function Hello() As String
-    Hello = "ä½ å¥½ä¸–ç•Œï¼"
+    Hello = "ÄãºÃÊÀ½ç£¡"
 End Function

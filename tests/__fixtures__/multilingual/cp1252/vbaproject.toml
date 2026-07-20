@@ -7,4 +7,4 @@ target = { type = "xlsm", path = "targets/xlsm" }
 encoding = "cp1252"
 
 [src]
-Hello = "src/Hello.bas"
+Bonjour = "src/Bonjour.bas"
