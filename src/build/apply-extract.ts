@@ -78,11 +78,11 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 
 /**
  * Resolve target file paths for exported components based on the project's
- * `[src-properties]` (folder + subfolders).
+ * `[source]` (folder + subfolders).
  *
  * Each component is placed under `folder/subfolder/component.filename`, where:
- * - `folder` comes from `[src-properties].folder` (default `"src"`)
- * - `subfolder` maps the component type via `[src-properties].subfolders`
+ * - `folder` comes from `[source].folder` (default `"src"`)
+ * - `subfolder` maps the component type via `[source].subfolders`
  *
  * @returns Map keyed by absolute target file path.
  */

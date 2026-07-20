@@ -499,16 +499,18 @@ The vbapm manifest (vbaproject.toml) serves as the foundation for your project a
 The `[package]` / `[project]` section includes general information about your package. You should choose `[package]` if your project is only intended to be used as a utility inside another project and `[project]` if your project is a standalone tool.
 
 Here are the main properties:
-- `name` (_required_)
-- `version` (_required_ for `[package]`)
-- `authors` (_required_ for `[package]`)
-- `target` (_required_ for `[project]`)
+- `name` (_required_): The name of the project/package
+- `version` (_required_ for `[package]`): version number following [semver](https://semver.org/).
+- `authors` (_required_ for `[package]`): name(s) of the author(s)
+- `target` (_required_ for `[project]`): define what application/extension to use when building your project.
+- `codename` custom VBA project name shown in the VBE (defaults to `"VBAProject"`)
 
 **Example 1**
 ```toml
 [project]
 name = "awesome-excel-project"
 target = "xlsm"
+codename = "AwesomeProject"
 ```
 
 **Example 2**
@@ -519,10 +521,10 @@ authors = ["Me <me@email.com>"]
 version = "0.1.0"
 ```
 
-#### [version]
+#### version
 vbapm follows [Semantic Versioning](https://semver.org/). Make sure you adopt a compatible versioning approach if you intend to publish to the repository.
 
-#### [target]
+#### target
 `target` is used to define what application/extension to use when building your project. It can be a string for the extension, in which case `target/` includes the source files for creating the target. Otherwise, `type` and `path` can be used to define a custom target path.
 
 Example 1:
@@ -535,6 +537,15 @@ Example 2:
 ```toml
 target = { type = "xlam", path = "targets/xlam" }
 ```
+
+#### codename
+
+`codename` sets the VBA project name displayed in the Visual Basic Editor (VBE). When omitted, the default `"VBAProject"` is used. Only valid for `[project]` — ignored for `[package]`.
+
+```toml
+codename = "MyCustomProject"
+```
+
 
 #### [build-dir]
 `build-dir` specifies where the built `.xlsm` / `.xlam` file is written. Defaults to `"build"` when omitted. Set to `"."` to output in the project root.
@@ -575,12 +586,12 @@ Wildcards are expanded at build time — any file on disk matching the glob is p
 > **Note:** Wildcard and individual entries can coexist. Components already covered
 > by an existing wildcard pattern do not get duplicate individual entries added which means the wildcard handles discovery on the next build or extract.
 
-### [src-properties]
+### [source]
 
 Optional settings that control how source files are organised and written to disk.
 
 ```toml
-[src-properties]
+[source]
 # folder = "src"            # Implicit overridable default. 
 subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 ```
@@ -594,6 +605,8 @@ subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 | `include-empty-objects` | `true` | When `false`, blank document objects (ThisWorkbook, sheet modules) are skipped during export. |
 
 ### [dependencies]
+
+The dependencies section lists the packages that your project depends on. Each dependency can be specified in one of three ways:
 
 `name = "version"` or
 

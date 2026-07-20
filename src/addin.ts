@@ -85,6 +85,7 @@ export async function exportTo(
 		JSON.stringify({
 			file,
 			staging,
+			// Respect [source] "include-empty-objects" flag (default: true)
 			includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
 		})
 	]);

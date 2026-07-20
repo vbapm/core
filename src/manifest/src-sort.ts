@@ -13,7 +13,7 @@ export interface SrcSubfolders {
 	Objects?: string;
 }
 
-/** Parsed form of the optional `[src-properties]` TOML section. */
+/** Parsed form of the optional `[source]` TOML section. */
 export interface SrcProperties {
 	/** Defaults to `"src"`.  The base directory for source files (relative
 	 * to the project root).  New components are placed here on extract and
@@ -33,7 +33,7 @@ export interface SrcProperties {
 }
 
 /**
- * Resolve the source folder from `[src-properties]`.  Defaults to `"src"`.
+ * Resolve the source folder from `[source]`.  Defaults to `"src"`.
  */
 export function resolveSrcFolder(srcProperties: SrcProperties | undefined): string {
 	return srcProperties?.folder ?? "src";
@@ -41,7 +41,7 @@ export function resolveSrcFolder(srcProperties: SrcProperties | undefined): stri
 
 /**
  * Resolve the subdirectory under the source folder for a given component type.
- * Uses the `subfolders` config from `[src-properties]` if present,
+ * Uses the `subfolders` config from `[source]` if present,
  * otherwise defaults to placing all files directly under the source folder.
  */
 export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type: string): string {
@@ -79,7 +79,7 @@ export interface SrcStructure {
 
 /**
  * Detect the organisational structure of the `[src]` section from the parsed
- * source entries alone — no `[src-properties]` needed.
+ * source entries alone — no `[source]` needed.
  */
 export function detectSrcStructure(src: Source[]): SrcStructure {
 	// ---- empty src ----
@@ -157,7 +157,7 @@ export function detectSrcStructure(src: Source[]): SrcStructure {
 }
 
 /**
- * Parse the `[src-properties]` TOML section into a typed object.
+ * Parse the `[source]` TOML section into a typed object.
  * Returns `undefined` when the section is absent.
  */
 export function parseSrcProperties(raw: any): SrcProperties | undefined {

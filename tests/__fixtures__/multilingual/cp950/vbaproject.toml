@@ -3,7 +3,7 @@
 name = "multilingual-cp950"
 target = { type = "xlsm", path = "targets/xlsm" }
 
-[src-properties]
+[source]
 encoding = "cp950"
 
 [src]

@@ -48,7 +48,7 @@ name = "transcode-test"
 version = "1.0.0"
 authors = ["Test"]
 
-[src-properties]
+[source]
 encoding = "cp1252"
 
 [src]
