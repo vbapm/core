@@ -269,8 +269,8 @@ function validateSrcNames(project: Project, components: Component[]): void {
 				Message.SourceNameMismatch,
 				yellowBright(
 					`WARN: "${source.name}" in [src] does not match Attribute VB_Name = "${comp.name}" ` +
-						`in "${relative(project.paths.dir, source.path)}". ` +
-						`Run "vbapm fix-manifest src" to fix.`
+						`in "${relative(project.paths.dir, source.path)}".\n` +
+						`  Run "vbapm manifest fix" to rename the [src] key automatically.`
 				)
 			);
 		}
