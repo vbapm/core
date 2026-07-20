@@ -33,11 +33,18 @@ jobs:
       - name: Verify fixture encoding after checkout
         shell: pwsh
         run: |
-          @("cp1252","cp1251","cp1250","cp932","cp936") | ForEach-Object {
-            $file = "tests/__fixtures__/multilingual/$_/src/Hello.bas"
+          $files = @{
+            cp1252 = "Bonjour.bas"
+            cp1251 = "Privet.bas"
+            cp1250 = "Witaj.bas"
+            cp932  = "Konnichiwa.bas"
+            cp936  = "NiHao.bas"
+          }
+          foreach ($cp in $files.Keys) {
+            $file = "tests/__fixtures__/multilingual/$cp/src/$($files[$cp])"
             $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $file).Path)
             $hex = ($bytes | ForEach-Object { '{0:X2}' -f $_ }) -join ' '
-            Write-Output "$_ ($($bytes.Length) bytes): $hex"
+            Write-Output "$cp ($($bytes.Length) bytes): $hex"
           }
 
       - name: Setup VBA runtime
