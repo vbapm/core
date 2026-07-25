@@ -28,7 +28,8 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	open: async () => (await import("./vbapm-open")).default,
 	close: async () => (await import("./vbapm-close")).default,
 	run: async () => (await import("./vbapm-run")).default,
-	version: async () => (await import("./vbapm-version")).default
+	version: async () => (await import("./vbapm-version")).default,
+	manifest: async () => (await import("./vbapm-manifest")).default
 };
 
 const args = mri(process.argv.slice(2), {

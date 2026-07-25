@@ -1,6 +1,9 @@
 import dedent from "@timhall/dedent";
+import { yellowBright } from "@timhall/ansi-colors";
 import walk from "walk-sync";
+import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
+import { Message } from "../messages";
 import { Manifest } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Project } from "../project";
@@ -114,6 +117,10 @@ export async function loadFromProject(
 	}
 
 	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
+
+	// Validate that non-wildcard [src] keys match their file's Attribute VB_Name
+	validateSrcNames(project, components);
+
 	const graph = {
 		name: project.manifest.codename || "VBAProject",
 		components,
@@ -235,4 +242,37 @@ function hasNonAscii(str: string): boolean {
 		if (str.charCodeAt(i) > 127) return true;
 	}
 	return false;
+}
+
+/**
+ * Validate that every non-wildcard [src] key matches the file's
+ * Attribute VB_Name.  Mismatches could cause roundtrip renames
+ * when exporting and re-importing, so we warn the user.
+ */
+function validateSrcNames(project: Project, components: Component[]): void {
+	// Build a map from component path to component (for single-path loads)
+	const compByPath = new Map<string, Component>();
+	for (const c of components) {
+		if (c.details.path) compByPath.set(c.details.path, c);
+	}
+
+	for (const source of project.manifest.src) {
+		if (source.path.includes("*")) continue;
+
+		const comp = compByPath.get(source.path);
+		if (!comp) continue;
+
+		// The loaded component's name comes from Attribute VB_Name.
+		// Warn if the manifest key doesn't match.
+		if (source.name !== comp.name) {
+			env.reporter.log(
+				Message.SourceNameMismatch,
+				yellowBright(
+					`WARN: "${source.name}" in [src] does not match Attribute VB_Name = "${comp.name}" ` +
+						`in "${relative(project.paths.dir, source.path)}".\n` +
+						`  Run "vbapm manifest fix" to rename the [src] key automatically.`
+				)
+			);
+		}
+	}
 }
