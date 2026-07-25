@@ -67,6 +67,8 @@ export interface Manifest extends Snapshot {
 	srcEncoding?: string;
 	srcProperties?: SrcProperties;
 	srcStructure?: SrcStructure;
+	/** True when the legacy `[src]` TOML key was used instead of `[source.files]`. */
+	srcDeprecated?: boolean;
 	codename?: string;
 	references: Reference[];
 	devSrc: Source[];
@@ -233,7 +235,9 @@ export function parseManifest(value: any, dir: string): Manifest {
 		buildDir = normalize(buildDir);
 	}
 
-	const src = parseSrc(value.src || {}, dir);
+	const srcRaw = value["source"]?.files ?? value.src ?? {};
+	const srcDeprecated = value.src !== undefined && value["source"]?.files === undefined;
+	const src = parseSrc(srcRaw, dir);
 	const srcProperties = parseSrcProperties(value["source"]);
 	srcEncoding = srcProperties?.encoding;
 	const srcStructure = detectSrcStructure(src);
@@ -253,6 +257,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		srcEncoding,
 		srcProperties,
 		srcStructure,
+		srcDeprecated,
 		codename,
 		dependencies,
 		references,
@@ -352,11 +357,13 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["codename"] = manifest.codename;
 	}
 
-	if (manifest.srcProperties) {
-		value["source"] = manifest.srcProperties;
+	if (manifest.srcProperties || manifest.src.length) {
+		const sourceValue: any = { ...manifest.srcProperties };
+		if (manifest.src.length) {
+			sourceValue.files = formatSrc(manifest.src, dir);
+		}
+		value["source"] = sourceValue;
 	}
-
-	value.src = formatSrc(manifest.src, dir);
 
 	if (manifest.dependencies.length) {
 		value.dependencies = formatDependencies(manifest.dependencies, dir);

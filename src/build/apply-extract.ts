@@ -63,7 +63,7 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 				env.reporter.log(
 					Message.SourceNameMismatch,
 					yellowBright(
-						`"${source.name}" in [src] was renamed to "${component.name}" ` +
+						`"${source.name}" in [source.files] was renamed to "${component.name}" ` +
 							`(file has Attribute VB_Name = "${component.name}")`
 					)
 				);
@@ -173,7 +173,7 @@ export function classifyByPath(
 					env.reporter.log(
 						Message.SourceNameMismatch,
 						yellowBright(
-							`"${resolved.source.name}" in [src] was renamed to "${component.name}" ` +
+							`"${resolved.source.name}" in [source.files] was renamed to "${component.name}" ` +
 								`(component in Excel file has Attribute VB_Name = "${component.name}")`
 						)
 					);

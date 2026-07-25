@@ -198,29 +198,30 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 
 /**
  * Post-process a TOML string to insert blank lines between type groups
- * in the `[src]` section. Only used for initial creation of individual-listing
+ * in the `[source.files]` section. Only used for initial creation of individual-listing
  * manifests (`vba init --list-all`).
  */
 export function insertTypeGroupBlankLines(toml: string): string {
 	const lines = toml.split("\n");
 	const result: string[] = [];
-	let inSrc = false;
+	let inSrcFiles = false;
 	let lastExt = "";
 
 	for (const line of lines) {
-		// Detect entering [src] section
-		if (line.trim().startsWith("[src]")) {
-			inSrc = true;
+		// Detect entering [source.files] section (new) or [src] (legacy)
+		const trimmed = line.trim();
+		if (trimmed === "[source.files]" || trimmed === "[src]") {
+			inSrcFiles = true;
 			result.push(line);
 			continue;
 		}
 
-		// Detect leaving [src] section (next section header or end)
-		if (inSrc && line.trim().startsWith("[")) {
-			inSrc = false;
+		// Detect leaving section (next section header or end)
+		if (inSrcFiles && trimmed.startsWith("[")) {
+			inSrcFiles = false;
 		}
 
-		if (inSrc && line.includes("=")) {
+		if (inSrcFiles && line.includes("=")) {
 			const extMatch = line.match(/\.(bas|frm|cls)\b/i);
 			const ext = extMatch ? extMatch[1].toLowerCase() : "";
 			if (ext && lastExt && ext !== lastExt) {

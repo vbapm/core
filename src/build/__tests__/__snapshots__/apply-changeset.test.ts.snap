@@ -61,6 +61,7 @@ Object {
       "path": "projects/complex/src/Added.bas",
     },
   ],
+  "srcDeprecated": true,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -127,6 +128,7 @@ Object {
       "path": "projects/wildcard/src/Class Modules/**/*.cls",
     },
   ],
+  "srcDeprecated": true,
   "srcEncoding": undefined,
   "srcProperties": Object {
     "subfolders": Object {
