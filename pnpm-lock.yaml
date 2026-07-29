@@ -40,13 +40,13 @@ importers:
         version: 4.0.0
       fs-extra:
         specifier: ^11
-        version: 11.3.6
+        version: 11.4.0
       iconv-lite:
         specifier: ^0.7.2
         version: 0.7.3
       isomorphic-git:
         specifier: ^1.37.1
-        version: 1.38.10
+        version: 1.40.0
       jschardet:
         specifier: ^3.1.4
         version: 3.1.4
@@ -1709,8 +1709,8 @@ packages:
   fs-constants@1.0.0:
     resolution: {integrity: sha512-y6OAwoSIf7FyjMIv94u+b5rdheZEjzR63GTyZJm5qh4Bi+2YgwLCcI/fPFZkL5PSixOt6ZNKm+w+Hfp/Bciwow==}
 
-  fs-extra@11.3.6:
-    resolution: {integrity: sha512-w8ZNZr2mKIc7qeNaQ9AVPT1+iFaI+Avd4xudVOvdDJ8VytREi1Ft5Ih7hd9jjehod8vAM5GMsfQ/TpPf4EyoEA==}
+  fs-extra@11.4.0:
+    resolution: {integrity: sha512-EQsFzMUJkCKGr1ePqlYADkIUmHW1s3ZXr5Yqy6wbGrfUCphpl2maM/kyOIRA2HpP3AaFQTZXD4ldjek+nccddA==}
     engines: {node: '>=14.14'}
 
   fs.realpath@1.0.0:
@@ -1928,8 +1928,8 @@ packages:
     resolution: {integrity: sha512-FFUtZMpoZ8RqHS3XeXEmHWLA4thH+ZxCv2lOiPIn1Xc7CxrqhWzNSDzD+/chS/zbYezmiwWLdQC09JdQKmthOw==}
     engines: {node: '>=20'}
 
-  isomorphic-git@1.38.10:
-    resolution: {integrity: sha512-nJSSq7ypu97vM33rSdxXyPzSWksCberjKspzXhFEcBHdVyxdNkWByAzJ/AURV1jIlfv8pLq37lGdIEt7ORj17Q==}
+  isomorphic-git@1.40.0:
+    resolution: {integrity: sha512-/CbnxwZqIm17y3c/z0INbkgEKSvFerXtO/NGgaRxZ8nvL3eoMtbjuAS7f4Pj7lZzj8HaultvDD1ClJTBVDl89g==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -4437,7 +4437,7 @@ snapshots:
 
   fs-constants@1.0.0: {}
 
-  fs-extra@11.3.6:
+  fs-extra@11.4.0:
     dependencies:
       graceful-fs: 4.2.11
       jsonfile: 6.2.1
@@ -4636,7 +4636,7 @@ snapshots:
 
   isexe@4.0.0: {}
 
-  isomorphic-git@1.38.10:
+  isomorphic-git@1.40.0:
     dependencies:
       async-lock: 1.4.1
       clean-git-ref: 2.0.1
