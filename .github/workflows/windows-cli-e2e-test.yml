@@ -5,10 +5,16 @@ on:
     branches:
       - main*
     paths-ignore:
-      - '**/*.md'
       - '.github/workflows/prepare-release.yml'
       - '.github/workflows/publish.yml'
+      - 'docs/**'
+      - '**/*.md'
+      - '*.md'
   pull_request:
+    paths-ignore:
+    - 'docs/**'
+    - '**/*.md'
+    - '*.md'
   workflow_dispatch:
 
 permissions:
