@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Deprecated
 - `vba export` command is deprecated in favor of `vba extract`. It still functions but prints a deprecation warning and will be removed in a future version.
+- The top-level `[src]` section in `vbaproject.toml` is deprecated in favor of `[source.files]`. Legacy manifests remain valid: `[src]` entries are treated as `[source.files]`, but a deprecation warning is printed until the manifest is updated.
 
 ### Added
 - `vba extract` command as the new canonical name for extracting source from a built target (replaces `vba export`).
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - New projects (`vba init`, `vba new`) now default to wildcard entries (e.g. `Modules = "src/**/*.bas"`) instead of listing every source file individually.
+- Source files are now written under `[source.files]` in `vbaproject.toml` instead of the top-level `[src]`. New manifests use `[source.files]`, and the deprecated `[src]` section is migrated to `[source.files]` on write.
 - Wildcard entries in `[src]` now suppress duplicate individual entries on extract. When a component's path is already covered by an existing wildcard pattern, no redundant individual `[src]` listing is added, keeping `vbaproject.toml` clean.
 - `src-encoding` has moved from `[project]`/`[package]` to `[source]` as `encoding`. Existing `vbaproject.toml` files with `src-encoding` under `[project]` or `[package]` will now receive a clear error message suggesting the migration. Per-source `encoding` on `[src]` entries is unchanged.
 

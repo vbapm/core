@@ -50,7 +50,7 @@ test("should default BuildGraph name to VBAProject when codename not set", async
 	expect(graph.name).toBe("VBAProject");
 });
 
-test("should warn when [src] key does not match Attribute VB_Name", async () => {
+test("should warn when [source.files] key does not match Attribute VB_Name", async () => {
 	const log = jest.spyOn(env.reporter, "log");
 	const { project, dependencies } = await setup(nameMismatch);
 
@@ -63,7 +63,9 @@ test("should warn when [src] key does not match Attribute VB_Name", async () => 
 	// Warning should be emitted
 	expect(log).toHaveBeenCalledWith(
 		expect.any(String), // Message.SourceNameMismatch
-		expect.stringContaining('"Hello" in [src] does not match Attribute VB_Name = "Bonjour"')
+		expect.stringContaining(
+			'"Hello" in [source.files] does not match Attribute VB_Name = "Bonjour"'
+		)
 	);
 
 	log.mockRestore();

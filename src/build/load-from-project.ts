@@ -118,7 +118,7 @@ export async function loadFromProject(
 
 	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
 
-	// Validate that non-wildcard [src] keys match their file's Attribute VB_Name
+	// Validate that non-wildcard [source.files] keys match their file's Attribute VB_Name
 	validateSrcNames(project, components);
 
 	const graph = {
@@ -245,7 +245,7 @@ function hasNonAscii(str: string): boolean {
 }
 
 /**
- * Validate that every non-wildcard [src] key matches the file's
+ * Validate that every non-wildcard [source.files] entry's key matches the file's
  * Attribute VB_Name.  Mismatches could cause roundtrip renames
  * when exporting and re-importing, so we warn the user.
  */
@@ -268,9 +268,9 @@ function validateSrcNames(project: Project, components: Component[]): void {
 			env.reporter.log(
 				Message.SourceNameMismatch,
 				yellowBright(
-					`WARN: "${source.name}" in [src] does not match Attribute VB_Name = "${comp.name}" ` +
+					`WARN: "${source.name}" in [source.files] does not match Attribute VB_Name = "${comp.name}" ` +
 						`in "${relative(project.paths.dir, source.path)}".\n` +
-						`  Run "vbapm manifest fix" to rename the [src] key automatically.`
+						`  Run "vbapm manifest fix" to rename the [source.files] key automatically.`
 				)
 			);
 		}

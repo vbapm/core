@@ -55,6 +55,7 @@ Object {
       "path": "src/Class1.cls",
     },
   ],
+  "srcDeprecated": true,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -126,6 +127,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -164,6 +166,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -208,6 +211,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -274,6 +278,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -305,6 +310,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -343,6 +349,7 @@ Object {
     },
   ],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -387,6 +394,7 @@ Object {
       "path": "src/c.frm",
     },
   ],
+  "srcDeprecated": true,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -418,6 +426,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -454,6 +463,7 @@ Object {
   "name": "package-name",
   "references": Array [],
   "src": Array [],
+  "srcDeprecated": false,
   "srcEncoding": undefined,
   "srcProperties": undefined,
   "srcStructure": Object {
@@ -492,8 +502,10 @@ Object {
       "type": "xlsm",
     },
   },
-  "src": Object {
-    "Validation": "projects/dev/src/Validation.bas",
+  "source": Object {
+    "files": Object {
+      "Validation": "projects/dev/src/Validation.bas",
+    },
   },
 }
 `;

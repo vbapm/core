@@ -2,7 +2,7 @@ import dedent from "@timhall/dedent";
 import { CliError, ErrorCode, manifestOk } from "../errors";
 import { pathExists, readFile, writeFile } from "../utils/fs";
 import { join, normalize } from "../utils/path";
-import { convert as convertToToml, parse as parseToml, patch as patchToml } from "../utils/toml";
+import { parse as parseToml, patch as patchToml } from "../utils/toml";
 import { Dependency, formatDependencies, parseDependencies } from "./dependency";
 import { formatReferences, parseReferences, Reference } from "./reference";
 import { formatSrc, parseSrc, Source } from "./source";
@@ -45,7 +45,7 @@ export type ManifestType = "package" | "project";
   version = "1.0.0"
   authors = ["Tim Hall <tim.hall.engr@gmail.com> (https://github.com/timhall)"]
 
-  [src]
+  [source.files]
   A = "src/a.bas"
   B = { path = "src/b.cls" }
 
@@ -67,6 +67,8 @@ export interface Manifest extends Snapshot {
 	srcEncoding?: string;
 	srcProperties?: SrcProperties;
 	srcStructure?: SrcStructure;
+	/** True when the legacy `[src]` TOML key was used instead of `[source.files]`. */
+	srcDeprecated?: boolean;
 	codename?: string;
 	references: Reference[];
 	devSrc: Source[];
@@ -233,7 +235,9 @@ export function parseManifest(value: any, dir: string): Manifest {
 		buildDir = normalize(buildDir);
 	}
 
-	const src = parseSrc(value.src || {}, dir);
+	const srcRaw = value["source"]?.files ?? value.src ?? {};
+	const srcDeprecated = value.src !== undefined && value["source"]?.files === undefined;
+	const src = parseSrc(srcRaw, dir);
 	const srcProperties = parseSrcProperties(value["source"]);
 	srcEncoding = srcProperties?.encoding;
 	const srcStructure = detectSrcStructure(src);
@@ -253,6 +257,7 @@ export function parseManifest(value: any, dir: string): Manifest {
 		srcEncoding,
 		srcProperties,
 		srcStructure,
+		srcDeprecated,
 		codename,
 		dependencies,
 		references,
@@ -307,6 +312,34 @@ export async function loadManifest(dir: string): Promise<Manifest> {
 	return manifest;
 }
 
+const SOURCE_FILES_HEADER = /^\[source\.files\]$/m;
+const LEGACY_SRC_HEADER = /^\[src\]$/m;
+
+/**
+ * Prepare an existing TOML string before patching so `[source.files]`
+ * entries are written on separate lines instead of a single inline table.
+ *
+ * toml-patch preserves the section style of existing headers, so:
+ * - legacy `[src]` headers are renamed to `[source.files]`, and
+ * - an empty `[source.files]` header is seeded when files are about to be
+ *   added but no source-files section exists yet.
+ */
+function prepareSourceFiles(existing: string, value: any): string {
+	const files = value["source"]?.files;
+	const hasFiles = files != null && typeof files === "object" && Object.keys(files).length > 0;
+	if (!hasFiles) return existing;
+
+	if (LEGACY_SRC_HEADER.test(existing) && !SOURCE_FILES_HEADER.test(existing)) {
+		return existing.replace(LEGACY_SRC_HEADER, "[source.files]");
+	}
+
+	if (!SOURCE_FILES_HEADER.test(existing)) {
+		return existing.trimEnd() + "\n\n[source.files]\n";
+	}
+
+	return existing;
+}
+
 export async function writeManifest(manifest: Manifest, dir: string) {
 	const value = formatManifest(manifest, dir);
 	const path = join(dir, "vbaproject.toml");
@@ -314,12 +347,34 @@ export async function writeManifest(manifest: Manifest, dir: string) {
 
 	if (await pathExists(path)) {
 		const existing = await readFile(path, "utf8");
-		toml = await patchToml(existing, value);
+		toml = await patchToml(prepareSourceFiles(existing, value), value);
 	} else {
-		toml = await convertToToml(value);
+		toml = await formatManifestToToml(value);
 	}
 
 	await writeFile(path, toml);
+}
+
+/**
+ * Create TOML for a fresh vbaproject.toml from a minimal template.
+ *
+ * Patching the manifest value into a template that already contains
+ * `[source]` / `[source.files]` headers makes toml-patch keep those
+ * sections on separate lines (instead of rendering source files as a
+ * single inline table).
+ */
+export async function formatManifestToToml(value: object): Promise<string> {
+	const type = (value as any).package ? "package" : "project";
+	const source = (value as any)["source"] || {};
+	const sourceProps = Object.keys(source).filter(key => key !== "files");
+	const files = source.files;
+	const hasFiles = files != null && typeof files === "object" && Object.keys(files).length > 0;
+
+	let template = `[${type}]\nname = ""\n`;
+	if (sourceProps.length > 0) template += "\n[source]\n";
+	if (hasFiles) template += "\n[source.files]\n";
+
+	return patchToml(template, value);
 }
 
 export function formatManifest(manifest: Manifest, dir: string): object {
@@ -352,11 +407,13 @@ export function formatManifest(manifest: Manifest, dir: string): object {
 		values["codename"] = manifest.codename;
 	}
 
-	if (manifest.srcProperties) {
-		value["source"] = manifest.srcProperties;
+	if (manifest.srcProperties || manifest.src.length) {
+		const sourceValue: any = { ...manifest.srcProperties };
+		if (manifest.src.length) {
+			sourceValue.files = formatSrc(manifest.src, dir);
+		}
+		value["source"] = sourceValue;
 	}
-
-	value.src = formatSrc(manifest.src, dir);
 
 	if (manifest.dependencies.length) {
 		value.dependencies = formatDependencies(manifest.dependencies, dir);

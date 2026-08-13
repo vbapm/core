@@ -17,10 +17,10 @@ export interface SrcSubfolders {
 export interface SrcProperties {
 	/** Defaults to `"src"`.  The base directory for source files (relative
 	 * to the project root).  New components are placed here on extract and
-	 * `[src]` wildcard entries are generated relative to it. */
+	 * `[source.files]` wildcard entries are generated relative to it. */
 	folder?: string;
 	/** Global source-file encoding (e.g. "cp1252", "utf-8").
-	 * Can be overridden per-source with the `encoding` key in `[src]`. */
+	 * Can be overridden per-source with the `encoding` key in `[source.files]`. */
 	encoding?: string;
 	sort?: {
 		"by-types"?: boolean;
@@ -58,7 +58,7 @@ export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type
 	return subfolders[key] || "";
 }
 
-/** Describes how the `[src]` section is currently organised. */
+/** Describes how the `[source.files]` section is currently organised. */
 export interface SrcStructure {
 	/** true when all .bas files are contiguous, all .frm contiguous, all .cls contiguous. */
 	sortedByTypes: boolean;
@@ -78,7 +78,7 @@ export interface SrcStructure {
 // ---------------------------------------------------------------------------
 
 /**
- * Detect the organisational structure of the `[src]` section from the parsed
+ * Detect the organisational structure of the `[source.files]` section from the parsed
  * source entries alone — no `[source]` needed.
  */
 export function detectSrcStructure(src: Source[]): SrcStructure {
@@ -198,29 +198,29 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 
 /**
  * Post-process a TOML string to insert blank lines between type groups
- * in the `[src]` section. Only used for initial creation of individual-listing
- * manifests (`vba init --list-all`).
+ * in the `[source.files]` section (or legacy `[src]`).
  */
 export function insertTypeGroupBlankLines(toml: string): string {
 	const lines = toml.split("\n");
 	const result: string[] = [];
-	let inSrc = false;
+	let inSrcFiles = false;
 	let lastExt = "";
 
 	for (const line of lines) {
-		// Detect entering [src] section
-		if (line.trim().startsWith("[src]")) {
-			inSrc = true;
+		// Detect entering [source.files] section (new) or [src] (legacy)
+		const trimmed = line.trim();
+		if (trimmed === "[source.files]" || trimmed === "[src]") {
+			inSrcFiles = true;
 			result.push(line);
 			continue;
 		}
 
-		// Detect leaving [src] section (next section header or end)
-		if (inSrc && line.trim().startsWith("[")) {
-			inSrc = false;
+		// Detect leaving section (next section header or end)
+		if (inSrcFiles && trimmed.startsWith("[")) {
+			inSrcFiles = false;
 		}
 
-		if (inSrc && line.includes("=")) {
+		if (inSrcFiles && line.includes("=")) {
 			const extMatch = line.match(/\.(bas|frm|cls)\b/i);
 			const ext = extMatch ? extMatch[1].toLowerCase() : "";
 			if (ext && lastExt && ext !== lastExt) {

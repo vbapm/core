@@ -2,6 +2,7 @@ import { Config, loadConfig } from "./config";
 import { env } from "./env";
 import { isLockfileValid, readLockfile } from "./lockfile";
 import { loadManifest, Manifest } from "./manifest";
+import { Message } from "./messages";
 import { loadWorkspace, Workspace } from "./professional/workspace";
 import resolve from "./resolve";
 import { DependencyGraph } from "./resolve/dependency-graph";
@@ -38,6 +39,14 @@ export interface Project {
  */
 export async function loadProject(dir: string = env.cwd): Promise<Project> {
 	const manifest = await loadManifest(dir);
+
+	if (manifest.srcDeprecated) {
+		env.reporter.log(
+			Message.DeprecatedSrc,
+			`Warning: The [src] section is deprecated. Use [source.files] instead.\n` +
+				`  The [src] entries are now treated as [source.files]. Update vbaproject.toml to silence this warning.`
+		);
+	}
 
 	const config = await loadConfig();
 	const workspace = await loadWorkspace(manifest, dir);
@@ -89,6 +98,14 @@ export async function fetchDependencies(project: FetchProject): Promise<Manifest
 		async registration => {
 			const path = await fetch(project.config.sources, registration);
 			const manifest = await loadManifest(path);
+
+			if (manifest.srcDeprecated) {
+				env.reporter.log(
+					Message.DeprecatedSrc,
+					`Warning: The [src] section in "${manifest.name}" is deprecated. ` +
+						`Use [source.files] instead.`
+				);
+			}
 
 			return manifest;
 		},

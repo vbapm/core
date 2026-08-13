@@ -10,7 +10,7 @@ const help = dedent`
   Options:
     <name>          Source name or file path (optionally with .bas or .cls extension)
     --type=TYPE     Source type (module or class)
-    --dev           Add to [dev-src] instead of [src]
+    --dev           Add to [dev-src] instead of [source.files]
 
   Examples:
   vbapm add ./src/subfolder/Module1.bas

@@ -11,7 +11,7 @@ const help = dedent`
   Usage: vbapm manifest <subcommand> [options]
 
   Subcommands:
-    fix       Fix [src] entries whose key does not match the file's
+    fix       Fix [source.files] entries whose key does not match the file's
               Attribute VB_Name.  Scans non-wildcard entries and
               renames mismatched keys to match the file.`;
 
@@ -44,7 +44,7 @@ async function fixSrc(_args: Args) {
 		const component = await Component.load(source.path, undefined as any);
 		if (source.name !== component.name) {
 			console.log(
-				`${yellowBright("fix:")} [src] "${source.name}" → "${component.name}" (${source.path})`
+				`${yellowBright("fix:")} [source.files] "${source.name}" → "${component.name}" (${source.path})`
 			);
 			src[i] = { ...source, name: component.name };
 			fixed++;
@@ -53,8 +53,8 @@ async function fixSrc(_args: Args) {
 
 	if (fixed > 0) {
 		await writeManifest(project.manifest, project.paths.dir);
-		console.log(`\nFixed ${fixed} [src] ${fixed === 1 ? "entry" : "entries"}.`);
+		console.log(`\nFixed ${fixed} [source.files] ${fixed === 1 ? "entry" : "entries"}.`);
 	} else {
-		console.log("All [src] entries already match their file's Attribute VB_Name.");
+		console.log("All [source.files] entries already match their file's Attribute VB_Name.");
 	}
 }

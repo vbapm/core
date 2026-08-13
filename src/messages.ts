@@ -28,5 +28,6 @@ export enum Message {
 	RegistrySourceSkipPull = "registry-source-skip-pull",
 
 	EncodingLossWarning = "encoding-loss-warning",
-	SourceNameMismatch = "source-name-mismatch"
+	SourceNameMismatch = "source-name-mismatch",
+	DeprecatedSrc = "deprecated-src"
 }
