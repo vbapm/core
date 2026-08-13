@@ -70,6 +70,32 @@ Yes. VBA's `References.AddFromFile(path)` can add a reference to another VBA pro
 (.xlam or .xlsm) **from any workbook**, including a blank one. This is the same mechanism
 Excel uses under the hood when you use Tools → References → Browse in the VBA IDE.
 
+### ⚠ Peer references are USAGE-GATED (critical finding)
+
+Verified empirically (COM probe + manual VBE test, 2026-08-13): a reference to another
+VBA project **only persists on save if the host project's code actually uses the peer**.
+
+- Adding the reference with `References.AddFromFile` puts it in the in-memory
+  VBProject immediately (empty GUID, version 0.0, correct FullPath).
+- But on save + reopen, Excel **drops** the reference if no host code references
+  the peer's members — it treats the project reference as unused.
+- This is unlike COM type libraries (VBA, Excel, stdole, Office) which persist
+  because they are registered in the system.
+- A host module that calls the peer (e.g. `AddinToolbox.Dp "test"`) makes the
+  reference persist across save/reopen. Confirmed both manually (VBE Browse + save)
+  and programmatically (`AddFromFile` + using-module + save).
+
+**Consequences for vbapm:**
+
+1. A `peer = true` reference in the manifest implies the host code uses the addin;
+   otherwise the reference will not survive a build. This matches real-world usage
+   (you reference an addin because you call its code).
+2. The build order matters: `Build.ImportGraph` imports all src components first,
+   then adds references. Since the using-modules are imported before the reference
+   is added, the reference persists.
+3. A `peer` reference on its own, with no host code using it, is meaningless for the
+   built artifact — Excel will silently discard it. vbapm could warn about this.
+
 ### What's available at export time
 
 VBA's `Reference` object exposes `Ref.FullPath` for **all** reference types:
@@ -460,12 +486,20 @@ Each test uses a blank `.xlsm` workbook created by `vbapm new`. The vbapm addin
 - **Assert**: Reference is re-added successfully (not silently dropped)
 
 #### 3. Import round-trip: build from TOML with `peer = true`
-- Create vbaproject.toml with `AddinToolbox = { peer = true }`
+- Create vbaproject.toml with `AddinToolbox = { peer = true, path = '...' }`
 - Have `AddinToolbox.xlam` built and present in workspace
+- Host `[source]` contains at least one module that calls `AddinToolbox.<member>` (usage-gated requirement)
 - Run `vbapm build`
-- **Assert**: `AddFromFile` is called with resolved path
-- **Assert**: Built `.xlsm` has working reference to AddinToolbox
+- **Assert**: `AddFromFile` is called with the resolved absolute path
+- **Assert**: Built `.xlsm` has working reference to AddinToolbox **after save + reopen**
 - **Assert**: Reference is NOT `MISSING` when opened in Excel
+
+#### 3b. Peer reference without usage is dropped (usage-gating)
+- Create blank `.xlsm` with `AddinToolbox = { peer = true, path = '...' }` and NO host code using AddinToolbox
+- Run `vbapm build` → `AddFromFile` succeeds, reference present in memory
+- Save + reopen
+- **Assert**: Reference is GONE — Excel dropped the unused project reference
+- **Design consequence**: vbapm may warn when a `peer` reference has no corresponding usage in `[source]`, since the reference will not survive a build
 
 #### 4. Peer ref to `.xlsm` (not `.xlam`)
 - Same as scenario 1 but peer is `.xlsm`

@@ -1,5 +1,5 @@
 import { manifestOk } from "../errors";
-import { relative } from "../utils/path";
+import { relative, resolve } from "../utils/path";
 
 /*
   # Reference
@@ -77,6 +77,21 @@ export function relativizePeerPath(fromDir: string, filePath: string): string {
 
 	const upCount = rel.split("/").filter(segment => segment === "..").length;
 	return upCount <= 1 ? rel : filePath;
+}
+
+/**
+ * Resolve peer reference paths to absolute form for import.
+ *
+ * The manifest stores peer paths relative (when nearby) or absolute. Before
+ * passing them to the VBA addin (`References.AddFromFile` needs an absolute
+ * path), resolve relative paths against the project folder. References without
+ * a path are passed through unchanged — validation is the caller's job.
+ */
+export function resolvePeerReferencePaths(references: Reference[], dir: string): Reference[] {
+	return references.map(reference => {
+		if (!reference.peer || !reference.path) return reference;
+		return { ...reference, path: resolve(dir, reference.path) };
+	});
 }
 
 export function parseReferences(value: any): Reference[] {

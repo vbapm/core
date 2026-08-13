@@ -1,4 +1,11 @@
-import { formatReferences, parseReference, parseReferences, relativizePeerPath, Reference } from "../reference";
+import {
+	formatReferences,
+	parseReference,
+	parseReferences,
+	relativizePeerPath,
+	resolvePeerReferencePaths,
+	Reference
+} from "../reference";
 
 describe("parseReference", () => {
 	test("parses peer reference without guid/version", () => {
@@ -107,5 +114,67 @@ describe("relativizePeerPath", () => {
 
 	test("passes through already-relative paths", () => {
 		expect(relativizePeerPath(projectDir, "../AddinToolbox.xlam")).toBe("../AddinToolbox.xlam");
+	});
+});
+
+describe("resolvePeerReferencePaths", () => {
+	const projectDir = "C:/Users/alice/projects/my-app";
+
+	test("resolves relative peer path against project folder", () => {
+		const refs: Reference[] = [
+			{
+				name: "AddinToolbox",
+				guid: "",
+				major: 0,
+				minor: 0,
+				peer: true,
+				path: "../AddinToolbox/build/AddinToolbox.xlam"
+			}
+		];
+
+		expect(resolvePeerReferencePaths(refs, projectDir)).toEqual([
+			{
+				name: "AddinToolbox",
+				guid: "",
+				major: 0,
+				minor: 0,
+				peer: true,
+				path: "C:/Users/alice/projects/AddinToolbox/build/AddinToolbox.xlam"
+			}
+		]);
+	});
+
+	test("keeps absolute peer path unchanged", () => {
+		const refs: Reference[] = [
+			{
+				name: "AddinToolbox",
+				guid: "",
+				major: 0,
+				minor: 0,
+				peer: true,
+				path: "C:/Users/alice/other/AddinToolbox.xlam"
+			}
+		];
+
+		expect(resolvePeerReferencePaths(refs, projectDir)).toEqual(refs);
+	});
+
+	test("passes through COM references unchanged", () => {
+		const refs: Reference[] = [
+			{
+				name: "Scripting",
+				guid: "{420B2830-E718-11CF-893D-00A0C9054228}",
+				major: 1,
+				minor: 0
+			}
+		];
+
+		expect(resolvePeerReferencePaths(refs, projectDir)).toEqual(refs);
+	});
+
+	test("passes through peer reference without path", () => {
+		const refs: Reference[] = [{ name: "AddinToolbox", guid: "", major: 0, minor: 0, peer: true }];
+
+		expect(resolvePeerReferencePaths(refs, projectDir)).toEqual(refs);
 	});
 });
