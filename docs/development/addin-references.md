@@ -225,13 +225,30 @@ export interface Reference {
     guid: string;       // "" for peer references
     major: number;      // 0 for peer references
     minor: number;      // 0 for peer references
-    peer?: boolean;     // true = VBA project reference, resolve via workspace
-    path?: string;      // resolved at build time, stored transiently
+    peer?: boolean;     // true = VBA project reference
+    path?: string;      // stored path (relative if nearby, else absolute)
 }
 ```
 
 This is backward-compatible — existing COM references continue to work unchanged.
-Peer references add only one optional boolean field.
+Peer references add only optional fields.
+
+### 3a. Path storage: relative when nearby, absolute otherwise (DECIDED)
+
+At extract time, the VBA addin reports the peer file's **absolute** path via
+`Ref.FullPath`. When storing it to the manifest, apply this rule
+(`relativizePeerPath` in `src/manifest/reference.ts`):
+
+- **Peer inside the project folder** (no `..` in the relative path) → store relative
+  path, e.g. `AddinToolbox = { peer = true, path = "build/AddinToolbox.xlam" }`
+- **Peer in a sibling folder** of the project (one leading `..` level) → store
+  relative path, e.g. `AddinToolbox = { peer = true, path = "../AddinToolbox/build/AddinToolbox.xlam" }`
+- **Peer further away** (two or more `..` levels, or a different drive) → store the
+  absolute path as-is. The user can manually edit it to a relative one if they wish.
+
+This keeps the manifest portable in the common monorepo/workspace case (peers are
+siblings or inside the project) while still recording the peer's real location when
+it lives somewhere unrelated.
 
 **TOML representation** for the EmailManager example:
 
@@ -242,8 +259,11 @@ Outlook = { guid = "{00062FFF-0000-0000-C000-000000000046}", version = "9.6" }
 Scripting = { guid = "{420B2830-E718-11CF-893D-00A0C9054228}", version = "1.0" }
 Word = { guid = "{00020905-0000-0000-C000-000000000046}", version = "8.7" }
 
-# Peer VBA project reference (new)
-AddinToolbox = { peer = true }
+# Peer VBA project reference (new) — relative when nearby
+AddinToolbox = { peer = true, path = "../AddinToolbox/build/AddinToolbox.xlam" }
+
+# Or, if the peer is elsewhere (user may edit to relative manually)
+# OtherTool = { peer = true, path = "C:/Users/me/OtherTool/OtherTool.xlam" }
 ```
 
 ### 4. How to import VBA project references (VBA side)
@@ -266,13 +286,18 @@ absolute path.
 
 ### 5. How to resolve the peer addin file path at build time
 
-vbapm resolves `peer = true` references by searching the workspace:
+At extract time, `relativizePeerPath` (see 3a) converts the absolute path reported by
+VBA into the stored form. At build/import time, the stored path is resolved back to
+an absolute path before passing to VBA:
 
-1. Scan parent directories for a vbapm workspace root (where `pnpm-workspace.yaml` or similar lives)
-2. Search sibling directories for `vbaproject.toml` files
-3. Match `[project].name` to the reference name (`AddinToolbox`)
-4. Use the peer project's `build/` output path as the resolved path
-5. If the peer hasn't been built yet, build it first (topological order)
+1. If the stored `path` is relative, resolve it against the project root
+2. If it is absolute, use it as-is
+3. If no `path` is stored, fall back to workspace search:
+   - Scan parent directories for a vbapm workspace root (where `pnpm-workspace.yaml` or similar lives)
+   - Search sibling directories for `vbaproject.toml` files
+   - Match `[project].name` to the reference name (`AddinToolbox`)
+   - Use the peer project's `build/` output path as the resolved path
+   - If the peer hasn't been built yet, build it first (topological order)
 
 Fallback strategies (if workspace search fails):
 - Check a `VBAPM_ADDINS_PATH` environment variable
@@ -397,7 +422,7 @@ Or, for a more robust check, hash the referenced file's content.
 
 5. **Build order**: Peer references imply build dependencies. vbapm needs a dependency graph: if Project A has `AddinToolbox = { peer = true }`, then `AddinToolbox` must be built before Project A. This requires workspace-level awareness (Phase 4).
 
-6. **Path portability**: `Ref.FullPath` from export gives an absolute path. When writing to TOML, should vbapm convert this to a `peer = true` declaration (portable) or keep the absolute path? Recommendation: convert to `peer = true` during export so the TOML is portable across machines.
+6. **Path portability**: ✅ DECIDED — `relativizePeerPath` stores the path as relative when the peer is inside the project folder or a sibling folder; otherwise it keeps the absolute path (which the user can manually edit to relative). See section 3a.
 
 7. **What if the user doesn't use a workspace?** A standalone project with `peer = true` needs a way to find the peer. Options: (a) require workspace layout, (b) fall back to a configured path, (c) error with guidance to set up a workspace.
 

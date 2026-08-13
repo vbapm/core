@@ -117,7 +117,16 @@ async function readInfo(staging: string): Promise<{
 		}
 	}
 
-	return { name: info.name, references: info.references ?? [], componentTypes };
+	return {
+		name: info.name,
+		// Defensively mark empty-GUID references as peers (VBA project refs).
+		// The addin already exports `peer: true`, but this also covers hand-made
+		// project.json files or older addin builds.
+		references: (info.references ?? []).map(ref =>
+			ref.guid === "" ? { ...ref, peer: true } : ref
+		),
+		componentTypes
+	};
 }
 
 function isBinary(file: string): boolean {

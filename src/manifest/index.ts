@@ -352,7 +352,7 @@ export async function writeManifest(manifest: Manifest, dir: string) {
 		toml = await formatManifestToToml(value);
 	}
 
-	await writeFile(path, toml);
+	await writeFile(path, toPeerLiteralStrings(toml));
 }
 
 /**
@@ -374,7 +374,55 @@ export async function formatManifestToToml(value: object): Promise<string> {
 	if (sourceProps.length > 0) template += "\n[source]\n";
 	if (hasFiles) template += "\n[source.files]\n";
 
-	return patchToml(template, value);
+	return toPeerLiteralStrings(await patchToml(template, value));
+}
+
+/**
+ * Rewrite peer-reference `path = "..."` values as TOML literal strings.
+ *
+ * toml-patch always emits basic (double-quoted) strings, which escape Windows
+ * backslashes as `\\`. For peer reference paths we prefer a literal string so
+ * the path reads naturally:
+ *
+ *   AddinToolbox = { peer = true, path = "C:\\Users\\...\\AddinToolbox.xlam" }
+ *   →            { peer = true, path = 'C:\Users\...\AddinToolbox.xlam' }
+ *
+ * Conversion is skipped when the value contains a single quote or control
+ * character (not representable in a literal string), or escapes other than
+ * `\\` / `\"`.
+ */
+export function toPeerLiteralStrings(toml: string): string {
+	return toml.replace(/[^\n]*\{[^{}\n]*peer\s*=\s*true[^{}\n]*\}[^\n]*/g, line =>
+		line.replace(/path\s*=\s*"((?:[^"\\]|\\.)*)"/g, (match, raw) => {
+			// Skip when the value contains escapes other than `\\` / `\"`
+			// (e.g. \n, \t, \uXXXX) which can't be represented literally.
+			if (hasUnconvertibleEscape(raw)) return match;
+			const value = raw.replace(/\\(["\\])/g, "$1");
+			// Literal strings cannot contain single quotes or control characters
+			if (value.includes("'") || /[\u0000-\u0008\u000A-\u001F\u007F]/.test(value)) return match;
+			return `path = '${value}'`;
+		})
+	);
+}
+
+/**
+ * Scan a TOML basic-string body and report whether it contains an escape
+ * sequence other than `\\` (escaped backslash) or `\"` (escaped quote).
+ * Walks the string so a `\\` pair is consumed as a unit (the second
+ * backslash is not treated as the start of a new escape).
+ */
+function hasUnconvertibleEscape(raw: string): boolean {
+	for (let i = 0; i < raw.length; i++) {
+		if (raw[i] === "\\") {
+			const next = raw[i + 1];
+			if (next === "\\" || next === '"') {
+				i++; // consume the escaped character
+			} else {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 export function formatManifest(manifest: Manifest, dir: string): object {
