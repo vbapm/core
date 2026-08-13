@@ -554,7 +554,7 @@ codename = "MyCustomProject"
 build-dir = "."    # output to project root instead of build/
 ```
 
-### [src]
+### [source.files]
 
 Will contain the list of source code files to be included in the VBA-Enabled Document at build time.
 
@@ -563,7 +563,7 @@ Two listing modes are supported:
 **Individual entries** — each file is listed explicitly by name (`name = "path"` or `{ path }`):
 
 ```toml
-[src]
+[source.files]
 A = "src/A.bas"
 B = "src/B.cls"
 C = { path = "src/C.bas" }
@@ -574,7 +574,7 @@ Use this mode with `vba init --list-all` or `vba init --from <workbook>` for ful
 **Wildcard entries** — groups of files are discovered by glob pattern (the default for `vba init`):
 
 ```toml
-[src]
+[source.files]
 Objects = "src/Excel Objects/**/*.cls"
 Forms = "src/Forms/**/*.frm"
 Modules = "src/Modules/**/*.bas"
@@ -585,6 +585,10 @@ Wildcards are expanded at build time — any file on disk matching the glob is p
 
 > **Note:** Wildcard and individual entries can coexist. Components already covered
 > by an existing wildcard pattern do not get duplicate individual entries added which means the wildcard handles discovery on the next build or extract.
+>
+> **Legacy `[src]`:** Older manifests use a top-level `[src]` section. It is still
+> accepted for backwards compatibility, but is deprecated — entries are treated
+> as `[source.files]` and a warning is shown until the manifest is updated.
 
 ### [source]
 
@@ -600,8 +604,8 @@ subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 |---|---|---|
 | `folder` | `"src"` | Base directory for all source files (relative to project root). New components extracted from a workbook are placed under this directory. |
 | `subfolders` | — | Organises source files into type-based subdirectories: `.bas` → `Modules/`, `.frm` → `Forms/`, `.cls` → `Classes/`. `Objects` maps document modules (`ThisWorkbook`, sheets) to a subfolder. |
-| `encoding` | — | Default encoding for source files (e.g. `"cp1252"`, `"utf-8"`). Can be overridden per-source in `[src]`. |
-| `sort` | — | Enforce ordering in the `[src]` section. Options: `by-types` (group by component type), `alphabetical` (sort by name). |
+| `encoding` | — | Default encoding for source files (e.g. `"cp1252"`, `"utf-8"`). Can be overridden per-source in `[source.files]`. |
+| `sort` | — | Enforce ordering in the `[source.files]` section. Options: `by-types` (group by component type), `alphabetical` (sort by name). |
 | `include-empty-objects` | `true` | When `false`, blank document objects (ThisWorkbook, sheet modules) are skipped during export. |
 
 ### [dependencies]

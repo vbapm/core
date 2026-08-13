@@ -23,7 +23,7 @@ A `.block` archive contains a flat list of files (no subdirectories):
 | File | Required | Description |
 |------|----------|-------------|
 | `vba-block.toml` | Yes | Package manifest (name, version, authors, source map, dependencies) |
-| `*.bas`, `*.cls`, `*.frm` | Yes | VBA source files declared under `[src]` in the manifest |
+| `*.bas`, `*.cls`, `*.frm` | Yes | VBA source files declared under `[source.files]` in the manifest |
 | `LICENSE` / `LICENCE` | No | License file |
 | `README.md` | No | Readme |
 | `CHANGELOG.md` / `HISTORY.md` | No | Changelog |
@@ -44,7 +44,7 @@ version = "1.4.1"
 authors = ["Tim Hall <tim.hall.engr@gmail.com> (https://github.com/timhall)"]
 license = "MIT"
 
-[src]
+[source.files]
 Dictionary = "Dictionary.cls"
 ```
 
@@ -64,7 +64,7 @@ version = "2.3.0"
 authors = ["Tim Hall <tim.hall.engr@gmail.com> (https://github.com/timhall)"]
 license = "MIT"
 
-[src]
+[source.files]
 JsonConverter = "JsonConverter.bas"
 
 [dependencies]
