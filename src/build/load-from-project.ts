@@ -118,7 +118,7 @@ export async function loadFromProject(
 
 	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
 
-	// Validate that non-wildcard [src] keys match their file's Attribute VB_Name
+	// Validate that non-wildcard [source.files] keys match their file's Attribute VB_Name
 	validateSrcNames(project, components);
 
 	const graph = {

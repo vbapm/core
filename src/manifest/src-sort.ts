@@ -17,10 +17,10 @@ export interface SrcSubfolders {
 export interface SrcProperties {
 	/** Defaults to `"src"`.  The base directory for source files (relative
 	 * to the project root).  New components are placed here on extract and
-	 * `[src]` wildcard entries are generated relative to it. */
+	 * `[source.files]` wildcard entries are generated relative to it. */
 	folder?: string;
 	/** Global source-file encoding (e.g. "cp1252", "utf-8").
-	 * Can be overridden per-source with the `encoding` key in `[src]`. */
+	 * Can be overridden per-source with the `encoding` key in `[source.files]`. */
 	encoding?: string;
 	sort?: {
 		"by-types"?: boolean;
@@ -58,7 +58,7 @@ export function resolveSrcSubfolders(subfolders: SrcSubfolders | undefined, type
 	return subfolders[key] || "";
 }
 
-/** Describes how the `[src]` section is currently organised. */
+/** Describes how the `[source.files]` section is currently organised. */
 export interface SrcStructure {
 	/** true when all .bas files are contiguous, all .frm contiguous, all .cls contiguous. */
 	sortedByTypes: boolean;
@@ -78,7 +78,7 @@ export interface SrcStructure {
 // ---------------------------------------------------------------------------
 
 /**
- * Detect the organisational structure of the `[src]` section from the parsed
+ * Detect the organisational structure of the `[source.files]` section from the parsed
  * source entries alone — no `[source]` needed.
  */
 export function detectSrcStructure(src: Source[]): SrcStructure {

@@ -45,7 +45,7 @@ export type ManifestType = "package" | "project";
   version = "1.0.0"
   authors = ["Tim Hall <tim.hall.engr@gmail.com> (https://github.com/timhall)"]
 
-  [src]
+  [source.files]
   A = "src/a.bas"
   B = { path = "src/b.cls" }
 

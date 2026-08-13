@@ -161,7 +161,7 @@ function compareByTypeThenName(typeA: string, nameA: string, typeB: string, name
 /**
  * Check whether a component's source path is already covered by a wildcard
  * entry in the manifest.  If so, the component does not need an individual
- * `[src]` listing — the wildcard will discover it on the next build/extract.
+ * `[source.files]` listing — the wildcard will discover it on the next build/extract.
  *
  * Supports glob `*` (matches anything except `/`) and `**` (matches anything
  * including `/`).  `** /` matches zero or more path segments.

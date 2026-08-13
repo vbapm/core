@@ -20,7 +20,7 @@ export interface Source {
 
 const EXAMPLE = `Example vbaproject.toml:
 
-  [src]
+  [source.files]
   A = "src/a.bas"
   B = { path = "src/b.cls" }`;
 

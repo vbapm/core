@@ -120,7 +120,7 @@ export async function initProject(options: InitOptions) {
 		await detectSourceEncoding(project);
 	}
 
-	// Write default wildcard [src] entries and [source] for new
+	// Write default wildcard [source.files] entries and [source] for new
 	// projects.  Skip when --list-all (explicit individual listing) or
 	// --from (importing from existing workbook, which already has
 	// individual entries from addTarget).

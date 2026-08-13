@@ -19,12 +19,12 @@ export interface ResolvedSource {
 }
 
 /**
- * Resolve the project manifest's `[src]` entries to a concrete map of
+ * Resolve the project manifest's `[source.files]` entries to a concrete map of
  * file paths → components.
  *
  * Wildcard entries (containing `*`) are expanded via `walk-sync` against the
  * project directory. Single-path entries are loaded directly. Only the project
- * manifest's own `[src]` is resolved — dependencies and `[dev-src]` are excluded.
+ * manifest's own `[source.files]` is resolved — dependencies and `[dev-src]` are excluded.
  *
  * @returns Map keyed by absolute file path.
  */
@@ -204,7 +204,7 @@ export function classifyByPath(
 /**
  * Execute a classified extract: write modified/created files, delete orphaned
  * files, re-scan wildcards to decide which created files need individual
- * `[src]` entries, and update the manifest.
+ * `[source.files]` entries, and update the manifest.
  */
 export async function applyExtract(project: Project, classified: ClassifiedExtract): Promise<void> {
 	// --- Write modified files ---
@@ -262,7 +262,7 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 // ---------------------------------------------------------------------------
 
 /**
- * Update the project manifest: add individual `[src]` entries for created
+ * Update the project manifest: add individual `[source.files]` entries for created
  * files that aren't covered by wildcards, and remove entries for orphaned files.
  */
 function updateManifestForExtract(
