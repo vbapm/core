@@ -501,7 +501,7 @@ describe("wildcard extract", () => {
 			const { stdout } = await execute(cwd, "extract --target xlsm");
 
 			// 2. Warning should mention the rename
-			expect(stdout).toContain('"Module1" in [src] was renamed to "Validation"');
+			expect(stdout).toContain('"Module1" in [source.files] was renamed to "Validation"');
 
 			// 3. Verify both entries exist in vbaproject.toml:
 			//    Module1 = "src/Module1.bas" (new workbook component)
