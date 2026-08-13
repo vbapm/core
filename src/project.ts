@@ -44,7 +44,7 @@ export async function loadProject(dir: string = env.cwd): Promise<Project> {
 		env.reporter.log(
 			Message.DeprecatedSrc,
 			`Warning: The [src] section is deprecated. Use [source.files] instead.\n` +
-				`  The [src] entries have been mapped to [source.files] automatically.`
+				`  The [src] entries are now treated as [source.files]. Update vbaproject.toml to silence this warning.`
 		);
 	}
 
