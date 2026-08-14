@@ -34,6 +34,7 @@ describe("peer references", () => {
 			expect(manifest).toContain(
 				`AddinPeer = { peer = true, path = 'src/AddinPeer/build/AddinPeer.xlam' }`
 			);
+			expect(manifest).toMatchSnapshot();
 		});
 	}, 180000);
 });
