@@ -59,8 +59,8 @@ const EXAMPLE = `Example vbaproject.toml:
   version = "1.0"
   guid = "{420B2830-E718-11CF-893D-00A0C9054228}"`;
 
-/** Absolute path detector for normalized (forward-slash) paths. */
-const ABSOLUTE_REGEX = /^([a-zA-Z]:)?\//;
+/** Absolute path detector: Windows drive (`C:/...` or `C:\...`) or POSIX root (`/...`). */
+const ABSOLUTE_REGEX = /^([a-zA-Z]:[\\/]|\/)/;
 
 /**
  * Choose the path form to store for a peer reference.
@@ -86,11 +86,20 @@ export function relativizePeerPath(fromDir: string, filePath: string): string {
  * passing them to the VBA addin (`References.AddFromFile` needs an absolute
  * path), resolve relative paths against the project folder. References without
  * a path are passed through unchanged — validation is the caller's job.
+ *
+ * Already-absolute paths are kept as-is. On POSIX, `resolve()` treats a
+ * Windows drive path like `C:/...` as relative, so re-resolving would corrupt
+ * it; a foreign absolute path is left untouched (the reference will simply be
+ * unresolvable on this platform).
  */
 export function resolvePeerReferencePaths(references: Reference[], dir: string): Reference[] {
 	return references.map(reference => {
 		if (!reference.peer || !reference.path) return reference;
-		return { ...reference, path: resolve(dir, reference.path) };
+		const { path } = reference;
+		return {
+			...reference,
+			path: ABSOLUTE_REGEX.test(path) ? path : resolve(dir, path)
+		};
 	});
 }
 

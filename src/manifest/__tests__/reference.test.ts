@@ -6,6 +6,7 @@ import {
 	resolvePeerReferencePaths,
 	Reference
 } from "../reference";
+import { resolve as resolvePath } from "../../utils/path";
 
 describe("parseReference", () => {
 	test("parses peer reference without guid/version", () => {
@@ -119,7 +120,9 @@ describe("relativizePeerPath", () => {
 });
 
 describe("resolvePeerReferencePaths", () => {
-	const projectDir = "C:/Users/alice/projects/my-app";
+	// A real absolute directory on the current platform (not a hardcoded
+	// Windows path, so the test is platform-agnostic).
+	const projectDir = resolvePath("projects/my-app");
 
 	test("resolves relative peer path against project folder", () => {
 		const refs: Reference[] = [
@@ -140,12 +143,15 @@ describe("resolvePeerReferencePaths", () => {
 				major: 0,
 				minor: 0,
 				peer: true,
-				path: "C:/Users/alice/projects/AddinToolbox/build/AddinToolbox.xlam"
+				path: resolvePath(projectDir, "../AddinToolbox/build/AddinToolbox.xlam")
 			}
 		]);
 	});
 
 	test("keeps absolute peer path unchanged", () => {
+		// A foreign absolute path (e.g. a Windows path on POSIX, or any drive
+		// path) is left as-is and NOT re-resolved against the project folder.
+		const absPath = "C:/Users/alice/other/AddinToolbox.xlam";
 		const refs: Reference[] = [
 			{
 				name: "AddinToolbox",
@@ -153,7 +159,7 @@ describe("resolvePeerReferencePaths", () => {
 				major: 0,
 				minor: 0,
 				peer: true,
-				path: "C:/Users/alice/other/AddinToolbox.xlam"
+				path: absPath
 			}
 		];
 
