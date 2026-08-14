@@ -1,7 +1,7 @@
 import dedent from "@timhall/dedent";
 import { manifestOk } from "../errors";
 import { isString } from "../utils/is";
-import { join, relative } from "../utils/path";
+import { join, normalize, relative } from "../utils/path";
 
 /*
   # Source
@@ -65,6 +65,8 @@ export function formatSrc(src: Source[], dir: string): object {
 		if (path.match(/^[a-zA-Z]:[\\/]/) || path.startsWith("/")) {
 			path = relative(dir, path);
 		}
+		// Standardize to forward slashes even on Windows
+		path = normalize(path);
 		value[name] = path;
 	});
 

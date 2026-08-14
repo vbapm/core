@@ -72,6 +72,23 @@ describe("formatReferences", () => {
 		});
 	});
 
+	test("normalizes Windows backslashes in peer path to forward slashes", () => {
+		const refs: Reference[] = [
+			{
+				name: "AddinToolbox",
+				guid: "",
+				major: 0,
+				minor: 0,
+				peer: true,
+				path: "C:\\Users\\alice\\projects\\Toolbox\\Toolbox.xlam"
+			}
+		];
+
+		expect(formatReferences(refs)).toEqual({
+			AddinToolbox: { peer: true, path: "C:/Users/alice/projects/Toolbox/Toolbox.xlam" }
+		});
+	});
+
 	test("keeps COM references unchanged", () => {
 		const refs: Reference[] = [
 			{

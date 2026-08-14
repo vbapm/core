@@ -1,5 +1,5 @@
 import { manifestOk } from "../errors";
-import { relative, resolve } from "../utils/path";
+import { normalize, relative, resolve } from "../utils/path";
 
 /*
   # Reference
@@ -70,13 +70,13 @@ const ABSOLUTE_REGEX = /^([a-zA-Z]:[\\/]|\/)/;
  * Otherwise fall back to the absolute path — the user can edit it to a relative one.
  */
 export function relativizePeerPath(fromDir: string, filePath: string): string {
-	if (!ABSOLUTE_REGEX.test(filePath)) return filePath;
+	if (!ABSOLUTE_REGEX.test(filePath)) return normalize(filePath);
 
 	const rel = relative(fromDir, filePath);
-	if (ABSOLUTE_REGEX.test(rel)) return filePath;
+	if (ABSOLUTE_REGEX.test(rel)) return normalize(filePath);
 
 	const upCount = rel.split("/").filter(segment => segment === "..").length;
-	return upCount <= 1 ? rel : filePath;
+	return upCount <= 1 ? rel : normalize(filePath);
 }
 
 /**
@@ -98,7 +98,7 @@ export function resolvePeerReferencePaths(references: Reference[], dir: string):
 		const { path } = reference;
 		return {
 			...reference,
-			path: ABSOLUTE_REGEX.test(path) ? path : resolve(dir, path)
+			path: ABSOLUTE_REGEX.test(path) ? normalize(path) : resolve(dir, path)
 		};
 	});
 }
@@ -133,7 +133,7 @@ export function formatReferences(references: Reference[]): object {
 
 		if (peer) {
 			const entry: { [key: string]: any } = { peer: true };
-			if (path) entry.path = path;
+			if (path) entry.path = normalize(path);
 			value[name] = entry;
 		} else {
 			const version = `${major}.${minor}`;
