@@ -41,9 +41,10 @@ describe("toPeerLiteralStrings", () => {
 			`B = { peer = true, path = "C:\\\\b.xlam" }`
 		].join("\n");
 
-		const expected = [`A = { peer = true, path = 'C:\\a.xlam' }`, `B = { peer = true, path = 'C:\\b.xlam' }`].join(
-			"\n"
-		);
+		const expected = [
+			`A = { peer = true, path = 'C:\\a.xlam' }`,
+			`B = { peer = true, path = 'C:\\b.xlam' }`
+		].join("\n");
 
 		expect(toPeerLiteralStrings(input)).toBe(expected);
 	});

@@ -132,9 +132,7 @@ async function updateManifest(project: Project, changeset: Changeset) {
 		const stored = reference.peer
 			? {
 					...reference,
-					path: reference.path
-						? relativizePeerPath(project.paths.dir, reference.path)
-						: undefined
+					path: reference.path ? relativizePeerPath(project.paths.dir, reference.path) : undefined
 				}
 			: reference;
 		project.manifest.references.push(stored);

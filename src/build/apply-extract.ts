@@ -319,9 +319,7 @@ function updateManifestForExtract(
 		const stored = ref.peer
 			? {
 					...ref,
-					path: ref.path
-						? relativizePeerPath(project.paths.dir, ref.path)
-						: undefined
+					path: ref.path ? relativizePeerPath(project.paths.dir, ref.path) : undefined
 				}
 			: ref;
 		project.manifest.references.push(stored);

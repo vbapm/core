@@ -21,7 +21,10 @@ describe("parseReference", () => {
 	});
 
 	test("parses peer reference with path", () => {
-		const ref = parseReference("AddinToolbox", { peer: true, path: "../AddinToolbox/build/AddinToolbox.xlam" });
+		const ref = parseReference("AddinToolbox", {
+			peer: true,
+			path: "../AddinToolbox/build/AddinToolbox.xlam"
+		});
 
 		expect(ref.path).toBe("../AddinToolbox/build/AddinToolbox.xlam");
 		expect(ref.peer).toBe(true);
@@ -44,9 +47,7 @@ describe("parseReference", () => {
 
 describe("formatReferences", () => {
 	test("formats peer reference as peer = true", () => {
-		const refs: Reference[] = [
-			{ name: "AddinToolbox", guid: "", major: 0, minor: 0, peer: true }
-		];
+		const refs: Reference[] = [{ name: "AddinToolbox", guid: "", major: 0, minor: 0, peer: true }];
 
 		expect(formatReferences(refs)).toEqual({
 			AddinToolbox: { peer: true }
@@ -102,9 +103,9 @@ describe("relativizePeerPath", () => {
 	});
 
 	test("keeps relative path when peer is in a sibling folder", () => {
-		expect(relativizePeerPath(projectDir, "C:/Users/alice/projects/AddinToolbox/build/AddinToolbox.xlam")).toBe(
-			"../AddinToolbox/build/AddinToolbox.xlam"
-		);
+		expect(
+			relativizePeerPath(projectDir, "C:/Users/alice/projects/AddinToolbox/build/AddinToolbox.xlam")
+		).toBe("../AddinToolbox/build/AddinToolbox.xlam");
 	});
 
 	test("keeps absolute path when peer is far away", () => {
