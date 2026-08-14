@@ -139,8 +139,6 @@ exports[`export export to project with dependency 2`] = `
 "[1/3] Loading project...
 Resolving dependencies
 Fetching dependencies
-Warning: The [src] section in \\"dictionary\\" is deprecated. Use [source.files] instead.
-Warning: The [src] section in \\"json\\" is deprecated. Use [source.files] instead.
 
 [2/3] Exporting src from \\"json.xlsm\\"
 

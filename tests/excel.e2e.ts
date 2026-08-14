@@ -50,7 +50,7 @@ import {
 	wildcard,
 	withDrawing
 } from "./__fixtures__";
-import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
+import { execute, readdir, run, RunResult, setup, stripWarnings, tmp } from "./__helpers__/execute";
 
 const exec = promisify(require("child_process").exec);
 
@@ -141,7 +141,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});
@@ -157,7 +157,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});
@@ -176,7 +176,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});
@@ -195,7 +195,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});

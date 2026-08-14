@@ -102,6 +102,25 @@ export async function execute(
 	return result;
 }
 
+/**
+ * Remove warning lines from CLI output before snapshot comparison.
+ *
+ * Deprecation warnings (e.g. `[src]` → `[source.files]`) are emitted while
+ * dependencies are fetched concurrently, so their order is not deterministic
+ * and would make stdout snapshots flaky on CI. This strips the warning line
+ * plus any indented continuation lines that belong to it.
+ */
+export function stripWarnings(output: string): string {
+	return output
+		.split("\n")
+		.filter((line, index, lines) => {
+			if (/^\s*Warning: /.test(line)) return false;
+			// Drop indented continuation lines that follow a warning line.
+			return !(/^\s/.test(line) && /^\s*Warning: /.test(lines[index - 1] ?? ""));
+		})
+		.join("\n");
+}
+
 const isBackup = /\.backup/;
 const isGit = /\.git[/,\\]/;
 const isBinary = (file: string) => [".xlsm", ".frx"].includes(extname(file));
