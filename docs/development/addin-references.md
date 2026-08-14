@@ -8,17 +8,6 @@ vbapm currently supports references to COM/DLL type libraries (like Outlook, Scr
 - **Import**: `References.AddFromGuid("", 0, 0)` silently fails — the addin reference is lost
 - **Changeset detection**: Since all VBA project references have identical `guid=""` and `version="0.0"`, the comparison logic cannot detect when an addin reference changed
 
-### Real-world example (EmailManager)
-
-The `demo/EmailManager` project references `AddinToolbox`, another VBA addin. Running `vbapm export` on EmailManager produces:
-
-```toml
-[references]
-AddinToolbox = { version = "0.0", guid = "" }
-```
-
-This is invalid for re-import because `AddFromGuid` can't resolve an empty GUID.
-
 ---
 
 ## How VBA References Work
@@ -276,7 +265,7 @@ This keeps the manifest portable in the common monorepo/workspace case (peers ar
 siblings or inside the project) while still recording the peer's real location when
 it lives somewhere unrelated.
 
-**TOML representation** for the EmailManager example:
+**TOML representation**:
 
 ```toml
 # COM references (unchanged)
@@ -397,7 +386,7 @@ Or, for a more robust check, hash the referenced file's content.
 - New `project.json` schema:
   ```json
   {
-    "name": "EmailManager",
+    "name": "my-project",
     "references": [
       { "name": "Outlook", "guid": "{00062FFF...}", "major": 9, "minor": 6 },
       { "name": "AddinToolbox", "guid": "", "major": 0, "minor": 0, "peer": true, "path": "C:\\...\\AddinToolbox.xlam" }

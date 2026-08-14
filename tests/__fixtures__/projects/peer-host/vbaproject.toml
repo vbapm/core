@@ -1,0 +1,9 @@
+[project]
+name = "peer-host"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source.files]
+Usage = "src/Usage.bas"
+
+[references]
+AddinPeer = { peer = true, path = "src/AddinPeer/build/AddinPeer.xlam" }
