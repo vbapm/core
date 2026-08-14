@@ -25,7 +25,28 @@ export async function tmp(id: string, action: (cwd: string) => void) {
 		await action(path);
 	} finally {
 		if (!keepTmp) {
+			await removeWithRetry(path);
+		}
+	}
+}
+
+/**
+ * Remove a path, retrying on transient file locks.
+ *
+ * Excel COM can still be releasing file handles (e.g. a peer addin loaded via
+ * `References.AddFromFile`) for a moment after the CLI command returns, which
+ * makes `fs-extra.remove` fail with EBUSY/EPERM on Windows. Retry with a short
+ * backoff so temp-directory cleanup isn't flaky on CI.
+ */
+async function removeWithRetry(path: string, attempts = 5): Promise<void> {
+	for (let attempt = 0; attempt < attempts; attempt++) {
+		try {
 			await remove(path);
+			return;
+		} catch (err: any) {
+			const retriable = err?.code === "EBUSY" || err?.code === "EPERM";
+			if (!retriable || attempt === attempts - 1) throw err;
+			await wait(1000);
 		}
 	}
 }
