@@ -17,13 +17,14 @@ export default {
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
 	transformIgnorePatterns: [
-		"/node_modules/(?!.*(?:@decimalturn/toml-patch|env-paths|is-safe-filename)/)"
+		"/node_modules/(?!.*(?:@decimalturn/toml-patch|env-paths|is-safe-filename)/)",
+		"<rootDir>/lib/"
 	],
 	transform: {
 		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: "tests/tsconfig.json", diagnostics: false }]
 	},
 	moduleNameMapper: {
-		"^vbapm$": "<rootDir>/src/index.ts",
+		"^vbapm$": "<rootDir>/lib/index.js",
 		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js"
 	},
 	snapshotFormat: {
