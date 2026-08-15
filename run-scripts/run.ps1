@@ -132,6 +132,10 @@ class Excel {
 				$this.App.PrintCommunication = $false
 				$this.App.EnableAnimations = $false
 				$this.App.EnableEvents = $false
+				# Suppress prompts (e.g. "save changes?" on a peer addin loaded
+				# via References.AddFromFile) so Close()/Quit() don't block and
+				# leave a lingering Excel process holding file locks.
+				$this.App.DisplayAlerts = $false
 			} catch {
 				Fail "ERROR #5: Failed to open Excel - $($_.Exception.Message)"
 			}
