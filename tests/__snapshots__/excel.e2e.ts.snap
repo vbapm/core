@@ -341,6 +341,21 @@ Classes = \\"src/Class Modules/**/*.cls\\"
 }
 `;
 
+exports[`peer references builds host with peer reference and round-trips the relative path 1`] = `
+"[project]
+name = \\"peer-host\\"
+target = { type = \\"xlsm\\", path = \\"targets/xlsm\\" }
+
+[source.files]
+Usage = \\"src/Usage.bas\\"
+Sheet1 = \\"src/Sheet1.cls\\"
+ThisWorkbook = \\"src/ThisWorkbook.cls\\"
+
+[references]
+AddinPeer = { peer = true, path = 'src/AddinPeer/build/AddinPeer.xlam' }
+"
+`;
+
 exports[`version should update by increment and preid 1`] = `
 Object {
   ".editorconfig": "# EditorConfig is awesome: http://EditorConfig.org{LF}# Template from: https://github.com/DecimalTurn/VBA-on-GitHub{LF}{LF}# top-most EditorConfig file{LF}root = true{LF}{LF}# Properties for VBA, VB6 ...",
