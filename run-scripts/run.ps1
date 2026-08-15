@@ -195,6 +195,7 @@ class Excel {
 
 		if ($closeWorkbook -and $null -ne $this.Workbook) {
 			$this.Workbook.Close($true)
+			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.Workbook) | Out-Null
 			$this.Workbook = $null
 		}
 		# Quit Excel only if we launched it AND we are not keeping the file open
@@ -202,6 +203,15 @@ class Excel {
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null
+
+			# Force release of any remaining COM references so Excel actually
+			# exits before this process returns. Without this, Excel lingers and
+			# a later command can attach to the dying instance (VBA_BACKGROUND_BUILD=0),
+			# leaving file locks behind (e.g. `~$` owner files for addin references).
+			[System.GC]::Collect()
+			[System.GC]::WaitForPendingFinalizers()
+			[System.GC]::Collect()
+			[System.GC]::WaitForPendingFinalizers()
 		}
 	}
 }
