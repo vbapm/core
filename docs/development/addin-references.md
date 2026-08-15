@@ -475,7 +475,7 @@ Each test uses a blank `.xlsm` workbook created by `vbapm new`. The vbapm addin
 - **Assert**: Reference is re-added successfully (not silently dropped)
 
 #### 3. Import round-trip: build from TOML with `peer = true`
-- Create vbaproject.toml with `AddinToolbox = { peer = true, path = '...' }`
+- Create vbaproject.toml with `AddinToolbox = { peer = true, path = "..." }`
 - Have `AddinToolbox.xlam` built and present in workspace
 - Host `[source]` contains at least one module that calls `AddinToolbox.<member>` (usage-gated requirement)
 - Run `vbapm build`
@@ -484,7 +484,7 @@ Each test uses a blank `.xlsm` workbook created by `vbapm new`. The vbapm addin
 - **Assert**: Reference is NOT `MISSING` when opened in Excel
 
 #### 3b. Peer reference without usage is dropped (usage-gating)
-- Create blank `.xlsm` with `AddinToolbox = { peer = true, path = '...' }` and NO host code using AddinToolbox
+- Create blank `.xlsm` with `AddinToolbox = { peer = true, path = "..." }` and NO host code using AddinToolbox
 - Run `vbapm build` → `AddFromFile` succeeds, reference present in memory
 - Save + reopen
 - **Assert**: Reference is GONE — Excel dropped the unused project reference

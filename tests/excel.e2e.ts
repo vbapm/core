@@ -138,7 +138,7 @@ describe("peer references", () => {
 
 			const manifest = await readFile(join(cwd, "vbaproject.toml"), "utf8");
 			expect(manifest).toContain(
-				`AddinPeer = { peer = true, path = 'src/AddinPeer/build/AddinPeer.xlam' }`
+				`AddinPeer = { peer = true, path = "src/AddinPeer/build/AddinPeer.xlam" }`
 			);
 
 			expect(manifest).toMatchSnapshot();

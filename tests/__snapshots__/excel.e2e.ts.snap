@@ -352,7 +352,7 @@ Sheet1 = \\"src/Sheet1.cls\\"
 ThisWorkbook = \\"src/ThisWorkbook.cls\\"
 
 [references]
-AddinPeer = { peer = true, path = 'src/AddinPeer/build/AddinPeer.xlam' }
+AddinPeer = { peer = true, path = \\"src/AddinPeer/build/AddinPeer.xlam\\" }
 "
 `;
 
