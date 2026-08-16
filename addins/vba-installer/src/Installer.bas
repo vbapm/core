@@ -266,9 +266,14 @@ Private Function GetProjectReference(Project As VBProject, FilePath As String) A
         End If
     Next Ref
 
-    ' Also match by name (VBProject name of the referenced file)
+    ' Also match by VBProject name (the referenced file's base name without extension)
     Dim PeerName As String
+    Dim Extension As String
     PeerName = FileSystem.GetBase(FilePath)
+    Extension = FileSystem.GetExtension(FilePath)
+    If Len(Extension) > 0 Then
+        PeerName = Left$(PeerName, Len(PeerName) - Len(Extension))
+    End If
     For Each Ref In Project.References
         If Ref.Name = PeerName Then
             Set GetProjectReference = Ref
