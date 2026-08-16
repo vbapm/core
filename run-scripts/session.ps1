@@ -50,7 +50,6 @@ $Script:AppWasOpen = $false   # true if we attached to a pre-existing instance
 $Script:BackgroundBuild = $false
 $Script:OpenWorkbook = $null  # current workbook COM ref
 $Script:WorkbookWasOpen = $false
-$Script:IsAddin = $false      # true when the current request targets an add-in
 
 function Get-ScriptFileName {
 	param([string]$Path)
@@ -175,27 +174,13 @@ function Invoke-ScriptRun {
 		Open-ScriptExcel
 	}
 
-	# Add-in target: ensure it is installed and leave it loaded across requests
-	# (never closed here — only removed when the session quits Excel).
-	$Script:IsAddin = $FilePath -match '\.(xlam|xla)$'
-	if ($Script:IsAddin -and $HasRegistry) {
-		try {
-			$null = Ensure-ExcelAddin -ExcelApp $Script:App -AddinPath $FilePath
-		} catch {
-			# best-effort
-		}
-	}
-
-	if (-not $Script:IsAddin) {
-		Ensure-ScriptWorkbook $FilePath
-	}
+	Ensure-ScriptWorkbook $FilePath
 
 	$result = Invoke-ScriptMacro $Script:App $MacroName $ArgValues
 
 	# Close the workbook unless the caller asked to keep it open (the Application
 	# itself is retained across requests so a later command reuses the instance).
-	# Add-ins are never closed here.
-	if (-not $Script:IsAddin -and -not $KeepOpen -and -not $Script:WorkbookWasOpen -and $null -ne $Script:OpenWorkbook) {
+	if (-not $KeepOpen -and -not $Script:WorkbookWasOpen -and $null -ne $Script:OpenWorkbook) {
 		try {
 			$Script:OpenWorkbook.Close($true)
 		} catch {
