@@ -121,9 +121,17 @@ Module1 = "src/Module1.bas"
     Write-Host "Project built." -ForegroundColor Green
 
     Step "6. Open the built file"
-    Run-Cmd "vba open" $projectDir
+    # Open via COM (Workbooks.Open) instead of `vba open`.
+    # `vba open` shells out to `Start -Wait` which hangs in headless CI
+    # because the .xlsm file association never returns while Excel stays open.
+    # The ghost bug triggers on any open+close path, so COM open is equivalent.
+    $projLeaf = Split-Path $WorkDir -Leaf
+    $builtFile = Join-Path $projectDir "build/$projLeaf.xlsm"
+    $microsoftExcel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+    $microsoftExcel.Workbooks.Open($builtFile) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($microsoftExcel) | Out-Null
     Start-Sleep -Seconds 2
-    Write-Host "Workbook opened via vba open." -ForegroundColor Green
+    Write-Host "Workbook opened via COM (Workbooks.Open)." -ForegroundColor Green
     if ($vbeOpen) {
         $vh = Find-VBEWindow
         if ($vh) { Write-Host "VBE still open: HWND 0x$($vh.ToString('X8'))" -ForegroundColor Green }
