@@ -87,6 +87,19 @@ function RunMacro {
 }
 
 # -------
+# Excel instance coordination registry
+# -------
+
+# Track our created Excel instance in %TEMP%\Excel-Instances so concurrent
+# agents can coordinate. Dot-source the shared registry module; if it isn't
+# present (e.g. installed CLI without scripts/), coordination is a no-op.
+$RegistryModule = Join-Path $PSScriptRoot '..\scripts\ps\Excel-InstanceRegistry.ps1'
+$HasRegistry = Test-Path -LiteralPath $RegistryModule
+if ($HasRegistry) {
+	. $RegistryModule
+}
+
+# -------
 # Excel
 # -------
 
@@ -106,6 +119,15 @@ class Excel {
 		$result = RunMacro $this.App $MacroName $MacroArgValues
 
 		return $result
+	}
+
+	# Attach to a workbook that is already open in a different Excel instance
+	# (resolved by the coordination registry helpers).
+	[void] Attach([object]$App, [object]$Workbook) {
+		$this.App = $App
+		$this.ExcelWasOpen = $true
+		$this.Workbook = $Workbook
+		$this.WorkbookWasOpen = $true
 	}
 
 	hidden [void] OpenExcel() {
@@ -142,6 +164,12 @@ class Excel {
 		$fileName = GetFileName $Path
 		$fileBase = GetFileBase $Path
 		$fullPath = [System.IO.Path]::GetFullPath($Path)
+
+		# If we already attached to a workbook (found open in another instance),
+		# skip the open logic entirely.
+		if ($this.WorkbookWasOpen -and $null -ne $this.Workbook) {
+			return
+		}
 
 		# Check add-ins first
 		try {
@@ -218,12 +246,53 @@ function Run {
 	switch ($AppName) {
 		"excel" {
 			$excel = [Excel]::new()
+			$registeredPid = 0
 			try {
+				# If the target workbook is already open in another living Excel
+				# instance, attach to that instance + workbook instead of opening
+				# a duplicate copy.
+				if ($HasRegistry) {
+					try {
+						$found = Find-OpenWorkbook -Path $FilePath
+						if ($null -ne $found) {
+							$excel.Attach($found.App, $found.Workbook)
+						}
+					} catch {
+						# best-effort; fall back to opening a fresh copy
+					}
+				}
+
+				# If we created a fresh Excel instance (not attaching to an
+				# already-running one), record it in the coordination registry
+				# so concurrent agents can distinguish it from a user/rogue
+				# session. Best-effort: never break the run over coordination.
+				if ($HasRegistry -and -not $excel.ExcelWasOpen) {
+					$reason = if ($excel.BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
+					try {
+						$registeredPid = Register-ExcelInstance `
+							-ExcelApp $excel.App `
+							-Owner "terminal-$PID" `
+							-Visible (-not $excel.BackgroundBuild) `
+							-Reason $reason
+					} catch {
+						$registeredPid = 0
+					}
+				}
+
 				$result = $excel.Run($FilePath, $MacroName, $MacroArgValues)
 			} catch {
 				$result = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
 			} finally {
 				$excel.Dispose($KeepOpen)
+
+				# Untrack our instance now that it is torn down.
+				if ($HasRegistry -and $registeredPid -gt 0) {
+					try {
+						Unregister-ExcelInstance -ProcessId $registeredPid
+					} catch {
+						# best-effort
+					}
+				}
 			}
 		}
 		default {
