@@ -4,7 +4,7 @@ import { CliError, ErrorCode } from "../errors";
 import { Reference } from "../manifest/reference";
 import { pathExists, readFile, readJson } from "../utils/fs";
 import { parallel } from "../utils/parallel";
-import { basename, extname, join } from "../utils/path";
+import { basename, extname, join, normalize } from "../utils/path";
 import { BuildGraph } from "./build-graph";
 import { byComponentTypeThenName, Component, ComponentType, extensionToType } from "./component";
 import { getSystemCodepage } from "./encoding-sniffer";
@@ -117,7 +117,19 @@ async function readInfo(staging: string): Promise<{
 		}
 	}
 
-	return { name: info.name, references: info.references ?? [], componentTypes };
+	return {
+		name: info.name,
+		// Defensively mark empty-GUID references as peers (VBA project refs).
+		// The addin already exports `peer: true`, but this also covers hand-made
+		// project.json files or older addin builds. Peer paths come from VBA's
+		// `Ref.FullPath` (backslashes on Windows) — normalize to forward slashes.
+		references: (info.references ?? []).map(ref =>
+			ref.guid === ""
+				? { ...ref, peer: true, path: ref.path ? normalize(ref.path) : undefined }
+				: ref
+		),
+		componentTypes
+	};
 }
 
 function isBinary(file: string): boolean {

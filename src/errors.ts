@@ -81,7 +81,8 @@ export enum ErrorCode {
 	OpenTargetNotBuilt = "open-target-not-built",
 	OpenTargetFailed = "open-target-failed",
 	CloseTargetUnsavedChanges = "close-target-unsaved-changes",
-	SourceNameMismatch = "source-name-mismatch"
+	SourceNameMismatch = "source-name-mismatch",
+	PeerReferenceMissingPath = "peer-reference-missing-path"
 }
 
 export function manifestOk(value: any, message: string) {

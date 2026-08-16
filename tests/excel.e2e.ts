@@ -44,13 +44,14 @@ import {
 	dev,
 	empty,
 	json,
+	peerHost,
 	single,
 	standard,
 	targetless,
 	wildcard,
 	withDrawing
 } from "./__fixtures__";
-import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
+import { execute, readdir, run, RunResult, setup, stripWarnings, tmp } from "./__helpers__/execute";
 
 const exec = promisify(require("child_process").exec);
 
@@ -97,6 +98,54 @@ function quote(value: string): string {
 	return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
+/**
+ * Peer (VBA project-to-project) reference integration tests.
+ *
+ * This block runs FIRST on purpose: the other excel tests can leave a lingering
+ * Excel instance behind, and a later test suite would attach to it
+ * (VBA_BACKGROUND_BUILD=0) without quitting it, leaving the peer addin file
+ * locked (`~$`/EBUSY). Running before any other Excel test keeps this test
+ * deterministic and CI-safe.
+ *
+ * Uses the `peer-host` fixture, which contains the host project and a PRE-BUILT
+ * peer addin at `src/AddinPeer/build/AddinPeer.xlam`. The addin is built offline
+ * and committed to the fixture so this test doesn't need to spin up Excel to
+ * build it (one fewer Excel instance = fewer file-lock/cleanup races on CI).
+ * The host references the peer with a RELATIVE path, so these tests are CI-safe
+ * (no absolute paths). The host source uses the peer, which is required for the
+ * reference to persist across save (usage-gating).
+ *
+ * To rebuild the committed addin after changing `src/AddinPeer`, run `vba build`
+ * inside `src/AddinPeer` and commit the regenerated
+ * `src/AddinPeer/build/AddinPeer.xlam`.
+ */
+describe("peer references", () => {
+	test("builds host with peer reference and round-trips the relative path", async () => {
+		await setup(peerHost, "peer-host", async cwd => {
+			// The peer addin is pre-built and committed in the fixture, so it
+			// already exists at the relative path the host references.
+			expect(await readFile(join(cwd, "src/AddinPeer/build/AddinPeer.xlam"))).toBeTruthy();
+
+			// Build the host. importGraph resolves the relative peer path to
+			// absolute and calls References.AddFromFile.
+			const { stderr: hostErr } = await execute(cwd, "build");
+			expect(hostErr).not.toContain("Error");
+
+			// Extract. The reference should persist (host uses AddinPeer),
+			// and the stored path should round-trip back to relative.
+			const { stderr: extractErr } = await execute(cwd, "extract --target xlsm");
+			expect(extractErr).not.toContain("Error");
+
+			const manifest = await readFile(join(cwd, "vbaproject.toml"), "utf8");
+			expect(manifest).toContain(
+				`AddinPeer = { peer = true, path = "src/AddinPeer/build/AddinPeer.xlam" }`
+			);
+
+			expect(manifest).toMatchSnapshot();
+		});
+	}, 180000);
+});
+
 describe("build", () => {
 	test("build standard project", async () => {
 		await setup(standard, "build", async cwd => {
@@ -141,7 +190,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});
@@ -157,7 +206,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});
@@ -176,7 +225,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});
@@ -195,7 +244,7 @@ describe("export", () => {
 
 				const result = await readdir(cwd);
 				expect(result).toMatchSnapshot();
-				expect(stdout).toMatchSnapshot();
+				expect(stripWarnings(stdout)).toMatchSnapshot();
 			});
 		});
 	});

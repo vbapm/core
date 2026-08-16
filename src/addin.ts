@@ -1,6 +1,7 @@
 import { ImportGraph } from "./build/build-graph";
 import { env } from "./env";
 import { CliError, ErrorCode } from "./errors";
+import { resolvePeerReferencePaths } from "./manifest/reference";
 import { Target } from "./manifest/target";
 import { Project } from "./project";
 import { copy, ensureDir, pathExists } from "./utils/fs";
@@ -43,6 +44,23 @@ export async function importGraph(
 	const { application, addin } = getTargetInfo(project, target);
 	const { name, components, references } = graph;
 
+	// Resolve peer (VBA project) reference paths to absolute before sending to
+	// the addin. The manifest stores them relative (when nearby) or absolute;
+	// `References.AddFromFile` needs an absolute path.
+	const resolvedReferences = resolvePeerReferencePaths(references, project.paths.dir);
+	for (const reference of references) {
+		if (reference.peer && !reference.path) {
+			throw new CliError(
+				ErrorCode.PeerReferenceMissingPath,
+				`Peer reference <${reference.name}> is missing a "path".\n\n` +
+					`Add the path to the addin in vbaproject.toml, e.g.:\n\n` +
+					`  [references.${reference.name}]\n` +
+					`  peer = true\n` +
+					`  path = "../${reference.name}/${reference.name}.xlam"`
+			);
+		}
+	}
+
 	await run(
 		application,
 		options.addin || addin,
@@ -52,7 +70,7 @@ export async function importGraph(
 				file,
 				name,
 				src: components,
-				references
+				references: resolvedReferences
 			})
 		],
 		{ keepOpen: options.open }

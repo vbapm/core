@@ -374,7 +374,7 @@ export async function formatManifestToToml(value: object): Promise<string> {
 	if (sourceProps.length > 0) template += "\n[source]\n";
 	if (hasFiles) template += "\n[source.files]\n";
 
-	return patchToml(template, value);
+	return await patchToml(template, value);
 }
 
 export function formatManifest(manifest: Manifest, dir: string): object {

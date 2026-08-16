@@ -1,7 +1,7 @@
 import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
-import { Reference } from "../manifest/reference";
+import { Reference, relativizePeerPath } from "../manifest/reference";
 import { Source } from "../manifest/source";
 import { Project } from "../project";
 import { ensureDir, remove, writeFile } from "../utils/fs";
@@ -127,7 +127,15 @@ async function updateManifest(project: Project, changeset: Changeset) {
 	}
 
 	for (let reference of changeset.references.added) {
-		project.manifest.references.push(reference);
+		// Relativize peer reference paths against the project folder so the
+		// manifest stays portable when the peer lives nearby.
+		const stored = reference.peer
+			? {
+					...reference,
+					path: reference.path ? relativizePeerPath(project.paths.dir, reference.path) : undefined
+				}
+			: reference;
+		project.manifest.references.push(stored);
 	}
 	for (const reference of changeset.references.removed) {
 		const index = project.manifest.references.findIndex(

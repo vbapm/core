@@ -1,0 +1,6 @@
+[project]
+name = "AddinPeer"
+target = { type = "xlam", path = "targets/xlam" }
+
+[src]
+Greeting = "src/Greeting.bas"
