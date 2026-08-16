@@ -112,10 +112,14 @@ export async function execute(
 	command: string,
 	options?: { binDir?: string }
 ): Promise<{ stdout: string; stderr: string }> {
+	// `open` shells out to the ESM-only `open` package which Jest can't transform;
+	// always spawn the real CLI for it.
+	const isOpen = command.trim().startsWith("open");
+
 	// Opt-in: run the command in-process (skip cmd.exe → vba.cmd → node.exe),
 	// importing the action functions directly. Shares the Jest process's module
 	// state (and, if a persistent session is active, the same Excel instance).
-	if (/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "")) {
+	if (/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") && !isOpen) {
 		return executeInProcess(cwd, command);
 	}
 
@@ -152,11 +156,18 @@ async function executeInProcess(
 	const [cmdName, ...rest] = command.trim().split(/\s+/);
 	const args = mri(rest, {});
 
-	// Capture process stdout/stderr (console.log/error) for the command's duration.
+	// Capture stdout/stderr for the command's duration. console.log flows through
+	// process.stdout.write, but Jest intercepts console.warn/error (printing them
+	// via the reporter with source traces) and does NOT route them through
+	// process.stdout.write. Overriding console.* directly reproduces the raw text
+	// a spawned CLI would emit so `stdout`/`stderr` match the exec() snapshots.
 	let stdout = "";
 	let stderr = "";
 	const origOut = process.stdout.write;
 	const origErr = process.stderr.write;
+	const origConsoleLog = console.log;
+	const origConsoleWarn = console.warn;
+	const origConsoleError = console.error;
 	process.stdout.write = ((chunk: any) => {
 		stdout += typeof chunk === "string" ? chunk : chunk?.toString?.() ?? "";
 		return true;
@@ -164,6 +175,15 @@ async function executeInProcess(
 	process.stderr.write = ((chunk: any) => {
 		stderr += typeof chunk === "string" ? chunk : chunk?.toString?.() ?? "";
 		return true;
+	}) as any;
+	console.log = ((...a: any[]) => {
+		stdout += `${a.map(x => (typeof x === "string" ? x : String(x))).join(" ")}\n`;
+	}) as any;
+	console.warn = ((...a: any[]) => {
+		stderr += `${a.map(x => (typeof x === "string" ? x : String(x))).join(" ")}\n`;
+	}) as any;
+	console.error = ((...a: any[]) => {
+		stderr += `${a.map(x => (typeof x === "string" ? x : String(x))).join(" ")}\n`;
 	}) as any;
 
 	const prevCwd = process.cwd();
@@ -191,6 +211,9 @@ async function executeInProcess(
 	} finally {
 		process.stdout.write = origOut;
 		process.stderr.write = origErr;
+		console.log = origConsoleLog;
+		console.warn = origConsoleWarn;
+		console.error = origConsoleError;
 		process.chdir(prevCwd);
 		env.cwd = prevEnvCwd;
 	}
@@ -208,77 +231,41 @@ async function executeInProcess(
 }
 
 /**
- * Map a CLI command name to its action function and run it (in-process).
- * Mirrors the bin/vbapm-*.ts command entrypoints.
+ * Map a CLI command name to its bin command (vbapm-*.ts) and run it in-process.
+ *
+ * We call the bin command's default export (which does the console.log formatting
+ * and update-check wiring) rather than the raw action functions, so the stdout
+ * matches what a spawned `vba` process would emit.
  */
 async function dispatchCommand(cmdName: string, args: any): Promise<void> {
-	// `mri` puts positional args in `args._`; the first positional is sometimes
-	// the command itself (already stripped above), so `args._` holds the rest.
+	let command: (args: any) => Promise<void>;
 	switch (cmdName) {
-		case "build": {
-			const { buildProject } = await import("../../src/actions/build-project");
-			await buildProject({
-				target: args.target,
-				addin: args.addin,
-				release: !!args.release
-			});
-			return;
-		}
-		case "new": {
-			const { createProject } = await import("../../src/actions/create-project");
-			const [name] = args._;
-			await createProject({
-				name,
-				target: args.target,
-				from: args.from,
-				pkg: !!args.package,
-				git: "git" in args ? !!args.git : true,
-				configTemplates: "conf" in args ? !!args.conf : true
-			});
-			return;
-		}
+		case "build":
+			command = (await import("../../src/bin/vbapm-build")).default;
+			break;
+		case "new":
+			command = (await import("../../src/bin/vbapm-new")).default;
+			break;
 		case "export":
-		case "extract": {
-			const { exportProject } = await import("../../src/actions/export-project");
-			await exportProject({
-				target: args.target,
-				completed: args.completed,
-				addin: args.addin,
-				xmlOnly: !!args["xml-only"],
-				vbaOnly: !!args["vba-only"],
-				skipSheetNameNormalization: !!args["skip-sheet-name-normalization"]
-			});
-			return;
-		}
-		case "update": {
-			const { updateProject } = await import("../../src/actions/update-project");
-			await updateProject({
-				target: args.target,
-				addin: args.addin,
-				release: !!args.release,
-				open: !!args.open
-			});
-			return;
-		}
-		case "close": {
-			const { closeTarget } = await import("../../src/actions/close-target");
-			await closeTarget({ target: args.target, save: !!args.save, force: !!args.force });
-			return;
-		}
-		case "open": {
-			const { openTarget, getTargetPath } = await import("../../src/actions/open-target");
-			const path = await getTargetPath(args.target);
-			await openTarget(path);
-			return;
-		}
-		case "version": {
-			const { incrementVersion } = await import("../../src/actions/increment-version");
-			await incrementVersion(args._[0] || "patch", { preid: args.preid });
-			return;
-		}
+			command = (await import("../../src/bin/vbapm-export")).default;
+			break;
+		case "extract":
+			command = (await import("../../src/bin/vbapm-extract")).default;
+			break;
+		case "update":
+			command = (await import("../../src/bin/vbapm-update")).default;
+			break;
+		case "close":
+			command = (await import("../../src/bin/vbapm-close")).default;
+			break;
+		case "version":
+			command = (await import("../../src/bin/vbapm-version")).default;
+			break;
 		default:
 			throw new Error(`executeInProcess: unsupported command "${cmdName}"`);
 	}
+
+	await command(args);
 }
 
 const isBackup = /\.backup/;

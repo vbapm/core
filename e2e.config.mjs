@@ -1,6 +1,7 @@
 export default {
 	testEnvironment: "node",
 	testTimeout: 120000,
+	globalSetup: "<rootDir>/tests/global-setup.js",
 	testMatch: ["**/tests/**/*.e2e.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
@@ -13,7 +14,8 @@ export default {
 	},
 	moduleNameMapper: {
 		"^vbapm$": "<rootDir>/lib/index.js",
-		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js"
+		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js",
+		"^open$": "<rootDir>/tests/__helpers__/open-stub.ts"
 	},
 	snapshotFormat: {
 		escapeString: true,
