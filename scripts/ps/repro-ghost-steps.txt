@@ -1,0 +1,23 @@
+# Ghost VBE Project Bug - Manual Repro Steps
+# Copy-paste each step into your terminal one at a time.
+
+# ==== Step 1: Close all Excel instances ====
+.\scripts\ps\close-excel.ps1 -SaveAll
+.\scripts\ps\close-hidden-excel-instances.ps1 -Force
+
+# ==== Step 2: Open new visible Excel (creates blank workbook) ====
+.\scripts\ps\open-new-excel.ps1
+
+# ==== Step 3: Open VBE window ====
+# Manually press Alt+F11 in Excel, then continue
+
+# ==== Step 4: Open workbook ====
+cd demo/simple-demo-thisworkbook5
+vba open
+
+# ==== Step 5: Close the workbook (not Excel) ====
+cd ..\..
+.\scripts\ps\close-workbook.ps1 -Name "simple-demo-thisworkbook5.xlsm" -Force
+
+# ==== Step 6: Check for ghosts ====
+.\scripts\ps\detect-ghost-vbe.ps1
