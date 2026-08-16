@@ -44,6 +44,14 @@ describe("parseReference", () => {
 			minor: 0
 		});
 	});
+
+	test("rejects peer reference with non-string path", () => {
+		expect(() => parseReference("AddinToolbox", { peer: true, path: 123 })).toThrow();
+	});
+
+	test("rejects null reference value", () => {
+		expect(() => parseReference("AddinToolbox", null)).toThrow();
+	});
 });
 
 describe("formatReferences", () => {

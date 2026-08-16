@@ -1,4 +1,5 @@
 import { manifestOk } from "../errors";
+import { isObject, isString } from "../utils/is";
 import { normalize, relative, resolve } from "../utils/path";
 
 /*
@@ -108,10 +109,15 @@ export function parseReferences(value: any): Reference[] {
 }
 
 export function parseReference(name: string, value: any): Reference {
+	manifestOk(isObject(value), `Reference <${name}> is invalid. \n\n${EXAMPLE}.`);
 	const { version, guid, peer, path } = value;
 
 	// Peer reference to another VBA project — no GUID or version
 	if (peer) {
+		manifestOk(
+			path === undefined || isString(path),
+			`Reference <${name}> has an invalid peer path <${path}>. \n\n${EXAMPLE}.`
+		);
 		return { name, guid: "", major: 0, minor: 0, peer: true, path };
 	}
 
