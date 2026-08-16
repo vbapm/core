@@ -18,8 +18,14 @@ const SPECIAL_FILE_STDOUT = env.isWindows ? "CON" : "/dev/stdout";
 // When set, route Windows runs through a persistent PowerShell session that
 // keeps the Excel.Application COM stub alive across invocations (avoids
 // re-launching Excel for every `vba run`). Defaults to off until stabilized.
+//
+// Only applies to the *background* build (VBA_BACKGROUND_BUILD=1), where we own
+// a dedicated hidden Excel instance worth reusing. In visible mode we attach to
+// an already-running user session, so a persistent session has no meaning.
 const PERSISTENT_SESSION =
-	env.isWindows && /^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+	env.isWindows &&
+	/^(1|true|yes)$/i.test(process.env.VBA_BACKGROUND_BUILD || "") &&
+	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
 
 export interface RunResult {
 	success: boolean;

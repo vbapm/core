@@ -109,6 +109,7 @@ class Excel {
 	hidden [bool]$ExcelWasOpen = $false
 	hidden [object]$Workbook
 	hidden [bool]$WorkbookWasOpen = $false
+	hidden [bool]$IsAddin = $false
 
 	Excel() {
 		$this.OpenExcel()
@@ -165,6 +166,10 @@ class Excel {
 		$fileBase = GetFileBase $Path
 		$fullPath = [System.IO.Path]::GetFullPath($Path)
 
+		# Only the vbapm add-in is left open across runs (avoids close/reopen
+		# churn). Any other add-in or workbook closes normally after the run.
+		$this.IsAddin = $fileBase -eq 'vbapm.xlam'
+
 		# If we already attached to a workbook (found open in another instance),
 		# skip the open logic entirely.
 		if ($this.WorkbookWasOpen -and $null -ne $this.Workbook) {
@@ -214,6 +219,11 @@ class Excel {
 	}
 
 	[void] Dispose([bool]$KeepOpen) {
+		# An add-in we opened is left open for reuse across runs.
+		if ($this.IsAddin) {
+			return
+		}
+
 		# A file that was open before we started is never closed by us
 		$closeWorkbook = -not $this.WorkbookWasOpen -and -not $KeepOpen
 

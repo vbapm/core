@@ -50,11 +50,18 @@ import {
 	wildcard,
 	withDrawing
 } from "./__fixtures__";
-import { execute, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
+import { execute, closePersistentSession, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
 
 const exec = promisify(require("child_process").exec);
 
 jest.setTimeout(180000);
+
+// When the persistent session is enabled (VBA_PERSISTENT_SESSION=1), the
+// in-process `run()` helper keeps one hidden Excel instance alive for the whole
+// suite. Close it here so we don't leak it after the tests finish.
+afterAll(async () => {
+	await closePersistentSession();
+});
 
 expect.addSnapshotSerializer({
 	test: value => isSnapshotFileMap(value),
