@@ -1,0 +1,116 @@
+Here's a summary of the e2e testing process in this repo.
+
+## What e2e CLI tests exercise
+
+The end-to-end tests (excel.e2e.ts + helper in execute.ts) run the full pipeline — CLI binary → Excel COM automation via the `vbapm.xlam` add-in — against real Excel on Windows. They cover build, `export`, `extract`, `update`, `new`, `close`, `run`, and worksheet/drawing edge cases, comparing output against Jest snapshots.
+
+## How the tests are invoked
+
+From package.json:
+
+| Script | What it does |
+|---|---|
+| `pnpm run test:e2e` | `VBA_BACKGROUND_BUILD=0` (visible Excel) |
+| `pnpm run test:e2e:background` | `VBA_BACKGROUND_BUILD=1` (hidden Excel) — what we just ran |
+| `pnpm run test:e2e:updateSnapshots` | same as background + `--updateSnapshot` |
+| `pnpm run test:e2e:multilang` | separate multilang config |
+
+Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which rebuilds lib if sources are newer than the build output (that's the `[ensure-fresh-build] lib/ is stale … rebuilding` line you saw).
+
+The actual test runner is `jest --config e2e.config.mjs --runInBand` (serial, so no parallel Excel collisions).
+
+## Two distinct execution paths *inside* the tests
+
+This is the crucial detail:
+
+1. **`execute(cwd, "build")`** — spawns the compiled vba binary as a **fresh Node process** per command. Used for build, `export`, `extract`, `new`, etc.
+
+2. **`run("excel", file, "Validation.Validate")`** — calls the `run()` function **in-process** from the `"vbapm"` library loaded into the Jest process. Used to actually execute a macro inside a built workbook.
+
+## Call chain and process boundaries
+
+```mermaid
+flowchart TB
+    subgraph JestProc["JEST PROCESS (repo checkout)"]
+        Jest["pnpm test:e2e\nJest --runInBand"]
+        Exec["child_process.exec\n(execute() helper)"]
+        LibIn["lib/vbapm.js\n(run() helper, in-process)"]
+    end
+
+    subgraph CmdProc["CMD.EXE (Windows shell,\nhost for the .cmd shim)"]
+        Cmd["cmd.exe\n(resolves extensionless path\nvia PATHEXT → vba.cmd)"]
+    end
+
+    subgraph VbaProc["NEW 'vba' NODE PROCESS (per execute() call)"]
+        Shim["vba.cmd shim\n(calls node lib/vbapm.js)"]
+        NodeCli["node.exe"]
+        LibCli["lib/vbapm.js\n(same library)"]
+    end
+
+    subgraph PS["POWERSHELL.EXE (child process)"]
+        Bridge["run-scripts/run.ps1\n(or session.ps1)"]
+    end
+
+    subgraph Excel["EXCEL.EXE (COM, out-of-process)"]
+        Addin["vbapm.xlam add-in"]
+        Macro["Build.ImportGraph /\nBuild.CreateDocument /\nBuild.ExportTo\n(Application.Run)"]
+    end
+
+    subgraph Reg["COORDINATION REGISTRY (side-channel)"]
+        Json["%TEMP%\\Excel-Instances\\instances.json"]
+    end
+
+    %% path A: execute() → child_process.exec → cmd.exe → vba.cmd → node → lib
+    Jest -->|"execute()"| Exec
+    Exec -->|"exec(`vba build`)"| Cmd
+    Cmd -->|"PATHEXT: vba → vba.cmd"| Shim
+    Shim -->|"`node lib/vbapm.js`"| NodeCli
+    NodeCli -->|"loads"| LibCli
+    LibCli -->|"spawn powershell.exe (run.ts)"| Bridge
+
+    %% path B: run() helper is in-process (no cmd.exe, no vba process)
+    Jest -->|"run() helper → import 'vbapm'"| LibIn
+    LibIn -->|"spawn powershell.exe (run.ts)"| Bridge
+
+    %% PowerShell drives Excel
+    Bridge -->|"New-Object ComObject / GetActiveObject"| Excel
+    Bridge -->|"opens / attaches"| Addin
+    Addin -->|"relays build/extract instructions"| Macro
+
+    %% registry tracking
+    Bridge -.->|"register/unregister instance\n(comReachable, addins, windowTitle)"| Json
+```
+
+**Key process boundaries:**
+
+- **Jest (repo process)** — drives tests.
+  - **Path A — `execute()`**: calls `child_process.exec`, which on Windows routes the command through **`cmd.exe`**. `cmd.exe` resolves the extensionless `vba` path to `vba.cmd` (via `PATHEXT`), which launches `node.exe` running `lib/vbapm.js`.
+  - **Path B — `run()` helper**: calls the library **in-process** (no `cmd.exe`, no new `vba` Node process).
+- **`cmd.exe`** — the Windows shell hosting the `vba.cmd` batch shim. Only in path A.
+- **`vba.cmd` shim** — a batch wrapper that invokes `node.exe --no-warnings lib/vbapm.js` (or `vendor/node.exe` if bundled).
+- **`node.exe`** — the actual runtime for the CLI; loads `lib/vbapm.js`.
+- **`powershell.exe`** — the COM bridge (`run.ps1`), spawned by `lib/vbapm.js` (via `run()` in `src/utils/run.ts`) only when a macro must run. This is the only layer that talks to Excel.
+- **`EXCEL.EXE`** — out-of-process COM server hosting the `vbapm.xlam` add-in; `Application.Run` executes the build/export/import macros.
+- **Coordination registry** — a side-channel (not part of the macro relay) that tracks instances across all agents for cross-agent awareness.
+
+> **Note:** `execute()` (via `child_process.exec`) spawns `cmd.exe`, which runs `vba.cmd`, which launches `node.exe` running `lib/vbapm.js`; that is where `powershell.exe` is finally spawned. The `run()` helper skips `cmd.exe` and the `vba` Node process entirely, going straight from Jest (in-process `lib/vbapm.js`) → `powershell.exe`.
+
+## The COM bridge
+
+`vba run` → run.ts → spawns `powershell.exe -File run-scripts/run.ps1` (or session.ps1 for the persistent mode) → run.ps1 drives Excel via COM:
+
+1. Attach to a running visible instance (`GetActiveObject`) **or** create a new instance (hidden if `VBA_BACKGROUND_BUILD=1`).
+2. Open the target file (a `.xlam` add-in, or a workbook).
+3. `Application.Run("Build.ImportGraph" | "Build.CreateDocument" | "Build.ExportTo")` to relay the build/extract instruction.
+4. Close the workbook (unless `keepOpen`), quit Excel (unless it was already running).
+
+## What we just observed and fixed
+
+- **Before the fix**: my `VBA_PERSISTENT_SESSION=1` + `.xlam` add-in changes caused (a) 20 leaked Excel instances (one per `execute()` CLI process) and (b) `Cannot run the macro 'Build.ImportGraph'` failures.
+- **After reverting** those: **26/26 tests, 18/18 snapshots pass** (~280s including the rebuild).
+
+## Current correct behavior
+
+- The `build:check` auto-rebuilds lib when stale.
+- Each test runs in a temp dir under .tmp (cleaned up unless `KEEP_E2E_TMP=1`).
+- Excel instances are created/quitted per macro run (no persistence), and the coordination registry (`%TEMP%\Excel-Instances\instances.json`) tracks instances for cross-agent awareness — with `comReachable`, addins, `windowTitle`, and `null` workbooks for non-COM-reachable ones.
