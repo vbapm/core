@@ -73,10 +73,20 @@ if ($Json) {
             $idStr = if ($r.id) { $r.id } else { '(none)' }
             $comStr = if ($r.comReachable) { 'com' } else { 'no-com' }
             Write-Output ("  id={0,-10} pid={1,-6} owner={2} reason={3} visible={4} com={5} createdAt={6}" -f $idStr, $r.pid, $r.owner, $r.reason, $r.visible, $comStr, $r.createdAt)
+            if ($r.windowTitle) {
+                Write-Output ("          window: {0}" -f $r.windowTitle)
+            }
             $wbs = @($r.workbooks)
             if ($wbs.Count -gt 0) {
                 foreach ($w in $wbs) {
                     Write-Output ("          workbook: {0}" -f $w)
+                }
+            }
+            $addins = @($r.addins)
+            if ($addins.Count -gt 0) {
+                foreach ($a in $addins) {
+                    $openFlag = if ($a.isOpen) { 'open' } else { 'closed' }
+                    Write-Output ("          addin: {0} [{1}]" -f $a.name, $openFlag)
                 }
             }
         }

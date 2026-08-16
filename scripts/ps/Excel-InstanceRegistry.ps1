@@ -39,8 +39,10 @@
 #     "createdAt":  "<ISO-8601>",
 #     "visible":    <bool>,       # whether the app window is visible
 #     "comReachable": <bool>,     # whether the instance is accessible via COM/ROT
+#     "windowTitle": "<string>",  # main window title (may be null)
 #     "reason":     "<string>",   # e.g. "e2e", "vbapm-run", "unknown"
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
+#     "addins":     [{"name": "<addin name>", "isOpen": <bool>}, ...]
 #   }
 #
 # All access to instances.json is serialized through the lock file so that
@@ -240,6 +242,92 @@ function Get-ExcelWorkbooks {
 
 <#
 .SYNOPSIS
+Return the names (and installed/loaded status) of add-ins known to a COM
+Excel.Application [ref]. Add-ins that are currently loaded are flagged
+`isOpen = $true`. Names are unique per add-in and normalized to forward slashes
+for any path-like names.
+#>
+function Get-ExcelAddins {
+    param([Parameter(Mandatory)][object]$ExcelApp)
+
+    $addins = @()
+    try {
+        foreach ($addin in $ExcelApp.AddIns) {
+            try {
+                $name = [string]$addin.Name
+                $isOpen = [bool]$addin.Installed
+            } catch {
+                continue
+            }
+
+            if (-not $name) { continue }
+
+            $addins += [pscustomobject]@{
+                name   = ($name -replace '\\', '/')
+                isOpen = $isOpen
+            }
+        }
+    } catch {
+        # AddIns collection unavailable; return whatever we have.
+    }
+    return @($addins)
+}
+
+<#
+.SYNOPSIS
+Ensure a COM Excel.Application [ref] has the given add-in installed and loaded.
+Reuses an already-loaded add-in, otherwise adds + installs it. Returns the add-in
+COM object (or $null on failure).
+
+This is the mechanism for leaving `vbapm.xlam` open across runs: once installed,
+the add-in stays in the Application's AddIns collection for the life of the Excel
+process, so subsequent macro runs reuse it instead of reopening it.
+#>
+function Ensure-ExcelAddin {
+    param(
+        [Parameter(Mandatory)][object]$ExcelApp,
+        [Parameter(Mandatory)][string]$AddinPath,
+        [string]$AddinName = ''
+    )
+
+    $fullPath = [System.IO.Path]::GetFullPath($AddinPath)
+    $fileName = [System.IO.Path]::GetFileName($fullPath)
+    $name = if ($AddinName) { $AddinName } else { [System.IO.Path]::GetFileNameWithoutExtension($fullPath) }
+
+    # 1) Already installed/loaded via the AddIns collection?
+    try {
+        $addin = $ExcelApp.AddIns($fileName)
+        if ($addin -and ([bool]$addin.Installed)) {
+            return $addin
+        }
+    } catch {
+        # Not found by that name; fall through to add it.
+    }
+
+    # 2) Already open as a workbook (some flows open the .xlam directly)?
+    try {
+        foreach ($wb in $ExcelApp.Workbooks) {
+            if ($wb.FullName -eq $fullPath) {
+                return $wb
+            }
+        }
+    } catch {
+        # ignore
+    }
+
+    # 3) Add + install it as a proper add-in.
+    try {
+        $addin = $ExcelApp.AddIns.Add($fullPath, $true)
+        $addin.Installed = $true
+        return $addin
+    } catch {
+        Write-Warning "Failed to ensure add-in '$fileName' is loaded: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+<#
+.SYNOPSIS
 Generate a random lowercase-alphanumeric id (hash) for an Excel instance. Used
 so agents can refer to (and close) a specific instance independent of its PID.
 #>
@@ -270,6 +358,8 @@ function Update-ExcelInstance {
         [bool]$Visible = $false,
         [string]$Reason = 'unknown',
         [string[]]$Workbooks = @(),
+        [object[]]$Addins = @(),
+        [string]$WindowTitle = '',
         [bool]$ComReachable = $true
     )
 
@@ -297,8 +387,10 @@ function Update-ExcelInstance {
             visible      = $Visible
             reason       = $Reason
             comReachable = [bool]$ComReachable
+            windowTitle  = if ([string]::IsNullOrEmpty($WindowTitle)) { $null } else { $WindowTitle }
             createdAt    = (Get-Date).ToString('o')
-            workbooks    = @($Workbooks)
+            workbooks    = if ($null -eq $Workbooks) { $null } else { @($Workbooks) }
+            addins       = if ($null -eq $Addins) { $null } else { @($Addins) }
         }
 
         $found = $false
@@ -514,8 +606,11 @@ function Register-ExcelInstance {
         # Capture the open-workbook list from the live app.
         $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $ExcelApp)
 
+        # Capture the loaded add-in list from the live app.
+        $openAddins = @(Get-ExcelAddins -ExcelApp $ExcelApp)
+
         # This instance was just obtained via COM, so it is COM-reachable.
-        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -ComReachable $true
+        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -Addins $openAddins -ComReachable $true
         return $instancePid
     } catch {
         Write-Warning "Failed to register Excel instance: $($_.Exception.Message)"

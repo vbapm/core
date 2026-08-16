@@ -55,11 +55,20 @@ function Upsert-Instance {
         [int]$InstanceId,
         [bool]$Visible,
         [string[]]$Workbooks,
+        [object[]]$Addins,
         [bool]$ComReachable = $false
     )
 
     $owner = Resolve-ExcelInstanceOwner $InstanceId
     $reason = 'unknown'
+    $windowTitle = $null
+    try {
+        $proc = Get-Process -Id $InstanceId -ErrorAction Stop
+        $windowTitle = $proc.MainWindowTitle
+    } catch {
+        $windowTitle = $null
+    }
+
     if ($existingByPid.ContainsKey([int]$InstanceId)) {
         $prev = $existingByPid[[int]$InstanceId]
         $owner = if ($prev.owner) { $prev.owner } else { $owner }
@@ -71,7 +80,7 @@ function Upsert-Instance {
         }
     }
 
-    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -ComReachable $ComReachable
+    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -Addins $Addins -WindowTitle $windowTitle -ComReachable $ComReachable
 }
 
 $apps = @(Get-ExcelApplications)
@@ -99,9 +108,10 @@ foreach ($app in $apps) {
     try { $isVisible = [bool]$app.Visible } catch {}
 
     $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $app)
+    $openAddins = @(Get-ExcelAddins -ExcelApp $app)
 
-    Upsert-Instance $instancePid $isVisible $openWorkbooks $true
-    Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count)"
+    Upsert-Instance $instancePid $isVisible $openWorkbooks $openAddins $true
+    Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count) addins=$($openAddins.Count)"
 }
 
 # 2) Discover any EXCEL process NOT reachable via ROT (e.g. a user-visible
@@ -117,20 +127,20 @@ foreach ($p in $allExcel) {
     $isVisible = [bool]($p.MainWindowHandle -ne 0)
 
     # Best-effort workbook list from this process's visible main window title.
-    # Format is "<WorkbookName> - Excel". Fall back to placeholder when unknown.
-    $openWorkbooks = @()
+    # Format is "<WorkbookName> - Excel". When the instance is not reachable via
+    # COM and exposes no main window title, we cannot know its workbooks, so we
+    # record $null (unknown) rather than a placeholder string.
+    $openWorkbooks = $null
     if ($isVisible -and $p.MainWindowTitle) {
         $title = $p.MainWindowTitle
         if ($title -match '^(.*?)(\.xlsx|\.xlsm|\.xlsb|\.xls)?\s*-\s*Excel$') {
-            $openWorkbooks += $p.MainWindowTitle -replace '\s*-\s*Excel$', ''
+            $openWorkbooks = @($p.MainWindowTitle -replace '\s*-\s*Excel$', '')
         } else {
-            $openWorkbooks += "[$($p.MainWindowTitle)]"
+            $openWorkbooks = @("[$($p.MainWindowTitle)]")
         }
-    } else {
-        $openWorkbooks += '[unknown — instance not reachable via COM]'
     }
 
-    Upsert-Instance $instancePid $isVisible $openWorkbooks $false
+    Upsert-Instance $instancePid $isVisible $openWorkbooks $null $false
     Write-Output "Synced (process) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count)"
 }
 

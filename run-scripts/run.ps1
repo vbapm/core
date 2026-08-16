@@ -109,6 +109,7 @@ class Excel {
 	hidden [bool]$ExcelWasOpen = $false
 	hidden [object]$Workbook
 	hidden [bool]$WorkbookWasOpen = $false
+	hidden [bool]$IsAddin = $false
 
 	Excel() {
 		$this.OpenExcel()
@@ -165,6 +166,21 @@ class Excel {
 		$fileBase = GetFileBase $Path
 		$fullPath = [System.IO.Path]::GetFullPath($Path)
 
+		# Add-in target: it was already installed/loaded by the caller (via
+		# Ensure-ExcelAddin), so just grab its reference and run its macro.
+		if ($this.IsAddin) {
+			try {
+				$addin = $this.App.AddIns($fileBase)
+				if ($addin -and $addin.Installed) {
+					$this.Workbook = $addin
+					$this.WorkbookWasOpen = $true
+				}
+			} catch {
+				# fall through; macro may still be resolvable by name
+			}
+			return
+		}
+
 		# If we already attached to a workbook (found open in another instance),
 		# skip the open logic entirely.
 		if ($this.WorkbookWasOpen -and $null -ne $this.Workbook) {
@@ -214,6 +230,12 @@ class Excel {
 	}
 
 	[void] Dispose([bool]$KeepOpen) {
+		# An add-in that we loaded is left installed for reuse across runs —
+		# it is never closed here (only removed when the Excel instance quits).
+		if ($this.IsAddin) {
+			return
+		}
+
 		# A file that was open before we started is never closed by us
 		$closeWorkbook = -not $this.WorkbookWasOpen -and -not $KeepOpen
 
@@ -248,10 +270,24 @@ function Run {
 			$excel = [Excel]::new()
 			$registeredPid = 0
 			try {
+				# If the target is an add-in (.xlam/.xla), ensure it is installed
+				# and leave it loaded across runs (instead of opening/closing it
+				# like a normal workbook).
+				if ($HasRegistry -and $FilePath -match '\.(xlam|xla)$') {
+					try {
+						$addin = Ensure-ExcelAddin -ExcelApp $excel.App -AddinPath $FilePath
+						if ($null -ne $addin) {
+							$excel.IsAddin = $true
+						}
+					} catch {
+						# best-effort; fall back to regular workbook handling
+					}
+				}
+
 				# If the target workbook is already open in another living Excel
 				# instance, attach to that instance + workbook instead of opening
 				# a duplicate copy.
-				if ($HasRegistry) {
+				if ($HasRegistry -and -not $excel.IsAddin) {
 					try {
 						$found = Find-OpenWorkbook -Path $FilePath
 						if ($null -ne $found) {
