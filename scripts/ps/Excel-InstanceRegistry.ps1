@@ -6,7 +6,8 @@
 # Excel instances, and so rogue/leftover instances can be identified.
 #
 # Layout (under %TEMP%\Excel-Instances\):
-#   instances.json  - JSON array describing every known/tracked Excel instance
+#   instances.json  - JSON document describing tracked (active) and recently
+#                     deactivated (inactive) Excel instances
 #   instances.lock  - lock file used to serialize edits to instances.json
 #
 # This file is a *dot-sourced* library, not a standalone script. It exposes:
@@ -15,11 +16,15 @@
 #     Get-ExcelInstancesDir        -> path to %TEMP%\Excel-Instances\
 #     Get-ExcelInstancesPath       -> full path to instances.json
 #     Get-ExcelInstancesLockPath   -> full path to instances.lock
-#     Read-ExcelInstances          -> deserialized registry (array), creating
-#                                     the directory/file if absent
-#     Write-ExcelInstances         -> write the registry with lock held
-#     Update-ExcelInstance         -> upsert one instance entry (lock held)
-#     Remove-ExcelInstance         -> delete one instance entry (lock held)
+#     Read-ExcelRegistryDocument   -> normalized { active, inactive } document
+#     Read-ExcelInstances          -> active instances only (flat array)
+#     Read-InactiveExcelInstances  -> recently deactivated instances (flat array)
+#     Write-ExcelRegistryDocument  -> write { active, inactive } with lock held
+#     Write-ExcelInstances         -> write active entries (preserves inactive)
+#     Update-ExcelInstance         -> upsert one active entry (lock held)
+#     Refresh-ExcelInstance        -> re-record workbooks/addins from a live app
+#     Remove-ExcelInstance         -> deactivate one entry (lock held)
+#     Remove-ExcelInstanceById     -> deactivate by stable hash id (lock held)
 #
 #   Lock Functions:
 #     Get-ExcelInstancesLock       -> acquire the lock (blocking, with timeout)
@@ -28,10 +33,19 @@
 #   Instance Intrinsics:
 #     Get-ExcelProcessId           -> PID of a [ref] to a COM Excel.Application
 #     Register-ExcelInstance       -> track a newly created instance
-#     Unregister-ExcelInstance     -> untrack an instance being torn down
+#     Unregister-ExcelInstance     -> deactivate an instance being torn down
 #     Get-RunningExcelInstances    -> enumerate live EXCEL.EXE processes w/ PIDs
 #
-# The registry is keyed by process id (Pid). Each entry:
+# The registry is keyed by process id (Pid). The on-disk document is:
+#   {
+#     "count":      <int>,   # active + inactive
+#     "registered": <int>,   # active entries with a real owner
+#     "invisible":  <int>,   # active entries that are hidden
+#     "active":     [ ... ], # instances believed to be live
+#     "inactive":   [ ... ]  # recently deactivated instances
+#   }
+#
+# Each ACTIVE entry:
 #   {
 #     "id":        "<random hash>", # stable lower-alnum hash used to close it
 #     "pid":        <int>,
@@ -44,6 +58,19 @@
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
 #     "addins":     [{"name": "<addin name>", "isOpen": <bool>}, ...]
 #   }
+#
+# An INACTIVE entry is a full active entry that was deactivated instead of being
+# deleted, plus:
+#   {
+#     "deactivatedAt":     "<ISO-8601>",  # when it was moved to inactive
+#     "deactivateReason":  "<string>"     # e.g. "unregistered", "dead-process"
+#   }
+#
+# Keeping deactivated entries (rather than deleting them) lets the end-of-suite
+# assessment (Assess-ExcelInstances.ps1) detect a "zombie": an instance whose
+# registry entry was deactivated but whose EXCEL.EXE process is still alive —
+# and attribute it to the workbooks (and therefore the e2e test) that were open
+# on it when it was deactivated.
 #
 # All access to instances.json is serialized through the lock file so that
 # concurrent agents never read a half-written JSON document.
@@ -153,10 +180,14 @@ function Release-ExcelInstancesLock {
 
 <#
 .SYNOPSIS
-Read the registry, returning an array of instance entries. Creates an empty
-registry (and directory) if none exists. Safe to call without holding the lock.
+Read the full registry document, normalized to { active, inactive }. Creates an
+empty registry (and directory) if none exists. Safe to call without the lock.
+
+Normalizes legacy on-disk shapes (a bare array, or the older
+`{ count, registered, invisible, instances }` object) to the new
+{ active, inactive } document so old files still load.
 #>
-function Read-ExcelInstances {
+function Read-ExcelRegistryDocument {
     $dir = Get-ExcelInstancesDir
     if (-not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -164,36 +195,71 @@ function Read-ExcelInstances {
 
     $jsonPath = Get-ExcelInstancesPath
     if (-not (Test-Path -LiteralPath $jsonPath)) {
-        return @()
+        return [ordered]@{ active = @(); inactive = @() }
     }
 
     try {
         $raw = Get-Content -LiteralPath $jsonPath -Raw -ErrorAction Stop
         if ([string]::IsNullOrWhiteSpace($raw)) {
-            return @()
+            return [ordered]@{ active = @(); inactive = @() }
         }
         $parsed = $raw | ConvertFrom-Json -ErrorAction Stop
-        if ($null -eq $parsed) { return @() }
-        # New schema: the file is an object { count, registered, instances }.
-        # Normalize to the flat array for in-memory consumers (backward-compatible
-        # with the legacy bare-array format).
-        if ($parsed.PSObject.Properties.Name -contains 'instances') {
-            return @($parsed.instances)
+        if ($null -eq $parsed) {
+            return [ordered]@{ active = @(); inactive = @() }
         }
-        if ($parsed -is [array]) { return @($parsed) }
-        return @($parsed)
+
+        $active = @()
+        $inactive = @()
+
+        if ($parsed -is [array]) {
+            # Legacy: bare array of instances.
+            $active = @($parsed)
+        } elseif ($parsed.PSObject.Properties.Name -contains 'active') {
+            $active = @($parsed.active)
+            if ($parsed.PSObject.Properties.Name -contains 'inactive') {
+                $inactive = @($parsed.inactive)
+            }
+        } elseif ($parsed.PSObject.Properties.Name -contains 'instances') {
+            # Older schema: { count, registered, invisible, instances }.
+            $active = @($parsed.instances)
+        } else {
+            $active = @($parsed)
+        }
+
+        return [ordered]@{ active = $active; inactive = $inactive }
     } catch {
         Write-Warning "Failed to read Excel instance registry: $($_.Exception.Message)"
-        return @()
+        return [ordered]@{ active = @(); inactive = @() }
     }
 }
 
 <#
 .SYNOPSIS
-Write the registry (overwriting) as JSON. Callers should hold the lock.
+Read the active instances only, as a flat array (backwards-compatible with
+callers that predate the active/inactive split).
 #>
-function Write-ExcelInstances {
-    param([object[]]$Instances)
+function Read-ExcelInstances {
+    return @((Read-ExcelRegistryDocument).active)
+}
+
+<#
+.SYNOPSIS
+Read the recently deactivated instances as a flat array.
+#>
+function Read-InactiveExcelInstances {
+    return @((Read-ExcelRegistryDocument).inactive)
+}
+
+<#
+.SYNOPSIS
+Write the full registry document (active + inactive) as JSON. Callers should
+hold the lock.
+#>
+function Write-ExcelRegistryDocument {
+    param(
+        [object[]]$Active,
+        [object[]]$Inactive = @()
+    )
 
     $dir = Get-ExcelInstancesDir
     if (-not (Test-Path -LiteralPath $dir)) {
@@ -202,30 +268,45 @@ function Write-ExcelInstances {
 
     $jsonPath = Get-ExcelInstancesPath
 
-    $list = @($Instances)
-    $count = $list.Count
+    $activeList = @($Active)
+    $inactiveList = @($Inactive)
 
     # "registered" = entries that carry a real owner (explicitly tracked by an
     # agent), as opposed to `rogue`/`unknown` entries discovered only via the
     # live process list.
-    $registered = @($list | Where-Object {
+    $registered = @($activeList | Where-Object {
         $o = [string]$_.owner
         $o -and $o -notmatch '^(rogue|unknown|unknown-owner)$'
     }).Count
 
     # "invisible" = automation-created (hidden) instances: visible is false or
     # unset. Useful for spotting leaked background instances at a glance.
-    $invisible = @($list | Where-Object { -not [bool]$_.visible }).Count
+    $invisible = @($activeList | Where-Object { -not [bool]$_.visible }).Count
 
     $doc = [ordered]@{
-        count      = $count
+        count      = $activeList.Count + $inactiveList.Count
         registered = $registered
         invisible  = $invisible
-        instances  = $list
+        active     = $activeList
+        inactive   = $inactiveList
     }
 
     $json = $doc | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($jsonPath, $json, [System.Text.UTF8Encoding]::new($false))
+}
+
+<#
+.SYNOPSIS
+Write the active instances (overwriting). Callers should hold the lock. Existing
+inactive entries are preserved so a partial write doesn't lose deactivated
+instances; use Write-ExcelRegistryDocument to change both lists at once.
+#>
+function Write-ExcelInstances {
+    param([object[]]$Instances)
+
+    # Callers hold the lock, so reading the current inactive list here is safe.
+    $existingInactive = @((Read-ExcelRegistryDocument).inactive)
+    Write-ExcelRegistryDocument -Active $Instances -Inactive $existingInactive
 }
 
 # -------
@@ -390,15 +471,25 @@ function Update-ExcelInstance {
 
     Get-ExcelInstancesLock | Out-Null
     try {
-        $instances = @(Read-ExcelInstances)
+        $doc = Read-ExcelRegistryDocument
+        $instances = @($doc.active)
 
-        # Preserve an existing id hash if this PID is already tracked, so the
-        # id stays stable across updates (visibility/workbook refreshes).
+        # Preserve an existing id hash if this PID is already tracked (active or
+        # previously deactivated), so the id stays stable across updates and
+        # re-activations.
         $existingId = $null
         foreach ($inst in $instances) {
             if ([int]$inst.pid -eq $InstanceId -and $inst.id) {
                 $existingId = [string]$inst.id
                 break
+            }
+        }
+        if (-not $existingId) {
+            foreach ($inst in @($doc.inactive)) {
+                if ([int]$inst.pid -eq $InstanceId -and $inst.id) {
+                    $existingId = [string]$inst.id
+                    break
+                }
             }
         }
         if (-not $existingId) {
@@ -430,7 +521,10 @@ function Update-ExcelInstance {
             $instances += [pscustomobject]$entry
         }
 
-        Write-ExcelInstances $instances
+        # This PID is active again — drop any stale inactive entry for it.
+        $inactive = @($doc.inactive | Where-Object { [int]$_.pid -ne $InstanceId })
+
+        Write-ExcelRegistryDocument -Active $instances -Inactive $inactive
     } finally {
         Release-ExcelInstancesLock
     }
@@ -438,16 +532,53 @@ function Update-ExcelInstance {
 
 <#
 .SYNOPSIS
-Remove an instance entry by PID. Holds the lock for the duration.
+Annotate an active entry for the inactive list: copy it and stamp when/why it
+was deactivated.
+#>
+function ConvertTo-InactiveEntry {
+    param(
+        [object]$Entry,
+        [string]$DeactivateReason
+    )
+
+    $deactivated = $Entry | Select-Object *
+    $deactivated | Add-Member -NotePropertyName deactivatedAt -NotePropertyValue ((Get-Date).ToString('o')) -Force
+    $deactivated | Add-Member -NotePropertyName deactivateReason -NotePropertyValue $DeactivateReason -Force
+    return $deactivated
+}
+
+<#
+.SYNOPSIS
+Deactivate an instance entry by PID: move it from `active` to `inactive` (rather
+than deleting it), so a later assessment can tell whether the process actually
+exited. Holds the lock for the duration.
 #>
 function Remove-ExcelInstance {
-    param([Parameter(Mandatory)][int]$InstanceId)
+    param(
+        [Parameter(Mandatory)][int]$InstanceId,
+        [string]$DeactivateReason = 'unregistered'
+    )
 
     Get-ExcelInstancesLock | Out-Null
     try {
-        $instances = @(Read-ExcelInstances)
-        $instances = @($instances | Where-Object { [int]$_.pid -ne $InstanceId })
-        Write-ExcelInstances $instances
+        $doc = Read-ExcelRegistryDocument
+        $active = @($doc.active)
+        $inactive = @($doc.inactive)
+
+        $removed = @($active | Where-Object { [int]$_.pid -eq $InstanceId })
+        $kept = @($active | Where-Object { [int]$_.pid -ne $InstanceId })
+
+        foreach ($entry in $removed) {
+            $inactive += (ConvertTo-InactiveEntry -Entry $entry -DeactivateReason $DeactivateReason)
+        }
+
+        # Keep the inactive list bounded to the most recent entries.
+        $maxInactive = 100
+        if ($inactive.Count -gt $maxInactive) {
+            $inactive = @($inactive | Select-Object -Last $maxInactive)
+        }
+
+        Write-ExcelRegistryDocument -Active $kept -Inactive $inactive
     } finally {
         Release-ExcelInstancesLock
     }
@@ -471,16 +602,34 @@ function Find-ExcelInstanceById {
 
 <#
 .SYNOPSIS
-Remove a registry entry by its stable hash id. Holds the lock for the duration.
+Deactivate a registry entry by its stable hash id (move to `inactive`). Holds
+the lock for the duration.
 #>
 function Remove-ExcelInstanceById {
-    param([Parameter(Mandatory)][string]$Id)
+    param(
+        [Parameter(Mandatory)][string]$Id,
+        [string]$DeactivateReason = 'closed-by-id'
+    )
 
     Get-ExcelInstancesLock | Out-Null
     try {
-        $instances = @(Read-ExcelInstances)
-        $instances = @($instances | Where-Object { -not ($_.id -and [string]$_.id -eq $Id) })
-        Write-ExcelInstances $instances
+        $doc = Read-ExcelRegistryDocument
+        $active = @($doc.active)
+        $inactive = @($doc.inactive)
+
+        $removed = @($active | Where-Object { $_.id -and [string]$_.id -eq $Id })
+        $kept = @($active | Where-Object { -not ($_.id -and [string]$_.id -eq $Id) })
+
+        foreach ($entry in $removed) {
+            $inactive += (ConvertTo-InactiveEntry -Entry $entry -DeactivateReason $DeactivateReason)
+        }
+
+        $maxInactive = 100
+        if ($inactive.Count -gt $maxInactive) {
+            $inactive = @($inactive | Select-Object -Last $maxInactive)
+        }
+
+        Write-ExcelRegistryDocument -Active $kept -Inactive $inactive
     } finally {
         Release-ExcelInstancesLock
     }
@@ -645,6 +794,73 @@ function Register-ExcelInstance {
 
 <#
 .SYNOPSIS
+Refresh the recorded workbooks/addins (and visibility) of a tracked instance
+from its live COM Application object, preserving owner/reason/createdAt. Called
+after opening workbooks/addins (and again just before teardown) so the registry
+reflects what the instance actually holds — which lets the end-of-suite
+assessment attribute a lingering ("zombie") instance to the workbooks (and
+therefore the e2e test) that were open on it.
+#>
+function Refresh-ExcelInstance {
+    param(
+        [Parameter(Mandatory)][object]$ExcelApp,
+        [int]$ProcessId = 0,
+        [string]$TargetPath = ''
+    )
+
+    try {
+        # Resolve the pid from the live app when the caller didn't supply one.
+        if ($ProcessId -le 0) {
+            try { $ProcessId = Get-ExcelProcessId -ExcelApp $ExcelApp } catch { }
+        }
+        if ($ProcessId -le 0) { return }
+
+        $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $ExcelApp)
+        $openAddins = @(Get-ExcelAddins -ExcelApp $ExcelApp)
+
+        # Record the file the macro was asked to operate on (build/export/extract
+        # open that file *inside* the VBA macro, so it is never visible via
+        # Get-ExcelWorkbooks). Merging it here gives the registry a stable path
+        # to attribute a lingering instance back to the test that used it.
+        if ($TargetPath) {
+            $normalizedTarget = $TargetPath -replace '\\', '/'
+            if ($openWorkbooks -notcontains $normalizedTarget) {
+                $openWorkbooks += $normalizedTarget
+            }
+        }
+
+        $isVisible = $false
+        try { $isVisible = [bool]$ExcelApp.Visible } catch {}
+
+        Get-ExcelInstancesLock | Out-Null
+        try {
+            $doc = Read-ExcelRegistryDocument
+            $active = @($doc.active)
+            $found = $false
+
+            for ($i = 0; $i -lt $active.Count; $i++) {
+                if ([int]$active[$i].pid -eq $ProcessId) {
+                    $active[$i].workbooks = @($openWorkbooks)
+                    $active[$i].addins = @($openAddins)
+                    $active[$i].visible = [bool]$isVisible
+                    $found = $true
+                    break
+                }
+            }
+
+            if ($found) {
+                Write-ExcelRegistryDocument -Active $active -Inactive $doc.inactive
+            }
+        } finally {
+            Release-ExcelInstancesLock
+        }
+    } catch {
+        # Best-effort; never break a run over a refresh failure.
+    }
+}
+
+<#
+.SYNOPSIS
 Untrack an Excel.Application instance from the registry before it is torn down.
 If $ConfirmProcessId is supplied, only the matching entry is removed.
 #>
@@ -696,15 +912,18 @@ Reconcile the registry against the live EXCEL.EXE process list so that every
 running instance appears in the registry — not just the ones an agent explicitly
 registered. Already-tracked entries keep their metadata; any live process not in
 the registry is added as a minimal `rogue` entry (owner "rogue", comReachable
-unknown). Dead entries are dropped. Writes the stable snapshot shape
-{ count, registered, instances }.
+unknown). Entries whose PID is no longer live are moved to `inactive` (rather
+than dropped) so a later assessment can detect a lingering process. Writes the
+stable snapshot shape { count, registered, invisible, active, inactive }.
 
 This is the "stable layer": the registry always mirrors what's actually open on
 the machine, even when automation didn't register (or failed to register) an
 instance.
 #>
 function Sync-ExcelInstanceSnapshot {
-    $registered = @(Read-ExcelInstances)
+    $doc = Read-ExcelRegistryDocument
+    $registered = @($doc.active)
+    $inactive = @($doc.inactive)
 
     # Index existing entries by pid so we can enrich without duplicating.
     $byPid = @{}
@@ -746,7 +965,21 @@ function Sync-ExcelInstanceSnapshot {
         }
     }
 
-    Write-ExcelInstances $snapshot
+    # Entries in `active` whose PID is no longer live are deactivated (moved to
+    # `inactive`) rather than dropped, so a later assessment can tell whether
+    # the process actually exited or is lingering.
+    $dead = @($registered | Where-Object { -not $livePids.ContainsKey([int]$_.pid) })
+    foreach ($entry in $dead) {
+        $inactive += (ConvertTo-InactiveEntry -Entry $entry -DeactivateReason 'dead-process')
+    }
+
+    # Keep the inactive list bounded to the most recent entries.
+    $maxInactive = 100
+    if ($inactive.Count -gt $maxInactive) {
+        $inactive = @($inactive | Select-Object -Last $maxInactive)
+    }
+
+    Write-ExcelRegistryDocument -Active $snapshot -Inactive $inactive
     return $snapshot
 }
 

@@ -37,6 +37,7 @@ try {
 }
 
 $registered = @(Read-ExcelInstances)
+$inactive = @(Read-InactiveExcelInstances)
 $running = @(Get-RunningExcelInstances)
 
 $registeredPids = @{}
@@ -56,11 +57,13 @@ $status = [pscustomobject]@{
     lockPath        = (Get-ExcelInstancesLockPath)
     lockHeld        = [bool](Test-Path -LiteralPath (Get-ExcelInstancesLockPath))
     registeredCount = $registered.Count
+    inactiveCount   = $inactive.Count
     runningCount    = $running.Count
     rogueCount      = $rogue.Count
     invisibleCount  = @($running | Where-Object { -not $_.visible }).Count
     orphanedCount   = $orphaned.Count
     registered      = @($registered)
+    inactive        = @($inactive)
     running         = @($running)
     rogue           = @($rogue)
     orphaned        = @($orphaned)
@@ -73,6 +76,7 @@ if ($Json) {
     Write-Output ("Registry directory : {0}" -f $status.directory)
     Write-Output ("Lock file held     : {0}" -f $status.lockHeld)
     Write-Output ("Registered count   : {0}" -f $status.registeredCount)
+    Write-Output ("Inactive count     : {0}" -f $status.inactiveCount)
     Write-Output ("Running EXCEL count: {0}" -f $status.runningCount)
     Write-Output ("Rogue count        : {0}" -f $status.rogueCount)
     Write-Output ("Invisible count    : {0}" -f $status.invisibleCount)
@@ -99,6 +103,21 @@ if ($Json) {
                 foreach ($a in $addins) {
                     $openFlag = if ($a.isOpen) { 'open' } else { 'closed' }
                     Write-Output ("          addin: {0} [{1}]" -f $a.name, $openFlag)
+                }
+            }
+        }
+        Write-Output ""
+    }
+
+    if ($status.inactiveCount -gt 0) {
+        Write-Output "--- Recently deactivated (inactive) ---"
+        foreach ($r in $inactive) {
+            $idStr = if ($r.id) { $r.id } else { '(none)' }
+            Write-Output ("  id={0,-10} pid={1,-6} owner={2} reason={3} deactivatedAt={4} why={5}" -f $idStr, $r.pid, $r.owner, $r.reason, $r.deactivatedAt, $r.deactivateReason)
+            $wbs = @($r.workbooks)
+            if ($wbs.Count -gt 0 -and $null -ne $wbs[0]) {
+                foreach ($w in $wbs) {
+                    Write-Output ("          workbook: {0}" -f $w)
                 }
             }
         }

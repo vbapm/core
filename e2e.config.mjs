@@ -2,6 +2,7 @@ export default {
 	testEnvironment: "node",
 	testTimeout: 120000,
 	globalSetup: "<rootDir>/tests/global-setup.js",
+	globalTeardown: "<rootDir>/tests/global-teardown.js",
 	testMatch: ["**/tests/**/*.e2e.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],

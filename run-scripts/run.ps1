@@ -33,6 +33,28 @@ function GetFileName {
 	return [System.IO.Path]::GetFileNameWithoutExtension($Path)
 }
 
+# Extract the target `file` path from a macro's JSON argument (if present).
+# build/export/extract open that file *inside* the VBA macro (run.ps1 itself only
+# opens the vbapm.xlam add-in), so this lets the registry attribute an instance
+# to the file a command actually operated on.
+function Get-MacroTargetFile {
+	param([string[]]$MacroArgValues)
+
+	foreach ($arg in $MacroArgValues) {
+		if (-not $arg) { continue }
+		try {
+			$parsed = $arg | ConvertFrom-Json -ErrorAction Stop
+			if ($null -ne $parsed -and $parsed.PSObject.Properties.Name -contains 'file' -and $parsed.file) {
+				return ([string]$parsed.file) -replace '\\', '/'
+			}
+		} catch {
+			# Not JSON, or no `file` field — skip.
+		}
+	}
+
+	return ''
+}
+
 function Fail {
 	param([string]$Message)
 
@@ -221,6 +243,7 @@ class Excel {
 	hidden [object]$Workbook
 	hidden [bool]$WorkbookWasOpen = $false
 	hidden [bool]$IsAddin = $false
+	hidden [int]$Pid = 0
 
 	Excel() {
 		$this.OpenExcel()
@@ -228,6 +251,22 @@ class Excel {
 
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
 		$this.OpenWorkbook($FilePath)
+
+		# Record the just-opened workbook/addin in the coordination registry NOW,
+		# while the COM object is still in memory and the workbook is open, and
+		# also record the file the macro will operate on (build/export/extract
+		# open it inside the macro). Capturing at open time (rather than only at
+		# teardown) keeps the workbook list accurate even when the macro closes
+		# the workbook before the run returns — which is what lets us attribute a
+		# lingering instance to the exact test that opened the workbook.
+		if (Get-Command Refresh-ExcelInstance -ErrorAction SilentlyContinue) {
+			try {
+				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues)
+			} catch {
+				# best-effort; never break a run over coordination bookkeeping
+			}
+		}
+
 		$result = RunMacro $this.App $MacroName $MacroArgValues
 
 		return $result
@@ -283,6 +322,7 @@ class Excel {
 
 			$excelPid = 0
 			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
+			$this.Pid = $excelPid
 			$mode = if ($this.BackgroundBuild) { 'background' } else { 'foreground' }
 			LogInstance "created Excel instance excelPid=$excelPid mode=$mode"
 			Set-ActiveExcelInstance -App $this.App -IsBackground $this.BackgroundBuild
@@ -439,6 +479,19 @@ function Run {
 			} catch {
 				$result = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
 			} finally {
+				# Refresh the registry entry's workbook/addin list from the live
+				# COM app before teardown, so the deactivated ("inactive") record
+				# carries the exact set of workbooks this instance held — letting
+				# the end-of-suite assessment trace a lingering instance back to
+				# the e2e test that opened them.
+				if ($HasRegistry -and $registeredPid -gt 0 -and $null -ne $excel.App) {
+					try {
+						Refresh-ExcelInstance -ExcelApp $excel.App -ProcessId $registeredPid -TargetPath (Get-MacroTargetFile $MacroArgValues)
+					} catch {
+						# best-effort
+					}
+				}
+
 				$excel.Dispose($KeepOpen)
 
 				# Untrack our instance now that it is torn down.
