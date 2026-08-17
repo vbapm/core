@@ -169,11 +169,11 @@ async function executeInProcess(
 	const origConsoleWarn = console.warn;
 	const origConsoleError = console.error;
 	process.stdout.write = ((chunk: any) => {
-		stdout += typeof chunk === "string" ? chunk : chunk?.toString?.() ?? "";
+		stdout += typeof chunk === "string" ? chunk : (chunk?.toString?.() ?? "");
 		return true;
 	}) as any;
 	process.stderr.write = ((chunk: any) => {
-		stderr += typeof chunk === "string" ? chunk : chunk?.toString?.() ?? "";
+		stderr += typeof chunk === "string" ? chunk : (chunk?.toString?.() ?? "");
 		return true;
 	}) as any;
 	console.log = ((...a: any[]) => {
