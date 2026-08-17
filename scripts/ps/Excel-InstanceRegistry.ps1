@@ -174,6 +174,12 @@ function Read-ExcelInstances {
         }
         $parsed = $raw | ConvertFrom-Json -ErrorAction Stop
         if ($null -eq $parsed) { return @() }
+        # New schema: the file is an object { count, registered, instances }.
+        # Normalize to the flat array for in-memory consumers (backward-compatible
+        # with the legacy bare-array format).
+        if ($parsed.PSObject.Properties.Name -contains 'instances') {
+            return @($parsed.instances)
+        }
         if ($parsed -is [array]) { return @($parsed) }
         return @($parsed)
     } catch {
@@ -195,11 +201,30 @@ function Write-ExcelInstances {
     }
 
     $jsonPath = Get-ExcelInstancesPath
-    $json = if ($Instances -and $Instances.Count -gt 0) {
-        @($Instances) | ConvertTo-Json -Depth 4
-    } else {
-        '[]'
+
+    $list = @($Instances)
+    $count = $list.Count
+
+    # "registered" = entries that carry a real owner (explicitly tracked by an
+    # agent), as opposed to `rogue`/`unknown` entries discovered only via the
+    # live process list.
+    $registered = @($list | Where-Object {
+        $o = [string]$_.owner
+        $o -and $o -notmatch '^(rogue|unknown|unknown-owner)$'
+    }).Count
+
+    # "invisible" = automation-created (hidden) instances: visible is false or
+    # unset. Useful for spotting leaked background instances at a glance.
+    $invisible = @($list | Where-Object { -not [bool]$_.visible }).Count
+
+    $doc = [ordered]@{
+        count      = $count
+        registered = $registered
+        invisible  = $invisible
+        instances  = $list
     }
+
+    $json = $doc | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($jsonPath, $json, [System.Text.UTF8Encoding]::new($false))
 }
 
@@ -663,6 +688,66 @@ function Get-RunningExcelInstances {
         }
     }
     return $result
+}
+
+<#
+.SYNOPSIS
+Reconcile the registry against the live EXCEL.EXE process list so that every
+running instance appears in the registry — not just the ones an agent explicitly
+registered. Already-tracked entries keep their metadata; any live process not in
+the registry is added as a minimal `rogue` entry (owner "rogue", comReachable
+unknown). Dead entries are dropped. Writes the stable snapshot shape
+{ count, registered, instances }.
+
+This is the "stable layer": the registry always mirrors what's actually open on
+the machine, even when automation didn't register (or failed to register) an
+instance.
+#>
+function Sync-ExcelInstanceSnapshot {
+    $registered = @(Read-ExcelInstances)
+
+    # Index existing entries by pid so we can enrich without duplicating.
+    $byPid = @{}
+    foreach ($e in $registered) {
+        $byPid[[int]$e.pid] = $e
+    }
+
+    $live = @(Get-RunningExcelInstances)
+    $livePids = @{}
+    $snapshot = @()
+
+    foreach ($p in $live) {
+        $instancePid = [int]$p.pid
+        $livePids[$instancePid] = $true
+
+        if ($byPid.ContainsKey($instancePid)) {
+            $entry = $byPid[$instancePid]
+            # Refresh cheap, process-derived fields (visibility/title) even for
+            # already-tracked entries so the snapshot stays current.
+            $entry.visible = [bool]$p.visible
+            if (-not $entry.windowTitle) { $entry.windowTitle = $p.mainWindowTitle }
+            $snapshot += $entry
+        } else {
+            # Live but untracked: record a minimal rogue entry so it shows up in
+            # the registry (and the status report) as an unattributed instance.
+            $snapshot += [pscustomobject]@{
+                id           = (New-ExcelInstanceId)
+                pid          = $instancePid
+                owner        = 'rogue'
+                visible      = [bool]$p.visible
+                reason       = 'rogue'
+                comReachable = $false
+                windowTitle  = if ([string]::IsNullOrEmpty($p.mainWindowTitle)) { $null } else { $p.mainWindowTitle }
+                createdAt    = $p.startedAt
+                workbooks    = $null
+                addins       = $null
+                startedAt    = $p.startedAt
+            }
+        }
+    }
+
+    Write-ExcelInstances $snapshot
+    return $snapshot
 }
 
 <#

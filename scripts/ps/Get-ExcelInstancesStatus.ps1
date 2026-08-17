@@ -26,6 +26,16 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
 
+# Reconcile first so the report (and instances.json) reflect *all* live EXCEL
+# instances, not just the subset an agent explicitly registered. This is what
+# guarantees `instances.json` mirrors Task Manager: any running EXCEL.EXE that
+# isn't tracked gets added as a `rogue` entry.
+try {
+    Sync-ExcelInstanceSnapshot | Out-Null
+} catch {
+    # Report is best-effort; never fail the status command over a sync error.
+}
+
 $registered = @(Read-ExcelInstances)
 $running = @(Get-RunningExcelInstances)
 
@@ -48,6 +58,7 @@ $status = [pscustomobject]@{
     registeredCount = $registered.Count
     runningCount    = $running.Count
     rogueCount      = $rogue.Count
+    invisibleCount  = @($running | Where-Object { -not $_.visible }).Count
     orphanedCount   = $orphaned.Count
     registered      = @($registered)
     running         = @($running)
@@ -64,11 +75,12 @@ if ($Json) {
     Write-Output ("Registered count   : {0}" -f $status.registeredCount)
     Write-Output ("Running EXCEL count: {0}" -f $status.runningCount)
     Write-Output ("Rogue count        : {0}" -f $status.rogueCount)
+    Write-Output ("Invisible count    : {0}" -f $status.invisibleCount)
     Write-Output ("Orphaned count     : {0}" -f $status.orphanedCount)
     Write-Output ""
 
     if ($status.registeredCount -gt 0) {
-        Write-Output "--- Registered instances ---"
+        Write-Output "--- Instances ---"
         foreach ($r in $registered) {
             $idStr = if ($r.id) { $r.id } else { '(none)' }
             $comStr = if ($r.comReachable) { 'com' } else { 'no-com' }
@@ -77,13 +89,13 @@ if ($Json) {
                 Write-Output ("          window: {0}" -f $r.windowTitle)
             }
             $wbs = @($r.workbooks)
-            if ($wbs.Count -gt 0) {
+            if ($wbs.Count -gt 0 -and $null -ne $wbs[0]) {
                 foreach ($w in $wbs) {
                     Write-Output ("          workbook: {0}" -f $w)
                 }
             }
             $addins = @($r.addins)
-            if ($addins.Count -gt 0) {
+            if ($addins.Count -gt 0 -and $null -ne $addins[0]) {
                 foreach ($a in $addins) {
                     $openFlag = if ($a.isOpen) { 'open' } else { 'closed' }
                     Write-Output ("          addin: {0} [{1}]" -f $a.name, $openFlag)
