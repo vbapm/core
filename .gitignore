@@ -26,3 +26,4 @@ node_modules
 *.code-workspace
 local/
 
+ghost-demo/

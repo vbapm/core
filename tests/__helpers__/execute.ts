@@ -73,7 +73,28 @@ export async function tmp(id: string, action: (cwd: string) => void) {
 		await action(path);
 	} finally {
 		if (!keepTmp) {
+			await removeWithRetry(path);
+		}
+	}
+}
+
+/**
+ * Remove a path, retrying on transient file locks.
+ *
+ * Excel COM can still be releasing file handles (e.g. a peer addin loaded via
+ * `References.AddFromFile`) for a moment after the CLI command returns, which
+ * makes `fs-extra.remove` fail with EBUSY/EPERM on Windows. Retry with a short
+ * backoff so temp-directory cleanup isn't flaky on CI.
+ */
+async function removeWithRetry(path: string, attempts = 5): Promise<void> {
+	for (let attempt = 0; attempt < attempts; attempt++) {
+		try {
 			await remove(path);
+			return;
+		} catch (err: any) {
+			const retriable = err?.code === "EBUSY" || err?.code === "EPERM";
+			if (!retriable || attempt === attempts - 1) throw err;
+			await wait(1000);
 		}
 	}
 }
@@ -275,6 +296,25 @@ async function dispatchCommand(cmdName: string, args: any): Promise<void> {
 	}
 
 	await command(args);
+}
+
+/**
+ * Remove warning lines from CLI output before snapshot comparison.
+ *
+ * Deprecation warnings (e.g. `[src]` → `[source.files]`) are emitted while
+ * dependencies are fetched concurrently, so their order is not deterministic
+ * and would make stdout snapshots flaky on CI. This strips the warning line
+ * plus any indented continuation lines that belong to it.
+ */
+export function stripWarnings(output: string): string {
+	return output
+		.split("\n")
+		.filter((line, index, lines) => {
+			if (/^\s*Warning: /.test(line)) return false;
+			// Drop indented continuation lines that follow a warning line.
+			return !(/^\s/.test(line) && /^\s*Warning: /.test(lines[index - 1] ?? ""));
+		})
+		.join("\n");
 }
 
 const isBackup = /\.backup/;

@@ -3,7 +3,7 @@ import { yellowBright } from "@timhall/ansi-colors";
 import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
-import { Reference } from "../manifest/reference";
+import { Reference, relativizePeerPath } from "../manifest/reference";
 import { Source } from "../manifest/source";
 import { Project } from "../project";
 import { remove } from "../utils/fs";
@@ -316,7 +316,13 @@ function updateManifestForExtract(
 
 	// Add new references
 	for (const ref of references.added) {
-		project.manifest.references.push(ref);
+		const stored = ref.peer
+			? {
+					...ref,
+					path: ref.path ? relativizePeerPath(project.paths.dir, ref.path) : undefined
+				}
+			: ref;
+		project.manifest.references.push(stored);
 	}
 
 	// Remove orphaned references

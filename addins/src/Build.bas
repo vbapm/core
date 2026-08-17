@@ -54,8 +54,13 @@ Public Function ImportGraph(Graph As Variant) As String
 
     Dim Ref As Dictionary
     For Each Ref In Values("references")
-        Output.Messages.Add "ref: " & Ref("name") & ", " & Ref("guid") & ", " & Ref("major") & ", " & Ref("minor")
-        Installer.AddReference Document.VBProject, Ref("guid"), CLng(Ref("major")), CLng(Ref("minor"))
+        If Ref.Exists("peer") And Ref("peer") = True Then
+            Output.Messages.Add "peer-ref: " & Ref("name") & ", " & Ref("path")
+            Installer.AddProjectReference Document.VBProject, Ref("path")
+        Else
+            Output.Messages.Add "ref: " & Ref("name") & ", " & Ref("guid") & ", " & Ref("major") & ", " & Ref("minor")
+            Installer.AddReference Document.VBProject, Ref("guid"), CLng(Ref("major")), CLng(Ref("minor"))
+        End If
     Next Ref
 
     Document.Save
@@ -179,6 +184,12 @@ Public Function ExportTo(Info As Variant) As String
             RefInfo("guid") = Ref.Guid
             RefInfo("major") = Ref.Major
             RefInfo("minor") = Ref.Minor
+
+            ' Detect peer (VBA project) references by empty GUID
+            If Ref.Guid = "" Then
+                RefInfo("peer") = True
+                RefInfo("path") = Ref.FullPath
+            End If
 
             Project("references").Add RefInfo
         End If

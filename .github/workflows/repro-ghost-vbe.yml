@@ -1,0 +1,73 @@
+name: Reproduce Ghost VBE Bug
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repro:
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Setup VBA runtime
+        uses: DecimalTurn/setup-vba@797e4a232699a98507cb4411d5bea3697427ad57 # v0.3.0
+        with:
+          office-apps: Excel
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Install dependencies and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build:cli
+          pnpm run build:addins
+
+      - name: Install CLI standalone
+        shell: pwsh
+        run: .\installer\devinstall.ps1
+
+      - name: Run repro script
+        id: repro
+        shell: pwsh
+        run: |
+          $result = .\scripts\ps\repro-ghost-vbe-ci.ps1 2>&1
+          $result | Out-String -Stream | ForEach-Object { Write-Output $_ }
+          $ghosts = ($result | Select-String "Ghosts\s*:\s*(\d+)" | ForEach-Object { $_.Matches.Groups[1].Value })
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "::error::Repro script failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+          $ghostCount = if ($ghosts) { [int]$ghosts } else { 0 }
+          Write-Output "ghost-count=$ghostCount" >> $env:GITHUB_OUTPUT
+          if ($ghostCount -gt 0) {
+            Write-Output "::warning::Ghost VBE projects detected: $ghostCount"
+          } else {
+            Write-Output "::notice::No ghost VBE projects detected."
+          }
+
+      - name: Summary
+        if: always()
+        run: |
+          $ghosts = "${{ steps.repro.outputs.ghost-count }}"
+          if ($ghosts -eq "0") {
+            Write-Output "### :white_check_mark: No ghost VBE projects" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            Write-Output "### :warning: $ghosts ghost VBE project(s) detected" >> $env:GITHUB_STEP_SUMMARY
+            Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+            Write-Output "This confirms the ghost VBE bug occurs on this machine." >> $env:GITHUB_STEP_SUMMARY
+          }
