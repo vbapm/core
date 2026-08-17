@@ -94,7 +94,9 @@ export async function run(
 		if (PERSISTENT_SESSION) {
 			debug("params (persistent):", { application, file, macro, args });
 			const session = initPowerShellSession(join(env.scripts, "session.ps1"));
-			const sessionResult = await session.run(application, file, macro, formatted_args, { keepOpen });
+			const sessionResult = await session.run(application, file, macro, formatted_args, {
+				keepOpen
+			});
 			if (!sessionResult.success) {
 				throw new RunError(sessionResult);
 			}

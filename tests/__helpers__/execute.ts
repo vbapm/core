@@ -203,8 +203,17 @@ async function executeInProcess(
 		// spawned CLI's rejection.
 		const { cleanError } = await import("../../src/errors");
 		const { message } = cleanError(err);
-		stderr += `ERROR ${message}\n`;
-		const e: any = new Error(message);
+		// Surface the nested macro error (RunError.result.errors / underlying)
+		// so a background-mode failure is debuggable instead of "Failed to import".
+		let detail = "";
+		if (err && err.result && Array.isArray(err.result.errors) && err.result.errors.length) {
+			detail = `\n  macro errors: ${err.result.errors.join(" | ")}`;
+		} else if (err && err.underlying) {
+			const u = cleanError(err.underlying);
+			detail = `\n  cause: ${u.message}`;
+		}
+		stderr += `ERROR ${message}${detail}\n`;
+		const e: any = new Error(message + detail);
 		e.stdout = stdout;
 		e.stderr = stderr;
 		throw e;

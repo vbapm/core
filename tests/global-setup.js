@@ -51,8 +51,7 @@ module.exports = async function globalSetup() {
 function writeRunBanner() {
 	try {
 		const logPath =
-			process.env.VBA_INSTANCE_LOG ||
-			join(process.env.TEMP, "Excel-Instances", "instances.log");
+			process.env.VBA_INSTANCE_LOG || join(process.env.TEMP, "Excel-Instances", "instances.log");
 
 		fs.mkdirSync(require("path").dirname(logPath), { recursive: true });
 
@@ -75,4 +74,4 @@ function writeRunBanner() {
 	} catch {
 		// Banner is best-effort; never fail the suite over logging.
 	}
-};
+}

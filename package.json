@@ -47,6 +47,7 @@
         "test:e2e:in-process": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=0 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --runInBand",
         "test:e2e:background": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand",
         "test:e2e:in-process:background": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --runInBand",
+        "test:e2e:in-process:background:debug": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 E2E_IN_PROCESS=1 VBA_DEBUG_INSTANCES=1 jest --config e2e.config.mjs --runInBand --verbose",
         "test:e2e:updateSnapshots": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand --updateSnapshot",
         "test:e2e:multilang": "pnpm run build:check && cross-env E2E_ML=1 jest --config multilang.config.mjs --runInBand",
         "build": "rimraf lib && rollup -c rollup.config.mjs",

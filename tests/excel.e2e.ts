@@ -50,7 +50,15 @@ import {
 	wildcard,
 	withDrawing
 } from "./__fixtures__";
-import { execute, closePersistentSession, readdir, run, RunResult, setup, tmp } from "./__helpers__/execute";
+import {
+	execute,
+	closePersistentSession,
+	readdir,
+	run,
+	RunResult,
+	setup,
+	tmp
+} from "./__helpers__/execute";
 
 const exec = promisify(require("child_process").exec);
 

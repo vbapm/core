@@ -46,10 +46,7 @@ export class Semaphore {
  * Run `fn` while holding a permit from `sem`, releasing it in all cases
  * (including when `fn` throws).
  */
-export async function withPermit<T>(
-	sem: Semaphore,
-	fn: () => Promise<T> | T
-): Promise<T> {
+export async function withPermit<T>(sem: Semaphore, fn: () => Promise<T> | T): Promise<T> {
 	const release = await sem.acquire();
 	try {
 		return await fn();
