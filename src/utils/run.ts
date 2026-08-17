@@ -9,6 +9,7 @@ import { parallel } from "./parallel";
 import { join } from "./path";
 import { createStdoutFile } from "./stdout-file";
 import { getPowerShellSession, initPowerShellSession } from "./powershell-session";
+import { withExcelSlot } from "./excel-pool";
 
 const execFile = promisify(_execFile);
 
@@ -84,58 +85,63 @@ export async function run(
 	});
 	const keepOpen = !!options.keepOpen;
 
-	// Persistent PowerShell session path (Windows only, opt-in): reuse a single
-	// PowerShell process + Excel.Application across runs.
-	if (PERSISTENT_SESSION) {
-		debug("params (persistent):", { application, file, macro, args });
-		const session = initPowerShellSession(join(env.scripts, "session.ps1"));
-		const sessionResult = await session.run(application, file, macro, formatted_args, { keepOpen });
-		if (!sessionResult.success) {
-			throw new RunError(sessionResult);
+	// Gate the Excel-touching portion through the shared instance pool so
+	// parallel callers (e.g. parallel Jest workers) never exceed the configured
+	// number of live Excel instances at once.
+	return withExcelSlot(async () => {
+		// Persistent PowerShell session path (Windows only, opt-in): reuse a single
+		// PowerShell process + Excel.Application across runs.
+		if (PERSISTENT_SESSION) {
+			debug("params (persistent):", { application, file, macro, args });
+			const session = initPowerShellSession(join(env.scripts, "session.ps1"));
+			const sessionResult = await session.run(application, file, macro, formatted_args, { keepOpen });
+			if (!sessionResult.success) {
+				throw new RunError(sessionResult);
+			}
+			return sessionResult;
 		}
-		return sessionResult;
-	}
 
-	// Windows uses a named switch; macOS receives keepOpen as a positional arg (position 4)
-	const parts = env.isWindows
-		? [application, file, macro, ...formatted_args]
-		: [application, file, macro, keepOpen ? "1" : "0", ...formatted_args];
-	const command = env.isWindows ? "powershell" : "osascript";
-	const commandArgs = env.isWindows
-		? [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				script,
-				...(keepOpen ? ["-KeepOpen"] : []),
-				...parts
-			]
-		: [script, ...parts];
+		// Windows uses a named switch; macOS receives keepOpen as a positional arg (position 4)
+		const parts = env.isWindows
+			? [application, file, macro, ...formatted_args]
+			: [application, file, macro, keepOpen ? "1" : "0", ...formatted_args];
+		const command = env.isWindows ? "powershell" : "osascript";
+		const commandArgs = env.isWindows
+			? [
+					"-NoProfile",
+					"-ExecutionPolicy",
+					"Bypass",
+					"-File",
+					script,
+					...(keepOpen ? ["-KeepOpen"] : []),
+					...parts
+				]
+			: [script, ...parts];
 
-	debug("params:", { application, file, macro, args });
-	debug("command:", command, commandArgs);
+		debug("params:", { application, file, macro, args });
+		debug("command:", command, commandArgs);
 
-	let result;
-	try {
-		// Use execPowershell on Windows (spawn-based) to work around Node.js libuv assertion bug
-		// and execFile on macOS to avoid shell injection (no shell on either platform).
-		// TODO: Replace execPowershell with execFile on Windows once upstream Node.js fix lands.
-		//       https://github.com/nodejs/node/issues/56645
-		const { stdout, stderr } = env.isWindows
-			? await execPowershell(script, keepOpen, parts, { env: process.env })
-			: await execFile(command, commandArgs, { env: process.env });
-		result = toResult(stdout, stderr);
-	} catch (err: any) {
-		result = toResult(err?.stdout, err?.stderr, err);
-	}
+		let result;
+		try {
+			// Use execPowershell on Windows (spawn-based) to work around Node.js libuv assertion bug
+			// and execFile on macOS to avoid shell injection (no shell on either platform).
+			// TODO: Replace execPowershell with execFile on Windows once upstream Node.js fix lands.
+			//       https://github.com/nodejs/node/issues/56645
+			const { stdout, stderr } = env.isWindows
+				? await execPowershell(script, keepOpen, parts, { env: process.env })
+				: await execFile(command, commandArgs, { env: process.env });
+			result = toResult(stdout, stderr);
+		} catch (err: any) {
+			result = toResult(err?.stdout, err?.stderr, err);
+		}
 
-	if (!result.success) {
-		throw new RunError(result);
-	}
+		if (!result.success) {
+			throw new RunError(result);
+		}
 
-	debug("result:", result);
-	return result;
+		debug("result:", result);
+		return result;
+	});
 }
 
 /**

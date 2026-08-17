@@ -35,6 +35,18 @@ function GetFileName {
 
 function Fail {
 	param([string]$Message)
+
+	# On failure, reveal any background Excel instance we own so a stuck/hung
+	# run can be inspected in the UI instead of lingering as a hidden zombie.
+	try {
+		if ($null -ne $script:ActiveApp -and $script:ActiveIsBackground) {
+			$script:ActiveApp.Visible = $true
+			PrintErr "ERROR: run failed; making background Excel instance visible for debugging.`n"
+		}
+	} catch {
+		# best-effort; never obscure the original failure
+	}
+
 	PrintLn "{`"success`":false,`"errors`":[`"$Message`"]}"
 	exit 1
 }
@@ -52,6 +64,36 @@ function PrintLn {
 function PrintErr {
 	param([string]$Message)
 	[Console]::Error.Write($Message)
+}
+
+# Emit an instance-lifecycle log line to stderr, only when VBA_DEBUG_INSTANCES
+# is set. Stderr is used (never stdout) so the JSON result written to stdout
+# stays parseable by the CLI. Timestamped + PID-tagged for correlating leaked
+# instances after the fact.
+function LogInstance {
+	param([string]$Message)
+
+	if (-not ($env:VBA_DEBUG_INSTANCES -match '^(1|true|yes)$')) {
+		return
+	}
+
+	$stamp = (Get-Date).ToString('o')
+	PrintErr "[vbapm-instances] $stamp pid=$PID $Message`n"
+}
+
+# Track the currently-active Excel.Application (script scope) so Fail can reveal
+# it if the run aborts. Implemented as a helper function because PowerShell 5.1
+# class methods cannot write script-scope variables directly.
+function Set-ActiveExcelInstance {
+	param([object]$App, [bool]$IsBackground)
+
+	$script:ActiveApp = $App
+	$script:ActiveIsBackground = $IsBackground
+}
+
+function Clear-ActiveExcelInstance {
+	$script:ActiveApp = $null
+	$script:ActiveIsBackground = $false
 }
 
 # -------
@@ -103,6 +145,36 @@ if ($HasRegistry) {
 # Excel
 # -------
 
+# Abort if too many EXCEL.EXE processes are already running (safeguard against
+# leaked instances piling up). Limit is VBA_MAX_EXCEL_INSTANCES (default 10).
+# Implemented as a *function* rather than inline class-method code because
+# PowerShell 5.1 class methods can't safely reference script-scope variables or
+# local variables assigned inside try blocks.
+function Assert-ExcelInstanceLimit {
+	# No-op when the coordination registry module isn't dot-sourced (e.g. an
+	# installed CLI without scripts/).
+	if (-not (Get-Command Get-RunningExcelInstances -ErrorAction SilentlyContinue)) {
+		return
+	}
+
+	$maxInstances = 10
+	if ($env:VBA_MAX_EXCEL_INSTANCES) {
+		$maxInstances = [int]$env:VBA_MAX_EXCEL_INSTANCES
+	}
+
+	$instanceCount = 0
+	try {
+		$instanceCount = @(Get-RunningExcelInstances).Count
+	} catch {
+		# Best-effort safeguard; never block a legitimate run over a count failure.
+		return
+	}
+
+	if ($instanceCount -ge $maxInstances) {
+		Fail "ERROR #5d: Refusing to open a new Excel instance - $instanceCount EXCEL.EXE processes already running (limit $maxInstances). Run scripts/ps/Close-AllInvisibleExcelInstances.ps1 to clean up leaked instances."
+	}
+}
+
 class Excel {
 	hidden [object]$App
 	hidden [bool]$BackgroundBuild = $false
@@ -147,6 +219,13 @@ class Excel {
 		}
 
 		if (-not $this.ExcelWasOpen) {
+			# Safeguard: never spawn a new Excel instance once the machine is
+			# already running too many EXCEL.EXE processes. This catches leaked
+			# instances from aborted/crashed automated runs before they pile up
+			# into the dozens, and aborts (with a clear error) instead of adding
+			# one more invisible instance to the pile.
+			Assert-ExcelInstanceLimit
+
 			try {
 				$this.App = New-Object -ComObject "Excel.Application"
 				$this.App.Visible = if ($this.BackgroundBuild) { $false } else { $true }
@@ -158,6 +237,11 @@ class Excel {
 			} catch {
 				Fail "ERROR #5: Failed to open Excel - $($_.Exception.Message)"
 			}
+
+			$excelPid = 0
+			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
+			$mode = if ($this.BackgroundBuild) { 'background' } else { 'foreground' }
+			LogInstance "created Excel instance excelPid=$excelPid mode=$mode"
 		}
 	}
 
@@ -233,6 +317,9 @@ class Excel {
 		}
 		# Quit Excel only if we launched it AND we are not keeping the file open
 		if (-not $this.ExcelWasOpen -and -not $KeepOpen -and $null -ne $this.App) {
+			$excelPid = 0
+			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
+			LogInstance "quitting Excel instance excelPid=$excelPid"
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null

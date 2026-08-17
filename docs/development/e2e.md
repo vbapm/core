@@ -10,7 +10,8 @@ From package.json:
 
 | Script | What it does |
 |---|---|
-| `pnpm run test:e2e` | `VBA_BACKGROUND_BUILD=0` (visible Excel) |
+| `pnpm run test:e2e` | `VBA_BACKGROUND_BUILD=0` (visible Excel), **spawns the real CLI** per command |
+| `pnpm run test:e2e:in-process` | visible Excel + `E2E_IN_PROCESS=1`, **dispatches CLI commands in-process** (see below) |
 | `pnpm run test:e2e:background` | `VBA_BACKGROUND_BUILD=1` (hidden Excel) — what we just ran |
 | `pnpm run test:e2e:updateSnapshots` | same as background + `--updateSnapshot` |
 | `pnpm run test:e2e:multilang` | separate multilang config |
@@ -18,6 +19,46 @@ From package.json:
 Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which rebuilds lib if sources are newer than the build output (that's the `[ensure-fresh-build] lib/ is stale … rebuilding` line you saw).
 
 The actual test runner is `jest --config e2e.config.mjs --runInBand` (serial, so no parallel Excel collisions).
+
+### Two ways to drive the CLI: spawned vs in-process
+
+The `execute()` helper can drive each command one of two ways, selected by the
+`E2E_IN_PROCESS` env var (the script sets it; the helper reads it):
+
+1. **Spawned CLI** (`E2E_IN_PROCESS` unset — `test:e2e`, `test:e2e:background`).
+   Each command is run as a **fresh `node lib/vbapm.js` process** via
+   `child_process.exec`, exactly like a real user invocation. This is the
+   default and the most faithful reproduction of the CLI.
+
+2. **In-process dispatch** (`E2E_IN_PROCESS=1` — `test:e2e:in-process`).
+   Commands are dispatched **inside the Jest process** by importing the CLI's
+   bin command modules (`src/bin/vbapm-*.ts`) directly and invoking their
+   default exports — no `cmd.exe`, no `vba.cmd`, no `node` child process per
+   command. This skips process spawn overhead, so the suite runs faster
+   (~125s vs ~145s). To keep `stdout`/`stderr` byte-identical to the spawned
+   CLI, `executeInProcess` overrides `console.log`/`warn`/`error` (Jest
+   otherwise intercepts them) and stubs the ESM-only `open` package
+   (`tests/__helpers__/open-stub.ts`, mapped in `e2e.config.mjs`). The `open`
+   command itself always falls back to the spawned CLI.
+
+## Bounded Excel instance pool (parallel runs)
+
+Every `run()` call (the `vba run` / macro-execution path) funnels through a
+**process-local counting semaphore** (`src/utils/semaphore.ts` +
+`src/utils/excel-pool.ts`) so that at most `VBA_EXCEL_POOL_SIZE` Excel instances
+are alive at once:
+
+- Default pool size is **4**; set `VBA_EXCEL_POOL_SIZE` to a different value to
+  tune it (e.g. `1` for fully serialized Excel access).
+- A caller that finds all slots busy **waits** (async) until one frees, rather
+  than spawning yet another Excel instance. Reuse of an *already-open workbook*
+  is handled separately by `Find-OpenWorkbook` in the PowerShell bridge.
+- The slot is always released (in `finally`) even if the macro run throws.
+
+This is what makes parallel execution viable: instead of `--runInBand` (one test
+at a time), Jest workers can run concurrently and still respect a bounded Excel
+footprint. Note the current npm scripts still pass `--runInBand` and set no pool
+size; running in parallel is opt-in and not yet wired into a script.
 
 ## Two distinct execution paths *inside* the tests
 
