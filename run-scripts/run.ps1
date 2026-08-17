@@ -66,10 +66,26 @@ function PrintErr {
 	[Console]::Error.Write($Message)
 }
 
-# Emit an instance-lifecycle log line to stderr, only when VBA_DEBUG_INSTANCES
-# is set. Stderr is used (never stdout) so the JSON result written to stdout
-# stays parseable by the CLI. Timestamped + PID-tagged for correlating leaked
-# instances after the fact.
+# Emit an instance-lifecycle log line, only when VBA_DEBUG_INSTANCES is set.
+#
+# All lines go to a SINGLE LOG FILE (NOT stderr): stderr is treated as a fatal
+# error by the CLI's `toResult` (`if (stderr) { success = false }`), so any
+# debug noise on stderr would turn a successful run into a failure. The log path
+# is `%TEMP%\Excel-Instances\instances.log` (or VBA_INSTANCE_LOG). Each line is
+# timestamped + PID-tagged and includes a live count of EXCEL.EXE processes so
+# instance growth/leaks can be tracked by scanning the log.
+#
+# A "run banner" (clear separator marking the start of a new e2e run) is written
+# by the test-side globalSetup before tests start, since `run.ps1` is a
+# short-lived process per macro call and can't detect run boundaries.
+function Get-InstanceLogPath {
+	$path = $env:VBA_INSTANCE_LOG
+	if (-not $path) {
+		$path = Join-Path $env:TEMP 'Excel-Instances\instances.log'
+	}
+	return $path
+}
+
 function LogInstance {
 	param([string]$Message)
 
@@ -77,8 +93,21 @@ function LogInstance {
 		return
 	}
 
+	$count = -1
+	if (Get-Command Get-RunningExcelInstances -ErrorAction SilentlyContinue) {
+		try { $count = @(Get-RunningExcelInstances).Count } catch {}
+	}
+
+	$logPath = Get-InstanceLogPath
+
 	$stamp = (Get-Date).ToString('o')
-	PrintErr "[vbapm-instances] $stamp pid=$PID $Message`n"
+	$line = "[vbapm-instances] $stamp pid=$PID count=$count $Message"
+
+	try {
+		Add-Content -LiteralPath $logPath -Value $line -ErrorAction Stop
+	} catch {
+		# Never let logging itself break a run.
+	}
 }
 
 # Track the currently-active Excel.Application (script scope) so Fail can reveal
@@ -146,32 +175,42 @@ if ($HasRegistry) {
 # -------
 
 # Abort if too many EXCEL.EXE processes are already running (safeguard against
-# leaked instances piling up). Limit is VBA_MAX_EXCEL_INSTANCES (default 10).
+# leaked instances piling up). Limit is VBA_MAX_EXCEL_INSTANCES (default 6).
+# In background mode, visible (user) instances are excluded from the count so a
+# user's normally-open Excel doesn't eat into the automation budget.
 # Implemented as a *function* rather than inline class-method code because
 # PowerShell 5.1 class methods can't safely reference script-scope variables or
 # local variables assigned inside try blocks.
 function Assert-ExcelInstanceLimit {
+	param([bool]$Background = $false)
+
 	# No-op when the coordination registry module isn't dot-sourced (e.g. an
 	# installed CLI without scripts/).
 	if (-not (Get-Command Get-RunningExcelInstances -ErrorAction SilentlyContinue)) {
 		return
 	}
 
-	$maxInstances = 10
+	$maxInstances = 6
 	if ($env:VBA_MAX_EXCEL_INSTANCES) {
 		$maxInstances = [int]$env:VBA_MAX_EXCEL_INSTANCES
 	}
 
 	$instanceCount = 0
 	try {
-		$instanceCount = @(Get-RunningExcelInstances).Count
+		$running = @(Get-RunningExcelInstances)
+		if ($Background) {
+			# Only count invisible (automation) instances; ignore visible user sessions.
+			$instanceCount = @($running | Where-Object { -not $_.visible }).Count
+		} else {
+			$instanceCount = $running.Count
+		}
 	} catch {
 		# Best-effort safeguard; never block a legitimate run over a count failure.
 		return
 	}
 
 	if ($instanceCount -ge $maxInstances) {
-		Fail "ERROR #5d: Refusing to open a new Excel instance - $instanceCount EXCEL.EXE processes already running (limit $maxInstances). Run scripts/ps/Close-AllInvisibleExcelInstances.ps1 to clean up leaked instances."
+		Fail "ERROR #5d: Refusing to open a new Excel instance - $instanceCount EXCEL.EXE process(es) already running (limit $maxInstances). Run scripts/ps/Close-AllInvisibleExcelInstances.ps1 to clean up leaked instances."
 	}
 }
 
@@ -224,7 +263,7 @@ class Excel {
 			# instances from aborted/crashed automated runs before they pile up
 			# into the dozens, and aborts (with a clear error) instead of adding
 			# one more invisible instance to the pile.
-			Assert-ExcelInstanceLimit
+			Assert-ExcelInstanceLimit -Background $this.BackgroundBuild
 
 			try {
 				$this.App = New-Object -ComObject "Excel.Application"
@@ -242,6 +281,7 @@ class Excel {
 			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
 			$mode = if ($this.BackgroundBuild) { 'background' } else { 'foreground' }
 			LogInstance "created Excel instance excelPid=$excelPid mode=$mode"
+			Set-ActiveExcelInstance -App $this.App -IsBackground $this.BackgroundBuild
 		}
 	}
 
@@ -303,8 +343,12 @@ class Excel {
 	}
 
 	[void] Dispose([bool]$KeepOpen) {
-		# An add-in we opened is left open for reuse across runs.
-		if ($this.IsAddin) {
+		# An add-in we opened is left open for reuse across runs — but only in
+		# FOREGROUND mode, where we're reusing the user's already-running Excel.
+		# In BACKGROUND mode each run owns a dedicated hidden instance that is
+		# torn down after the run; skipping quit here would leak one EXCEL.EXE
+		# per run.
+		if ($this.IsAddin -and -not $this.BackgroundBuild) {
 			return
 		}
 
@@ -323,6 +367,7 @@ class Excel {
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null
+			Clear-ActiveExcelInstance
 		}
 	}
 }
