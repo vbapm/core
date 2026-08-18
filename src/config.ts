@@ -1,12 +1,16 @@
 import { env } from "./env";
 import { GitSource, PathSource, RegistrySource, Sources } from "./sources";
-import { pathExists, readFile } from "./utils/fs";
+import { pathExists, readFile, writeFile } from "./utils/fs";
 import { join } from "./utils/path";
-import { parse as parseToml } from "./utils/toml";
+import { convert as convertToml, parse as parseToml } from "./utils/toml";
 
 export type Registry = {} | { [name: string]: { index: string; packages: string } };
 
 export interface Flags {}
+
+export interface ToolSettings {
+	background?: boolean;
+}
 
 export interface Config {
 	registry: Registry;
@@ -17,6 +21,40 @@ export interface Config {
 export interface ConfigValue {
 	registry?: Registry;
 	flags?: Flags;
+}
+
+export function normalizeBackground(value: unknown): boolean {
+	if (typeof value === "boolean") return value;
+	if (typeof value === "number") return value !== 0;
+	if (typeof value === "string") {
+		return /^(1|true|yes|on)$/i.test(value.trim());
+	}
+	return false;
+}
+
+export async function loadToolSettings(file = join(env.bin, "vba.toml")): Promise<ToolSettings> {
+	if (!(await pathExists(file))) return {};
+
+	const raw = await readFile(file);
+	const parsed = await parseToml(raw.toString());
+	return parsed && typeof parsed === "object" ? (parsed as ToolSettings) : {};
+}
+
+export async function saveToolSettings(settings: ToolSettings, file = join(env.bin, "vba.toml")) {
+	const existing = await loadToolSettings(file);
+	const updated = { ...existing, ...settings };
+	const content = await convertToml(updated);
+	await writeFile(file, content);
+}
+
+export async function resolveBackgroundMode(value?: boolean): Promise<boolean> {
+	if (typeof value === "boolean") return value;
+
+	const envValue = env.values.VBA_BACKGROUND_BUILD;
+	if (typeof envValue !== "undefined") return normalizeBackground(envValue);
+
+	const settings = await loadToolSettings();
+	return normalizeBackground(settings.background);
 }
 
 const empty: ConfigValue = { registry: {}, flags: {} };
