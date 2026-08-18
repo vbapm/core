@@ -10,13 +10,13 @@ import { Semaphore, withPermit } from "./semaphore";
  * provides a single counting semaphore that all `run()` calls go through, so
  * the number of live Excel instances never exceeds `VBA_EXCEL_POOL_SIZE`.
  *
- * Size is resolved at first use from `VBA_EXCEL_POOL_SIZE` (default 6). Set it
+ * Size is resolved at first use from `VBA_EXCEL_POOL_SIZE` (default 12). Set it
  * to `1` to force fully serialized Excel access, or higher for beefy CI.
  */
 const POOL_SIZE = (() => {
 	const raw = process.env.VBA_EXCEL_POOL_SIZE;
 	const n = raw ? parseInt(raw, 10) : 0;
-	return Number.isFinite(n) && n >= 1 ? n : 6;
+	return Number.isFinite(n) && n >= 1 ? n : 12;
 })();
 
 export const excelPool = new Semaphore(POOL_SIZE);

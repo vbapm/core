@@ -197,7 +197,7 @@ if ($HasRegistry) {
 # -------
 
 # Abort if too many EXCEL.EXE processes are already running (safeguard against
-# leaked instances piling up). Limit is VBA_MAX_EXCEL_INSTANCES (default 6).
+# leaked instances piling up). Limit is VBA_MAX_EXCEL_INSTANCES (default 12).
 # In background mode, visible (user) instances are excluded from the count so a
 # user's normally-open Excel doesn't eat into the automation budget.
 # Implemented as a *function* rather than inline class-method code because
@@ -212,7 +212,7 @@ function Assert-ExcelInstanceLimit {
 		return
 	}
 
-	$maxInstances = 6
+	$maxInstances = 12
 	if ($env:VBA_MAX_EXCEL_INSTANCES) {
 		$maxInstances = [int]$env:VBA_MAX_EXCEL_INSTANCES
 	}
