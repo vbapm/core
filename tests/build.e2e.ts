@@ -7,13 +7,7 @@
 
 import { join } from "path";
 import { single, standard, targetless } from "./__fixtures__";
-import {
-	execute,
-	closePersistentSession,
-	run,
-	RunResult,
-	setup
-} from "./__helpers__/execute";
+import { execute, closePersistentSession, run, RunResult, setup } from "./__helpers__/execute";
 
 jest.setTimeout(180000);
 
