@@ -70,57 +70,29 @@ This is the crucial detail:
 
 ## Call chain and process boundaries
 
-```mermaid
-flowchart TB
-    subgraph JestProc["JEST PROCESS (repo checkout)"]
-        Jest["pnpm test:e2e\nJest --runInBand"]
-        Exec["child_process.exec\n(execute() helper)"]
-        LibIn["lib/vbapm.js\n(run() helper, in-process)"]
-    end
-
-    subgraph CmdProc["CMD.EXE (Windows shell,\nhost for the .cmd shim)"]
-        Cmd["cmd.exe\n(resolves extensionless path\nvia PATHEXT → vba.cmd)"]
-    end
-
-    subgraph VbaProc["NEW 'vba' NODE PROCESS (per execute() call)"]
-        Shim["vba.cmd shim\n(calls node lib/vbapm.js)"]
-        NodeCli["node.exe"]
-        LibCli["lib/vbapm.js\n(same library)"]
-    end
-
-    subgraph PS["POWERSHELL.EXE (child process)"]
-        Bridge["run-scripts/run.ps1\n(or session.ps1)"]
-    end
-
-    subgraph Excel["EXCEL.EXE (COM, out-of-process)"]
-        Addin["vbapm.xlam add-in"]
-        Macro["Build.ImportGraph /\nBuild.CreateDocument /\nBuild.ExportTo\n(Application.Run)"]
-    end
-
-    subgraph Reg["COORDINATION REGISTRY (side-channel)"]
-        Json["%TEMP%\\Excel-Instances\\instances.json"]
-    end
-
-    %% path A: execute() → child_process.exec → cmd.exe → vba.cmd → node → lib
-    Jest -->|"execute()"| Exec
-    Exec -->|"exec(`vba build`)"| Cmd
-    Cmd -->|"PATHEXT: vba → vba.cmd"| Shim
-    Shim -->|"`node lib/vbapm.js`"| NodeCli
-    NodeCli -->|"loads"| LibCli
-    LibCli -->|"spawn powershell.exe (run.ts)"| Bridge
-
-    %% path B: run() helper is in-process (no cmd.exe, no vba process)
-    Jest -->|"run() helper → import 'vbapm'"| LibIn
-    LibIn -->|"spawn powershell.exe (run.ts)"| Bridge
-
-    %% PowerShell drives Excel
-    Bridge -->|"New-Object ComObject / GetActiveObject"| Excel
-    Bridge -->|"opens / attaches"| Addin
-    Addin -->|"relays build/extract instructions"| Macro
-
-    %% registry tracking
-    Bridge -.->|"register/unregister instance\n(comReachable, addins, windowTitle)"| Json
+```text
+Jest process (repo checkout)
+├─ execute() helper in tests/__helpers__/execute.ts
+│  └─ child_process.exec
+│     └─ cmd.exe (Windows shell)
+│        └─ vba.cmd shim
+│           └─ node.exe
+│              └─ lib/vbapm.js
+│                 └─ powershell.exe
+│                    └─ EXCEL.EXE
+│                       └─ vbapm.xlam add-in
+│                          └─ Build.ImportGraph / Build.CreateDocument / Build.ExportTo
+└─ run() helper in tests/__helpers__/execute.ts
+   └─ lib/vbapm.js (in-process; dispatches src/bin/vbapm-*.ts)
+      └─ powershell.exe
+         └─ EXCEL.EXE
+            └─ vbapm.xlam add-in
+               └─ Build.ImportGraph / Build.CreateDocument / Build.ExportTo
 ```
+
+`child_process.exec` runs the command through the platform shell, which is why `execute()` follows the `cmd.exe` → `vba.cmd` → `node.exe` chain on Windows.
+
+The CLI-side PowerShell bridge that actually launches Excel lives in [src/utils/run.ts](src/utils/run.ts).
 
 **Key process boundaries:**
 
