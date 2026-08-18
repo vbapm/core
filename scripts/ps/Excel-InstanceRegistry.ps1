@@ -252,6 +252,22 @@ function Read-InactiveExcelInstances {
 
 <#
 .SYNOPSIS
+Clear the inactive (recently deactivated) instance list. Called at the start of
+an e2e run so stale entries from previous runs don't pollute the end-of-suite
+assessment. Holds the lock for the duration.
+#>
+function Clear-InactiveExcelInstances {
+    Get-ExcelInstancesLock | Out-Null
+    try {
+        $doc = Read-ExcelRegistryDocument
+        Write-ExcelRegistryDocument -Active $doc.active -Inactive @()
+    } finally {
+        Release-ExcelInstancesLock
+    }
+}
+
+<#
+.SYNOPSIS
 Write the full registry document (active + inactive) as JSON. Callers should
 hold the lock.
 #>

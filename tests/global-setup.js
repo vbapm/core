@@ -18,6 +18,7 @@ const { join } = require("path");
 const fs = require("fs");
 
 module.exports = async function globalSetup() {
+	clearInactiveInstances();
 	writeRunBanner();
 
 	const background = /^(1|true|yes)$/i.test(process.env.VBA_BACKGROUND_BUILD || "");
@@ -41,6 +42,27 @@ module.exports = async function globalSetup() {
 		console.warn("[e2e globalSetup] EnsureVbapmAddin.ps1 exited non-zero; continuing anyway.");
 	}
 };
+
+/**
+ * Reset the registry's inactive (recently deactivated) list before tests run so
+ * the end-of-suite assessment only reports instances deactivated during this run.
+ */
+function clearInactiveInstances() {
+	const script = join(__dirname, "..", "scripts", "ps", "Clear-InactiveExcelInstances.ps1");
+
+	const result = spawnSync(
+		"powershell.exe",
+		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
+		{ stdio: "ignore" }
+	);
+
+	if (result.status !== 0) {
+		// Best-effort: don't fail the suite over registry housekeeping.
+		console.warn(
+			"[e2e globalSetup] Clear-InactiveExcelInstances.ps1 exited non-zero; continuing anyway."
+		);
+	}
+}
 
 /**
  * Write a clear "run banner" separator into the instance log so each e2e run is
