@@ -1,7 +1,7 @@
 import { env } from "./env";
 import { GitSource, PathSource, RegistrySource, Sources } from "./sources";
-import { pathExists, readFile, writeFile } from "./utils/fs";
-import { join } from "./utils/path";
+import { ensureDir, pathExists, readFile, writeFile } from "./utils/fs";
+import { dirname, join } from "./utils/path";
 import { convert as convertToml, parse as parseToml } from "./utils/toml";
 
 export type Registry = {} | { [name: string]: { index: string; packages: string } };
@@ -10,6 +10,12 @@ export interface Flags {}
 
 export interface ToolSettings {
 	background?: boolean;
+	[name: string]: unknown;
+}
+
+export interface ToolSettingsOptions {
+	global?: boolean;
+	file?: string;
 }
 
 export interface Config {
@@ -32,28 +38,60 @@ export function normalizeBackground(value: unknown): boolean {
 	return false;
 }
 
-export async function loadToolSettings(file = join(env.bin, "vba.toml")): Promise<ToolSettings> {
-	if (!(await pathExists(file))) return {};
+export function getGlobalConfigFile(): string {
+	return join(env.bin, "vba.toml");
+}
+
+export async function getLocalConfigFile(dir = env.cwd): Promise<string | undefined> {
+	let current = dir;
+
+	while (true) {
+		const candidate = join(current, "vbaproject.toml");
+		if (await pathExists(candidate)) return join(current, "vba.toml");
+
+		const parent = dirname(current);
+		if (parent === current) return undefined;
+		current = parent;
+	}
+}
+
+export async function loadToolSettings(
+	options: ToolSettingsOptions = {}
+): Promise<ToolSettings> {
+	const file = options.file ?? (options.global ? getGlobalConfigFile() : await getLocalConfigFile());
+	if (!file || !(await pathExists(file))) return {};
 
 	const raw = await readFile(file);
 	const parsed = await parseToml(raw.toString());
 	return parsed && typeof parsed === "object" ? (parsed as ToolSettings) : {};
 }
 
-export async function saveToolSettings(settings: ToolSettings, file = join(env.bin, "vba.toml")) {
-	const existing = await loadToolSettings(file);
+export async function loadEffectiveToolSettings(): Promise<ToolSettings> {
+	const globalSettings = await loadToolSettings({ global: true });
+	const localSettings = await loadToolSettings({ global: false });
+	return { ...globalSettings, ...localSettings };
+}
+
+export async function saveToolSettings(
+	settings: ToolSettings,
+	options: ToolSettingsOptions = {}
+): Promise<string> {
+	const file =
+		options.file ??
+		(options.global ? getGlobalConfigFile() : (await getLocalConfigFile()) ?? join(env.cwd, "vba.toml"));
+
+	await ensureDir(dirname(file));
+	const existing = await loadToolSettings({ file });
 	const updated = { ...existing, ...settings };
 	const content = await convertToml(updated);
 	await writeFile(file, content);
+	return file;
 }
 
 export async function resolveBackgroundMode(value?: boolean): Promise<boolean> {
 	if (typeof value === "boolean") return value;
 
-	const envValue = env.values.VBA_BACKGROUND_BUILD;
-	if (typeof envValue !== "undefined") return normalizeBackground(envValue);
-
-	const settings = await loadToolSettings();
+	const settings = await loadEffectiveToolSettings();
 	return normalizeBackground(settings.background);
 }
 

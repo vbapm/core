@@ -32,11 +32,6 @@ export default async function (args: Args) {
 			? !!args.background
 			: await resolveBackgroundMode();
 		
-	process.env.VBA_BACKGROUND_BUILD = background ? "1" : "0";
-	if (typeof args.background === "boolean") {
-		await saveToolSettings({ background });
-	}
-
 	// In a visible (foreground) build, `open` keeps the freshly imported
 	// workbook open in the user's existing Excel session. In a background build
 	// the hidden instance is torn down, so instead pass no `open` and reopen the

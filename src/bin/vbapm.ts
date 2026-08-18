@@ -21,6 +21,7 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	init: async () => (await import("./vbapm-init")).default,
 	add: async () => (await import("./vbapm-add")).default,
 	build: async () => (await import("./vbapm-build")).default,
+	config: async () => (await import("./vbapm-config")).default,
 	test: async () => (await import("./vbapm-test")).default,
 	extract: async () => (await import("./vbapm-extract")).default,
 	export: async () => (await import("./vbapm-export")).default,
@@ -60,6 +61,7 @@ const help = dedent`
     - init          Initialize a new project / package in the current directory
     - add           Create and register a new source file in vbaproject.toml
     - build         Build project from manifest
+    - config        Get and set repository/tool configuration
     - test          Run tests for built target
     - extract       Extract src from built target
     - export        (deprecated) Extract src from built target
