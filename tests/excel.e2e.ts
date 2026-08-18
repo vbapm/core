@@ -469,17 +469,21 @@ describe("close", () => {
 
 			const fullPath = join(buildDir, targetFile);
 
-			// 2. Open workbook via COM, make a change, don't save (leave open)
+			// 2. Open workbook via COM, make a change, don't save (leave open).
+			//    The script also reports the Excel PID so we can quit it afterward.
 			const psScriptPath = join(cwd, "_open_unsaved.ps1");
 			const escapedPath = fullPath.replace(/\\/g, "\\\\");
 			const psScript = [
 				'$path = "' + escapedPath + '"',
+				"$before = @(Get-Process EXCEL -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)",
 				"$excel = New-Object -ComObject Excel.Application",
 				"$excel.Visible = $false",
 				"$wb = $excel.Workbooks.Open($path)",
 				"$ws = $wb.Worksheets(1)",
 				'$ws.Cells.Item(1,1) = "unsaved change"',
-				'Write-Output "opened_and_modified"'
+				"$after = @(Get-Process EXCEL -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)",
+				"$excelPid = ($after | Where-Object { $before -notcontains $_ } | Select-Object -First 1)",
+				'Write-Output "opened_and_modified pid=$excelPid"'
 			].join("\n");
 			await writeFile(psScriptPath, psScript);
 
@@ -487,10 +491,22 @@ describe("close", () => {
 				`powershell -NoProfile -ExecutionPolicy Bypass -File "${psScriptPath}"`,
 				{ timeout: 30000 }
 			);
-			expect(psOut.trim()).toBe("opened_and_modified");
+			expect(psOut.trim()).toMatch(/^opened_and_modified pid=\d+$/);
+			const excelPid = psOut.trim().match(/pid=(\d+)/)?.[1];
 
-			// 3. Close without --save or --force → should fail with unsaved changes
-			await expect(execute(cwd, "close")).rejects.toThrow();
+			try {
+				// 3. Close without --save or --force → should fail with unsaved changes
+				await expect(execute(cwd, "close")).rejects.toThrow();
+			} finally {
+				// 4. Quit the hidden Excel we opened so it doesn't linger holding
+				//    the built target (and so the temp dir can be removed).
+				if (excelPid) {
+					await exec(
+						`powershell -NoProfile -Command "Stop-Process -Id ${excelPid} -Force -ErrorAction SilentlyContinue"`,
+						{ timeout: 15000 }
+					);
+				}
+			}
 		}).catch(() => {
 			// Temp dir cleanup may fail (EBUSY from lingering Excel process) — ignore
 		});
