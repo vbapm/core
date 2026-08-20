@@ -92,6 +92,21 @@ Jest process (repo checkout)
 
 `child_process.exec` runs the command through the platform shell, which is why `execute()` follows the `cmd.exe` → `vba.cmd` → `node.exe` chain on Windows.
 
+```text
+Spawned CLI path (default)
+execute() in tests/__helpers__/execute.ts
+└─ child_process.exec
+   └─ cmd.exe → vba.cmd → node.exe → lib/vbapm.js → powershell.exe → EXCEL.EXE
+
+In-process path (branch feature)
+execute() in tests/__helpers__/execute.ts
+└─ executeInProcess()
+   └─ dispatchCommand()
+      └─ src/bin/vbapm-*.ts
+         └─ src/utils/run.ts
+            └─ powershell.exe → EXCEL.EXE
+```
+
 The CLI-side PowerShell bridge that actually launches Excel lives in [src/utils/run.ts](src/utils/run.ts).
 
 **Key process boundaries:**
