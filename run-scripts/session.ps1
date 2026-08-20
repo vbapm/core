@@ -52,6 +52,7 @@ $Script:OpenWorkbook = $null  # current workbook COM ref
 $Script:WorkbookWasOpen = $false
 $Script:IsAddin = $false      # true when the current request targets an add-in
 $Script:LoadedAddins = @{}
+$Script:SessionAddinCopies = @{}
 $Script:LastRequestIsAddin = $null
 
 function Get-ScriptFileName {
@@ -215,62 +216,36 @@ function Ensure-ScriptAddin {
 		return $Script:LoadedAddins[$addinKey]
 	}
 
-	# Reuse an add-in already installed in this Excel instance.
-	try {
-		$addin = $Script:App.AddIns($fileName)
-		if ($addin -and $addin.Installed) {
-			$Script:LoadedAddins[$addinKey] = $addin
-			return $addin
-		}
-	} catch {
-		# Not installed yet; add it below.
+	$loadPath = $fullPath
+	if (-not $Script:SessionAddinCopies.ContainsKey($addinKey)) {
+		$copyPath = Join-Path $env:TEMP "vbapm-session-$PID-$fileName"
+		Copy-Item -LiteralPath $fullPath -Destination $copyPath -Force
+		$Script:SessionAddinCopies[$addinKey] = $copyPath
 	}
-
-	# Excel's AddIns(name) lookup is inconsistent across versions. Enumerate the
-	# collection and compare FullName before attempting to add a duplicate.
-	try {
-		foreach ($addin in $Script:App.AddIns) {
-			if ($addin.FullName -and ([System.IO.Path]::GetFullPath([string]$addin.FullName)).ToLowerInvariant() -eq $addinKey) {
-				$addin.Installed = $true
-				$Script:LoadedAddins[$addinKey] = $addin
-				return $addin
-			}
-		}
-	} catch {
-		# Fall through to AddIns.Add.
-	}
-
-	# Some callers may have opened the add-in as a workbook already. Reuse that
-	# object rather than loading a second copy.
-	try {
-		foreach ($wb in $Script:App.Workbooks) {
-			if ($wb.FullName -eq $fullPath) {
-				return $wb
-			}
-		}
-	} catch {
-		# Fall through to AddIns.Add.
-	}
+	$loadPath = $Script:SessionAddinCopies[$addinKey]
 
 	try {
-		$addin = $Script:App.AddIns.Add($fullPath, $true)
-		$addin.Installed = $true
-		$Script:LoadedAddins[$addinKey] = $addin
-		return $addin
-	} catch {
-		# This runner may reject AddIns.Add for temporary paths. The existing
-		# one-shot bridge handles the same artifact by opening it as a workbook;
-		# preserve that proven fallback, but retain it for this session.
-		try {
-			$workbook = $Script:App.Workbooks.Open($fullPath)
-			if ($Script:BackgroundBuild) {
-				$Script:App.Visible = $false
-			}
-			$Script:LoadedAddins[$addinKey] = $workbook
-			return $workbook
-		} catch {
-			throw "Failed to load add-in '$fileName' - $($_.Exception.Message)"
+		if ($null -eq $Script:App) {
+			throw 'Excel application is unavailable'
 		}
+		foreach ($workbook in $Script:App.Workbooks) {
+			if ($workbook.FullName -eq $loadPath) {
+				$Script:LoadedAddins[$addinKey] = $workbook
+				return $workbook
+			}
+		}
+		$workbook = $Script:App.Workbooks.Open($loadPath)
+		if ($null -eq $workbook) {
+			throw 'Excel returned no workbook object'
+		}
+		if ($Script:BackgroundBuild) {
+			$Script:App.Visible = $false
+		}
+		$Script:LoadedAddins[$addinKey] = $workbook
+		return $workbook
+	} catch {
+		$fallbackError = $_.Exception.Message
+		throw "Failed to load add-in '$fileName' - $fallbackError"
 	}
 }
 
@@ -303,7 +278,11 @@ function Close-ScriptWorkbooks {
 		try { $addin.Close($false) } catch {}
 		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($addin) | Out-Null } catch {}
 	}
+	foreach ($copyPath in @($Script:SessionAddinCopies.Values)) {
+		try { Remove-Item -LiteralPath $copyPath -Force -ErrorAction SilentlyContinue } catch {}
+	}
 	$Script:LoadedAddins = @{}
+	$Script:SessionAddinCopies = @{}
 	$Script:OpenWorkbook = $null
 	$Script:WorkbookWasOpen = $false
 	[System.GC]::Collect()
@@ -319,6 +298,7 @@ function Reset-ScriptExcel {
 	$Script:App = $null
 	$Script:AppWasOpen = $false
 	$Script:LoadedAddins = @{}
+	$Script:SessionAddinCopies = @{}
 	[System.GC]::Collect()
 	[System.GC]::WaitForPendingFinalizers()
 }
@@ -332,6 +312,13 @@ function Invoke-ScriptRun {
 	)
 
 	$requestIsAddin = $FilePath -match '\.(xlam|xla)$'
+	if ($null -ne $Script:App) {
+		try {
+			$null = $Script:App.Workbooks.Count
+		} catch {
+			Reset-ScriptExcel
+		}
+	}
 	if ($null -ne $Script:App -and $null -ne $Script:LastRequestIsAddin -and $Script:LastRequestIsAddin -ne $requestIsAddin) {
 		# Excel does not reliably return to a clean VBA project context when a
 		# request changes from an add-in to a macro-enabled workbook (or back).
@@ -395,13 +382,33 @@ function Invoke-ScriptRun {
 }
 
 function Close-ScriptSession {
+	if ($null -ne $Script:App) {
+		Close-ScriptWorkbooks
+	}
 	# Quit Excel only if we launched it ourselves.
 	if (-not $Script:AppWasOpen -and $null -ne $Script:App) {
+		$excelPid = 0
+		if (Get-Command Get-ExcelProcessId -ErrorAction SilentlyContinue) {
+			try { $excelPid = Get-ExcelProcessId -ExcelApp $Script:App } catch {}
+		}
 		try {
 			$Script:App.Quit()
-			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null
 		} catch {
 			# best-effort
+		}
+		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+		[System.GC]::Collect()
+		[System.GC]::WaitForPendingFinalizers()
+
+		# A COM Quit can return while Excel is still alive, or throw after Excel
+		# has become unresponsive. This PID was captured from the instance we
+		# created, so force-cleaning it cannot touch a user's visible Excel.
+		if ($excelPid -gt 0) {
+			try {
+				if (Get-Process -Id $excelPid -ErrorAction SilentlyContinue) {
+					Stop-Process -Id $excelPid -Force -ErrorAction SilentlyContinue
+				}
+			} catch {}
 		}
 	}
 	$Script:App = $null

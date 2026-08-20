@@ -50,7 +50,7 @@
         "test:e2e:background:updateSnapshots": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --updateSnapshot --maxWorkers=5",
         "test:e2e:in-process:background": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --maxWorkers=5",
         "test:e2e:in-process:background:debug": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 E2E_IN_PROCESS=1 VBA_DEBUG_INSTANCES=1 jest --config e2e.config.mjs --verbose --maxWorkers=5",
-        "test:e2e:session": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --maxWorkers=5",
+        "test:e2e:session": "pnpm run build:check && cross-env VBA_BACKGROUND_BUILD=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --maxWorkers=3",
         
         "test:e2e:multilang": "pnpm run build:check && cross-env E2E_ML=1 jest --config multilang.config.mjs --runInBand",
         "build": "rimraf lib && rollup -c rollup.config.mjs",

@@ -138,16 +138,18 @@ export class PowerShellSession {
 		child.stdout.removeAllListeners("data");
 		child.stderr.removeAllListeners("data");
 
-		const encoded = Buffer.from(JSON.stringify({ id: "__VBA_QUIT__" }), "utf8").toString("base64");
-		child.stdin.write(encoded + "\n");
-		child.stdin.end();
-
 		await new Promise<void>(resolve => {
 			const t = setTimeout(resolve, 10000);
 			child.once("close", () => {
 				clearTimeout(t);
 				resolve();
 			});
+
+			const encoded = Buffer.from(JSON.stringify({ id: "__VBA_QUIT__" }), "utf8").toString(
+				"base64"
+			);
+			child.stdin.write(encoded + "\n");
+			child.stdin.end();
 		});
 		this.child = null;
 		session = null;
