@@ -29,6 +29,8 @@ export interface SessionRunResult {
 	messages: string[];
 	warnings: string[];
 	errors: string[];
+	stdout?: string;
+	stderr?: string;
 }
 
 /**
@@ -126,18 +128,29 @@ export class PowerShellSession {
 	async close(): Promise<void> {
 		if (!this.child) return;
 
+		const child = this.child;
+
+		// Drop our listeners first. Under Jest the session is closed in `afterAll`,
+		// and a late `close`/`error` event would call `debug()` -> lazy `require()`
+		// after the test environment is torn down, which crashes the worker.
+		child.removeAllListeners("close");
+		child.removeAllListeners("error");
+		child.stdout.removeAllListeners("data");
+		child.stderr.removeAllListeners("data");
+
 		const encoded = Buffer.from(JSON.stringify({ id: "__VBA_QUIT__" }), "utf8").toString("base64");
-		this.child.stdin.write(encoded + "\n");
-		this.child.stdin.end();
+		child.stdin.write(encoded + "\n");
+		child.stdin.end();
 
 		await new Promise<void>(resolve => {
-			const t = setTimeout(resolve, 2000);
-			this.child!.once("close", () => {
+			const t = setTimeout(resolve, 10000);
+			child.once("close", () => {
 				clearTimeout(t);
 				resolve();
 			});
 		});
 		this.child = null;
+		session = null;
 	}
 
 	private onStdout(chunk: string): void {
@@ -182,11 +195,31 @@ export class PowerShellSession {
 
 	private toRunResult(r: SessionResponse): SessionRunResult {
 		if (r.success) {
+			if (typeof r.result === "string") {
+				try {
+					const parsed = JSON.parse(r.result);
+					if (parsed && typeof parsed === "object" && "success" in parsed) {
+						return {
+							success: !!parsed.success,
+							messages: parsed.messages ?? [],
+							warnings: parsed.warnings ?? [],
+							errors: parsed.errors ?? [],
+							stdout: `${r.result}\n`,
+							stderr: ""
+						};
+					}
+				} catch {
+					// Treat non-JSON macro output as ordinary stdout below.
+				}
+			}
+
 			return {
 				success: true,
 				messages: [typeof r.result === "string" ? r.result : JSON.stringify(r.result)],
 				warnings: [],
-				errors: []
+				errors: [],
+				stdout: `${typeof r.result === "string" ? r.result : JSON.stringify(r.result)}\n`,
+				stderr: ""
 			};
 		}
 		return {

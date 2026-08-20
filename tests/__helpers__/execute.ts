@@ -7,6 +7,10 @@ import { env } from "../../src/env";
 import { tmpFolder } from "../../src/utils/fs";
 import { basename, extname, join, resolve } from "../../src/utils/path";
 import { RunResult } from "../../src/utils/run";
+import {
+	closePowerShellSession as closeSourcePowerShellSession,
+	run as sourceRun
+} from "../../src/utils/run";
 import { truncate } from "../../src/utils/text";
 const exec = promisify(require("child_process").exec);
 
@@ -65,6 +69,9 @@ const keepTmp = /^(1|true|yes)$/i.test(process.env.KEEP_E2E_TMP || "");
 // To enable verbose logging of executed commands and their output, set the environment variable `E2E_VERBOSE` to `1`, `true`, or `yes`.
 const hasVerboseArg = process.argv.some(arg => arg === "--verbose" || arg === "-v");
 const isVerbose = /^(1|true|yes)$/i.test(process.env.E2E_VERBOSE || "") || hasVerboseArg;
+const useSourcePersistentSession =
+	/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") &&
+	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
 
 export async function tmp(id: string, action: (cwd: string) => void) {
 	const path = await tmpFolder({ dir: tmp_dir, prefix: `${id}-` });
@@ -72,6 +79,9 @@ export async function tmp(id: string, action: (cwd: string) => void) {
 	try {
 		await action(path);
 	} finally {
+		if (useSourcePersistentSession) {
+			await closePersistentSession();
+		}
 		if (!keepTmp) {
 			await removeWithRetry(path);
 		}
@@ -347,7 +357,7 @@ export async function run(
 ): Promise<RunResult> {
 	let result: RunResult;
 	try {
-		result = await _run(application, file, macro, args);
+		result = await (useSourcePersistentSession ? sourceRun : _run)(application, file, macro, args);
 
 		// Give Office time to clean up
 		await wait(500);
@@ -381,5 +391,5 @@ function normalize(value: string): string {
  * by spawned `vba` processes via `execute()`.
  */
 export async function closePersistentSession(): Promise<void> {
-	await closePowerShellSession();
+	await Promise.all([closePowerShellSession(), closeSourcePowerShellSession()]);
 }

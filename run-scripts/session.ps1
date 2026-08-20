@@ -50,6 +50,9 @@ $Script:AppWasOpen = $false   # true if we attached to a pre-existing instance
 $Script:BackgroundBuild = $false
 $Script:OpenWorkbook = $null  # current workbook COM ref
 $Script:WorkbookWasOpen = $false
+$Script:IsAddin = $false      # true when the current request targets an add-in
+$Script:LoadedAddins = @{}
+$Script:LastRequestIsAddin = $null
 
 function Get-ScriptFileName {
 	param([string]$Path)
@@ -61,26 +64,41 @@ function Get-ScriptFileBase {
 	return [System.IO.Path]::GetFileName($Path)
 }
 
+function Unescape-ScriptArgument {
+	param([string]$Value)
+	return $Value -replace '\^q', '"'
+}
+
 function Invoke-ScriptMacro {
 	param(
 		[object]$ExcelApp,
 		[string]$MacroName,
-		[string[]]$ArgValues
+		[string[]]$ArgValues,
+		[string]$WorkbookName = '',
+		[bool]$Qualified = $false
 	)
 
 	$numArgs = if ($ArgValues) { $ArgValues.Count } else { 0 }
-	switch ($numArgs) {
-		0  { return $ExcelApp.Run($MacroName) }
-		1  { return $ExcelApp.Run($MacroName, $ArgValues[0]) }
-		2  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1]) }
-		3  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2]) }
-		4  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3]) }
-		5  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4]) }
-		6  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5]) }
-		7  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6]) }
-		8  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6], $ArgValues[7]) }
-		9  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6], $ArgValues[7], $ArgValues[8]) }
-		10 { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6], $ArgValues[7], $ArgValues[8], $ArgValues[9]) }
+	try {
+		switch ($numArgs) {
+			0  { return $ExcelApp.Run($MacroName) }
+			1  { return $ExcelApp.Run($MacroName, $ArgValues[0]) }
+			2  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1]) }
+			3  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2]) }
+			4  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3]) }
+			5  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4]) }
+			6  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5]) }
+			7  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6]) }
+			8  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6], $ArgValues[7]) }
+			9  { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6], $ArgValues[7], $ArgValues[8]) }
+			10 { return $ExcelApp.Run($MacroName, $ArgValues[0], $ArgValues[1], $ArgValues[2], $ArgValues[3], $ArgValues[4], $ArgValues[5], $ArgValues[6], $ArgValues[7], $ArgValues[8], $ArgValues[9]) }
+		}
+	} catch {
+		if (-not $Qualified -and $WorkbookName) {
+			$qualifiedName = "'$WorkbookName'!$MacroName"
+			return Invoke-ScriptMacro $ExcelApp $qualifiedName $ArgValues $WorkbookName $true
+		}
+		throw
 	}
 	return $null
 }
@@ -105,6 +123,11 @@ function Open-ScriptExcel {
 		$Script:App.PrintCommunication = $false
 		$Script:App.EnableAnimations = $false
 		$Script:App.EnableEvents = $false
+		# Match the one-shot bridge's automation behavior for every workbook
+		# opened by this long-lived process. A macro-enabled workbook opened after
+		# the add-in can otherwise inherit a restrictive security mode.
+		try { $Script:App.AutomationSecurity = 1 } catch {}
+		$Script:App.DisplayAlerts = $false
 
 		if ($HasRegistry) {
 			$reason = if ($Script:BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
@@ -134,20 +157,39 @@ function Ensure-ScriptWorkbook {
 		}
 	}
 
-	# Otherwise, if this workbook is already open anywhere, attach to it.
-	if ($HasRegistry) {
-		try {
-			$found = Find-OpenWorkbook -Path $Path
-			if ($null -ne $found) {
-				$Script:App = $found.App
-				$Script:AppWasOpen = $true
-				$Script:OpenWorkbook = $found.Workbook
+	# Mirror run.ps1: an add-in that is already loaded must be used as-is rather
+	# than reopened as a plain workbook. Reopening vbapm.xlam through
+	# Workbooks.Open is what breaks unqualified Application.Run('Build.*')
+	# resolution (the failure mode that caused the earlier revert).
+	try {
+		$addin = $Script:App.AddIns($fileName)
+		if ($addin.IsOpen) {
+			$Script:OpenWorkbook = $addin
+			$Script:WorkbookWasOpen = $true
+			return
+		}
+	} catch {
+		# Not registered as an add-in; fall through.
+	}
+
+	# Already open *in our own instance*? Match on full path so a same-named file
+	# from another directory is never picked up.
+	#
+	# Deliberately NOT using the registry's cross-instance Find-OpenWorkbook here:
+	# re-pointing $Script:App at a foreign instance mid-session makes macro
+	# resolution depend on unrelated Excel processes (and on whether that instance
+	# has the add-in loaded), which is precisely how 'Cannot run the macro' shows
+	# up. A session owns exactly one instance for its whole lifetime.
+	try {
+		foreach ($wb in $Script:App.Workbooks) {
+			if ($wb.FullName -eq $fullPath) {
+				$Script:OpenWorkbook = $wb
 				$Script:WorkbookWasOpen = $true
 				return
 			}
-		} catch {
-			# best-effort
 		}
+	} catch {
+		# Not already open; fall through to opening it.
 	}
 
 	# Open (or reopen) the workbook in our instance.
@@ -162,6 +204,125 @@ function Ensure-ScriptWorkbook {
 	}
 }
 
+function Ensure-ScriptAddin {
+	param([string]$Path)
+
+	$fullPath = [System.IO.Path]::GetFullPath($Path)
+	$fileName = Get-ScriptFileBase $Path
+	$addinKey = $fullPath.ToLowerInvariant()
+
+	if ($Script:LoadedAddins.ContainsKey($addinKey)) {
+		return $Script:LoadedAddins[$addinKey]
+	}
+
+	# Reuse an add-in already installed in this Excel instance.
+	try {
+		$addin = $Script:App.AddIns($fileName)
+		if ($addin -and $addin.Installed) {
+			$Script:LoadedAddins[$addinKey] = $addin
+			return $addin
+		}
+	} catch {
+		# Not installed yet; add it below.
+	}
+
+	# Excel's AddIns(name) lookup is inconsistent across versions. Enumerate the
+	# collection and compare FullName before attempting to add a duplicate.
+	try {
+		foreach ($addin in $Script:App.AddIns) {
+			if ($addin.FullName -and ([System.IO.Path]::GetFullPath([string]$addin.FullName)).ToLowerInvariant() -eq $addinKey) {
+				$addin.Installed = $true
+				$Script:LoadedAddins[$addinKey] = $addin
+				return $addin
+			}
+		}
+	} catch {
+		# Fall through to AddIns.Add.
+	}
+
+	# Some callers may have opened the add-in as a workbook already. Reuse that
+	# object rather than loading a second copy.
+	try {
+		foreach ($wb in $Script:App.Workbooks) {
+			if ($wb.FullName -eq $fullPath) {
+				return $wb
+			}
+		}
+	} catch {
+		# Fall through to AddIns.Add.
+	}
+
+	try {
+		$addin = $Script:App.AddIns.Add($fullPath, $true)
+		$addin.Installed = $true
+		$Script:LoadedAddins[$addinKey] = $addin
+		return $addin
+	} catch {
+		# This runner may reject AddIns.Add for temporary paths. The existing
+		# one-shot bridge handles the same artifact by opening it as a workbook;
+		# preserve that proven fallback, but retain it for this session.
+		try {
+			$workbook = $Script:App.Workbooks.Open($fullPath)
+			if ($Script:BackgroundBuild) {
+				$Script:App.Visible = $false
+			}
+			$Script:LoadedAddins[$addinKey] = $workbook
+			return $workbook
+		} catch {
+			throw "Failed to load add-in '$fileName' - $($_.Exception.Message)"
+		}
+	}
+}
+
+function Close-ScriptWorkbooks {
+	try {
+		foreach ($workbook in @($Script:App.Workbooks)) {
+			$fullPath = ''
+			try { $fullPath = [System.IO.Path]::GetFullPath([string]$workbook.FullName).ToLowerInvariant() } catch {}
+
+			$isLoadedAddin = $false
+			if ($fullPath) {
+				$isLoadedAddin = $Script:LoadedAddins.ContainsKey($fullPath)
+			}
+			if ($isLoadedAddin -or $fullPath -match '\.(xlam|xla)$') {
+				continue
+			}
+
+			try { $workbook.Close($true) } catch {}
+			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($workbook) | Out-Null } catch {}
+		}
+	} catch {
+		# Best-effort cleanup; the next request can still report its own error.
+	}
+
+	# Add-ins are needed only for the request that invoked them. Keeping one
+	# loaded changes the macro context for a later workbook request, so unload
+	# session-owned add-ins while retaining the Excel.Application itself.
+	foreach ($addin in @($Script:LoadedAddins.Values)) {
+		try { $addin.Installed = $false } catch {}
+		try { $addin.Close($false) } catch {}
+		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($addin) | Out-Null } catch {}
+	}
+	$Script:LoadedAddins = @{}
+	$Script:OpenWorkbook = $null
+	$Script:WorkbookWasOpen = $false
+	[System.GC]::Collect()
+	[System.GC]::WaitForPendingFinalizers()
+}
+
+function Reset-ScriptExcel {
+	Close-ScriptWorkbooks
+	if ($null -ne $Script:App) {
+		try { $Script:App.Quit() } catch {}
+		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+	}
+	$Script:App = $null
+	$Script:AppWasOpen = $false
+	$Script:LoadedAddins = @{}
+	[System.GC]::Collect()
+	[System.GC]::WaitForPendingFinalizers()
+}
+
 function Invoke-ScriptRun {
 	param(
 		[string]$FilePath,
@@ -170,23 +331,64 @@ function Invoke-ScriptRun {
 		[string[]]$ArgValues
 	)
 
+	$requestIsAddin = $FilePath -match '\.(xlam|xla)$'
+	if ($null -ne $Script:App -and $null -ne $Script:LastRequestIsAddin -and $Script:LastRequestIsAddin -ne $requestIsAddin) {
+		# Excel does not reliably return to a clean VBA project context when a
+		# request changes from an add-in to a macro-enabled workbook (or back).
+		# Reuse remains enabled for consecutive requests of the same kind, while
+		# context switches get a fresh owned Excel instance.
+		Reset-ScriptExcel
+	}
+
 	if ($null -eq $Script:App) {
 		Open-ScriptExcel
 	}
 
-	Ensure-ScriptWorkbook $FilePath
+	# Per-request state. $Script:WorkbookWasOpen describes *this* request only;
+	# leaving it sticky from a previous request means we stop closing workbooks we
+	# opened, so they pile up in the reused instance and bleed into later macros.
+	$Script:WorkbookWasOpen = $false
+	$Script:IsAddin = $requestIsAddin
+	$Script:LastRequestIsAddin = $requestIsAddin
 
-	$result = Invoke-ScriptMacro $Script:App $MacroName $ArgValues
+	if ($Script:IsAddin) {
+		$Script:OpenWorkbook = Ensure-ScriptAddin $FilePath
+		$Script:WorkbookWasOpen = $true
+	} else {
+		Ensure-ScriptWorkbook $FilePath
+	}
 
-	# Close the workbook unless the caller asked to keep it open (the Application
-	# itself is retained across requests so a later command reuses the instance).
-	if (-not $KeepOpen -and -not $Script:WorkbookWasOpen -and $null -ne $Script:OpenWorkbook) {
-		try {
-			$Script:OpenWorkbook.Close($true)
-		} catch {
-			# best-effort
+	# A previous request may have left the add-in or another workbook active.
+	# Application.Run resolves unqualified macro names against the active VBA
+	# project, so make the current request's workbook the active document first.
+	try { $Script:OpenWorkbook.Activate() } catch {}
+
+	$workbookName = if ($Script:IsAddin) { '' } else { Get-ScriptFileBase $FilePath }
+	try {
+		$result = Invoke-ScriptMacro $Script:App $MacroName $ArgValues $workbookName
+	} catch {
+		# Excel can retain an unusable VBA project context after a macro opened
+		# and closed workbooks internally. Recreate only the owned application and
+		# retry once; healthy request sequences still reuse the same process.
+		Reset-ScriptExcel
+		Open-ScriptExcel
+		$Script:WorkbookWasOpen = $false
+		if ($Script:IsAddin) {
+			$Script:OpenWorkbook = Ensure-ScriptAddin $FilePath
+			$Script:WorkbookWasOpen = $true
+		} else {
+			Ensure-ScriptWorkbook $FilePath
 		}
-		$Script:OpenWorkbook = $null
+		try { $Script:OpenWorkbook.Activate() } catch {}
+		$result = Invoke-ScriptMacro $Script:App $MacroName $ArgValues $workbookName
+	}
+
+	# VBA build macros open their target workbook internally. Keep those internal
+	# workbooks alive until the add-in-to-workbook context reset, matching the
+	# one-shot bridge's lifecycle; closing them immediately can discard the VBA
+	# project before the target archive is finalized.
+	if (-not $KeepOpen -and -not $Script:IsAddin) {
+		Close-ScriptWorkbooks
 	}
 
 	return $result
@@ -254,7 +456,9 @@ while ($true) {
 	$resolveKeepOpen = [bool]$requestJson.keepOpen
 	$resolveArgs = @()
 	if ($requestJson.args) {
-		foreach ($a in $requestJson.args) { $resolveArgs += [string]$a }
+		foreach ($a in $requestJson.args) {
+			$resolveArgs += Unescape-ScriptArgument ([string]$a)
+		}
 	}
 
 	try {
@@ -266,3 +470,9 @@ while ($true) {
 		Write-ScriptResponse $requestId $payload
 	}
 }
+
+# Reaching here means either an explicit __VBA_QUIT__ (already cleaned up, and
+# Close-ScriptSession is a no-op the second time) or stdin hit EOF because the
+# parent Node process exited without sending one. Always quit the instance we
+# own, otherwise a killed/crashed caller strands a hidden EXCEL.EXE forever.
+Close-ScriptSession

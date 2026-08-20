@@ -13,6 +13,7 @@ From package.json:
 | `pnpm run test:e2e` | `VBA_BACKGROUND_BUILD=0` (visible Excel), **spawns the real CLI** per command |
 | `pnpm run test:e2e:in-process` | visible Excel + `E2E_IN_PROCESS=1`, **dispatches CLI commands in-process** (see below) |
 | `pnpm run test:e2e:background` | `VBA_BACKGROUND_BUILD=1` (hidden Excel) — what we just ran |
+| `pnpm run test:e2e:session` | background + `E2E_IN_PROCESS=1` + `VBA_PERSISTENT_SESSION=1`; reuses a PowerShell/Excel session per worker |
 | `pnpm run test:e2e:updateSnapshots` | same as background + `--updateSnapshot` |
 | `pnpm run test:e2e:multilang` | separate multilang config |
 
@@ -48,7 +49,7 @@ Every `run()` call (the `vba run` / macro-execution path) funnels through a
 `src/utils/excel-pool.ts`) so that at most `VBA_EXCEL_POOL_SIZE` Excel instances
 are alive at once:
 
-- Default pool size is **4**; set `VBA_EXCEL_POOL_SIZE` to a different value to
+- Default pool size is **12**; set `VBA_EXCEL_POOL_SIZE` to a different value to
   tune it (e.g. `1` for fully serialized Excel access).
 - A caller that finds all slots busy **waits** (async) until one frees, rather
   than spawning yet another Excel instance. Reuse of an *already-open workbook*
@@ -141,4 +142,130 @@ The CLI-side PowerShell bridge that actually launches Excel lives in [src/utils/
 
 - The `build:check` auto-rebuilds lib when stale.
 - Each test runs in a temp dir under .tmp (cleaned up unless `KEEP_E2E_TMP=1`).
-- Excel instances are created/quitted per macro run (no persistence), and the coordination registry (`%TEMP%\Excel-Instances\instances.json`) tracks instances for cross-agent awareness — with `comReachable`, addins, `windowTitle`, and `null` workbooks for non-COM-reachable ones.
+- Default e2e mode creates and quits Excel per macro run. The opt-in session mode reuses PowerShell and Excel within a test worker, then closes the session at each temp-project boundary and worker teardown.
+- The coordination registry tracks instances across agents for cross-agent awareness.
+
+## Future work: cross-process Excel bridge daemon
+
+The current persistent session is process-local. It reuses PowerShell and Excel
+only while one Node/Jest worker remains alive. A spawned `vba` command still
+creates a new Node process, so it cannot discover or reuse that session. The
+longer-term solution is a Windows-only broker process that owns the Excel pool
+and accepts requests from short-lived CLI processes.
+
+### Responsibilities
+
+The daemon should:
+
+- Own one or more hidden `Excel.Application` instances.
+- Keep the PowerShell COM bridge alive for the lifetime of each owned instance.
+- Serialize requests per Excel instance while allowing independent instances to
+   run concurrently.
+- Load `vbapm.xlam` once per instance and clean normal workbooks after every
+   request.
+- Track owner PID, daemon PID, instance PID, active request, open workbooks,
+   loaded add-ins, and last activity in the existing Excel instance registry.
+- Quit every owned Excel instance when the daemon shuts down or loses ownership.
+
+### IPC and lifecycle
+
+Use a Windows named pipe rather than a TCP port. The pipe name should include
+the current user and repository or environment identity, for example:
+`\\.\pipe\vbapm-excel-{user}-{scope}`.
+
+The CLI flow would be:
+
+1. Locate the daemon endpoint from a small file in `%TEMP%\vbapm`.
+2. Validate the endpoint's daemon PID and protocol version.
+3. Start the daemon if the endpoint is absent or stale.
+4. Send one framed request and wait for one framed response.
+5. Keep the daemon alive for subsequent CLI invocations.
+6. Send an explicit shutdown request when an owning test run ends.
+
+The existing base64 JSON request shape is a suitable starting point. The daemon
+protocol should add `protocolVersion`, `requestId`, `sessionKey`, `keepOpen`,
+and cleanup policy fields. Responses should include `success`, `stdout`,
+`stderr`, `errors`, and the selected instance identifier. Add `ping` and
+owner-restricted `shutdown` requests.
+
+Frames must be length-prefixed or use the existing record separators. JSON
+should remain inside the frame so paths and macro arguments never pass through a
+shell parser.
+
+### Ownership and recovery
+
+The daemon must have an explicit owner and lease:
+
+- Write the daemon PID, pipe name, protocol version, and start time to the
+   endpoint file using an atomic rename.
+- Refresh a heartbeat or lease timestamp while serving requests.
+- Treat an endpoint as stale when the PID is dead, the pipe cannot be opened, or
+   the lease exceeds its timeout.
+- Never let a stale client kill a daemon it does not own.
+- After a daemon crash, start a replacement and let registry cleanup mark dead
+   Excel processes inactive.
+- On PowerShell or Excel failure, discard that instance, release COM references,
+   and start a replacement before retrying once.
+- Retry only requests known to be safe. Build/export requests need an
+   idempotency key or a target-state check before retrying.
+
+### Instance pool
+
+The daemon should maintain a bounded pool rather than one global Excel object:
+
+```text
+CLI process
+   | named pipe
+   v
+Excel bridge daemon
+   +-- request queue
+   +-- instance 1: PowerShell session + Excel.Application
+   +-- instance 2: PowerShell session + Excel.Application
+   +-- instance N: PowerShell session + Excel.Application
+```
+
+Route requests touching the same workbook or project to the same instance when
+possible. Otherwise assign the least-busy healthy instance. Enforce the same
+global limit as `VBA_MAX_EXCEL_INSTANCES` and expose queue depth and instance
+health in debug logs.
+
+Each request should decode and validate arguments, ensure the add-in, open or
+reuse the workbook, run the macro, close request-owned workbooks, release COM
+references, and return the result without quitting a healthy instance. If
+cleanup cannot prove that an instance is clean, retire it instead of reusing it.
+
+### Security and operability
+
+- Restrict the named pipe ACL to the current user.
+- Accept only the structured run request, never arbitrary PowerShell or commands.
+- Limit request and argument sizes.
+- Log daemon PID, client PID, request ID, instance ID, and macro name, but never
+   workbook contents or secrets.
+- Add `vbapm daemon status`, `vbapm daemon stop`, and a diagnostic command for
+   queue and instance state.
+- Keep the existing registry as an observability and cleanup side channel, not
+   as the transport protocol.
+
+### Implementation sequence
+
+1. Extract the current PowerShell session request handler behind an interface.
+2. Add a daemon executable and named-pipe server with `ping`, `run`, and
+    `shutdown` messages.
+3. Move instance creation, pooling, and cleanup into the daemon.
+4. Change `src/utils/run.ts` to prefer the daemon when enabled and fall back to
+    the one-shot bridge when it is unavailable.
+5. Add crash, stale-endpoint, concurrent-client, and cleanup tests.
+6. Run spawned-CLI e2e tests through the daemon and compare runtime, Excel
+    launch count, and lingering-instance count against `--runInBand`.
+
+### Acceptance criteria
+
+Path B is ready only when:
+
+- Spawned CLI invocations reuse daemon-owned Excel instances across commands.
+- A daemon crash or stale endpoint self-heals without killing visible user Excel.
+- Parallel clients stay within the configured instance limit.
+- A failed request cannot poison the next request assigned to that instance.
+- All daemon-owned Excel and PowerShell processes are gone after shutdown.
+- Full spawned and in-process e2e suites pass without snapshot changes.
+- Runtime and Excel launch counts are measured before and after the change.
