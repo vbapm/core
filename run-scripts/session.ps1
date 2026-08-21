@@ -388,6 +388,27 @@ function Invoke-ScriptRun {
 	return $result
 }
 
+function Wait-ScriptExcelExit {
+	param(
+		[int]$ProcessId,
+		[int]$TimeoutSeconds = 10
+	)
+
+	if ($ProcessId -le 0) {
+		return $true
+	}
+
+	$deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+	while ((Get-Date) -lt $deadline) {
+		if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
+			return $true
+		}
+		Start-Sleep -Milliseconds 100
+	}
+
+	return (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue))
+}
+
 function Close-ScriptSession {
 	$lockHeld = $false
 	try {
@@ -422,6 +443,17 @@ function Close-ScriptSession {
 						Stop-Process -Id $excelPid -Force -ErrorAction SilentlyContinue
 					}
 				} catch {}
+
+				# Keep the registry lock while the process exits and COM/file handles
+				# settle. A new worker must not create Excel in this interval.
+				$exited = Wait-ScriptExcelExit -ProcessId $excelPid
+				if ($exited) {
+					Start-Sleep -Seconds 2
+				}
+
+				if (Get-Command Unregister-ExcelInstance -ErrorAction SilentlyContinue) {
+					try { Unregister-ExcelInstance -ProcessId $excelPid } catch {}
+				}
 			}
 		}
 	} finally {
