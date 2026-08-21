@@ -138,10 +138,14 @@ export class PowerShellSession {
 		child.stdout.removeAllListeners("data");
 		child.stderr.removeAllListeners("data");
 
+		let timedOut = false;
 		await new Promise<void>(resolve => {
-			const t = setTimeout(resolve, 10000);
+			const timeout = setTimeout(() => {
+				timedOut = true;
+				resolve();
+			}, 10000);
 			child.once("close", () => {
-				clearTimeout(t);
+				clearTimeout(timeout);
 				resolve();
 			});
 
@@ -151,6 +155,9 @@ export class PowerShellSession {
 			child.stdin.write(encoded + "\n");
 			child.stdin.end();
 		});
+		if (timedOut) {
+			child.kill();
+		}
 		this.child = null;
 		session = null;
 	}

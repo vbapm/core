@@ -11,6 +11,7 @@
  * VBA_FAIL_ON_ZOMBIE=1 to fail the suite when zombies are detected.
  */
 const { spawnSync } = require("child_process");
+const fs = require("fs");
 const { join } = require("path");
 
 module.exports = async function globalTeardown() {
@@ -30,4 +31,47 @@ module.exports = async function globalTeardown() {
 			`Assess-ExcelInstances.ps1 exited with status ${result.status} (zombie Excel instances detected).`
 		);
 	}
+
+	await cleanupTrackedE2EInstances();
+	await sweepTemporaryRepos();
 };
+
+async function cleanupTrackedE2EInstances() {
+	const script = join(__dirname, "..", "scripts", "ps", "Close-TrackedE2EExcelInstances.ps1");
+	const result = spawnSync(
+		"powershell.exe",
+		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
+		{
+			stdio: "inherit"
+		}
+	);
+
+	if (result.status !== 0) {
+		console.warn(`[e2e] tracked Excel cleanup exited with status ${result.status}`);
+	}
+}
+
+async function sweepTemporaryRepos() {
+	if (/^(1|true|yes)$/i.test(process.env.KEEP_E2E_TMP || "")) {
+		return;
+	}
+
+	const tempRoot = join(__dirname, ".tmp");
+	if (!fs.existsSync(tempRoot)) {
+		return;
+	}
+
+	for (const entry of fs.readdirSync(tempRoot)) {
+		const path = join(tempRoot, entry);
+		try {
+			await fs.promises.rm(path, {
+				recursive: true,
+				force: true,
+				maxRetries: 10,
+				retryDelay: 1000
+			});
+		} catch (err) {
+			console.warn(`[e2e] final temporary repo sweep deferred: ${path} (${err.message})`);
+		}
+	}
+}

@@ -103,7 +103,10 @@ async function removeWithRetry(path: string, attempts = 5): Promise<void> {
 			return;
 		} catch (err: any) {
 			const retriable = err?.code === "EBUSY" || err?.code === "EPERM";
-			if (!retriable || attempt === attempts - 1) throw err;
+			if (!retriable || attempt === attempts - 1) {
+				console.warn(`[e2e] temporary repo cleanup deferred: ${path} (${err?.message ?? err})`);
+				return;
+			}
 			await wait(1000);
 		}
 	}
