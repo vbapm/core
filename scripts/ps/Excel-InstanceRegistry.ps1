@@ -128,11 +128,13 @@ function Get-ExcelInstancesLock {
     while ($true) {
         try {
             # Atomic creation; throws if the file already exists.
-            $stream = [System.IO.File]::Open(
+            $stream = New-Object System.IO.FileStream(
                 $lockPath,
                 [System.IO.FileMode]::CreateNew,
                 [System.IO.FileAccess]::Write,
-                [System.IO.FileShare]::None
+                [System.IO.FileShare]::None,
+                256,
+                [System.IO.FileOptions]::DeleteOnClose
             )
             $writer = New-Object System.IO.StreamWriter($stream, [System.Text.Encoding]::UTF8, 256, $true)
             $writer.Write("$ownerId $((Get-Date).ToString('o'))")
@@ -186,10 +188,9 @@ function Release-ExcelInstancesLock {
         $script:ExcelInstancesLockDepth = 0
     }
 
-    $lockPath = Get-ExcelInstancesLockPath
-    if (Test-Path -LiteralPath $lockPath) {
-        Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
-    }
+    # DeleteOnClose removes our lock atomically when the stream is disposed.
+    # Do not remove the path here: another process may acquire a new lock in
+    # the interval between disposal and an explicit Remove-Item call.
 }
 
 # -------
