@@ -111,6 +111,11 @@ function Get-ExcelInstancesLock {
         [int]$PollMilliseconds = 100
     )
 
+    if ($null -ne $script:ExcelInstancesLockStream) {
+        $script:ExcelInstancesLockDepth++
+        return $true
+    }
+
     $dir = Get-ExcelInstancesDir
     if (-not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -129,10 +134,12 @@ function Get-ExcelInstancesLock {
                 [System.IO.FileAccess]::Write,
                 [System.IO.FileShare]::None
             )
-            $writer = New-Object System.IO.StreamWriter($stream)
+            $writer = New-Object System.IO.StreamWriter($stream, [System.Text.Encoding]::UTF8, 256, $true)
             $writer.Write("$ownerId $((Get-Date).ToString('o'))")
-            $writer.Close()
-            $stream.Close()
+            $writer.Flush()
+            $writer.Dispose()
+            $script:ExcelInstancesLockStream = $stream
+            $script:ExcelInstancesLockDepth = 1
             return $true
         } catch [System.IO.IOException] {
             # Lock file already exists. Check whether it is stale.
@@ -168,6 +175,17 @@ function Get-ExcelInstancesLock {
 Release a previously acquired registry lock.
 #>
 function Release-ExcelInstancesLock {
+    if ($null -ne $script:ExcelInstancesLockStream) {
+        $script:ExcelInstancesLockDepth--
+        if ($script:ExcelInstancesLockDepth -gt 0) {
+            return
+        }
+
+        try { $script:ExcelInstancesLockStream.Dispose() } catch {}
+        $script:ExcelInstancesLockStream = $null
+        $script:ExcelInstancesLockDepth = 0
+    }
+
     $lockPath = Get-ExcelInstancesLockPath
     if (Test-Path -LiteralPath $lockPath) {
         Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue

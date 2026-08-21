@@ -116,26 +116,36 @@ function Open-ScriptExcel {
 	}
 
 	if (-not $Script:AppWasOpen) {
-		$Script:App = New-Object -ComObject "Excel.Application"
-		$Script:App.Visible = if ($Script:BackgroundBuild) { $false } else { $true }
-		$Script:App.ScreenUpdating = $false
-		$Script:App.DisplayStatusBar = $false
-		$Script:App.PrintCommunication = $false
-		$Script:App.EnableAnimations = $false
-		$Script:App.EnableEvents = $false
-		# Match the one-shot bridge's automation behavior for every workbook
-		# opened by this long-lived process. A macro-enabled workbook opened after
-		# the add-in can otherwise inherit a restrictive security mode.
-		try { $Script:App.AutomationSecurity = 1 } catch {}
-		$Script:App.DisplayAlerts = $false
-
-		if ($HasRegistry) {
-			$reason = if ($Script:BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
-			try {
-				Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Reason $reason | Out-Null
-			} catch {
-				# best-effort
+		$lockHeld = $false
+		try {
+			if ($HasRegistry) {
+				Get-ExcelInstancesLock | Out-Null
+				$lockHeld = $true
 			}
+
+			$Script:App = New-Object -ComObject "Excel.Application"
+			$Script:App.Visible = if ($Script:BackgroundBuild) { $false } else { $true }
+			$Script:App.ScreenUpdating = $false
+			$Script:App.DisplayStatusBar = $false
+			$Script:App.PrintCommunication = $false
+			$Script:App.EnableAnimations = $false
+			$Script:App.EnableEvents = $false
+			# Match the one-shot bridge's automation behavior for every workbook
+			# opened by this long-lived process. A macro-enabled workbook opened after
+			# the add-in can otherwise inherit a restrictive security mode.
+			try { $Script:App.AutomationSecurity = 1 } catch {}
+			$Script:App.DisplayAlerts = $false
+
+			if ($HasRegistry) {
+				$reason = if ($Script:BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
+				try {
+					Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Reason $reason | Out-Null
+				} catch {
+					# best-effort
+				}
+			}
+		} finally {
+			if ($lockHeld) { Release-ExcelInstancesLock }
 		}
 	}
 }
@@ -279,10 +289,19 @@ function Close-ScriptWorkbooks {
 }
 
 function Reset-ScriptExcel {
-	Close-ScriptWorkbooks
-	if ($null -ne $Script:App) {
-		try { $Script:App.Quit() } catch {}
-		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+	$lockHeld = $false
+	try {
+		if ($HasRegistry) {
+			Get-ExcelInstancesLock | Out-Null
+			$lockHeld = $true
+		}
+		Close-ScriptWorkbooks
+		if ($null -ne $Script:App) {
+			try { $Script:App.Quit() } catch {}
+			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+		}
+	} finally {
+		if ($lockHeld) { Release-ExcelInstancesLock }
 	}
 	$Script:App = $null
 	$Script:AppWasOpen = $false
@@ -370,34 +389,43 @@ function Invoke-ScriptRun {
 }
 
 function Close-ScriptSession {
-	if ($null -ne $Script:App) {
-		Close-ScriptWorkbooks
-	}
-	# Quit Excel only if we launched it ourselves.
-	if (-not $Script:AppWasOpen -and $null -ne $Script:App) {
-		$excelPid = 0
-		if (Get-Command Get-ExcelProcessId -ErrorAction SilentlyContinue) {
-			try { $excelPid = Get-ExcelProcessId -ExcelApp $Script:App } catch {}
+	$lockHeld = $false
+	try {
+		if ($HasRegistry) {
+			Get-ExcelInstancesLock | Out-Null
+			$lockHeld = $true
 		}
-		try {
-			$Script:App.Quit()
-		} catch {
-			# best-effort
+		if ($null -ne $Script:App) {
+			Close-ScriptWorkbooks
 		}
-		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
-		[System.GC]::Collect()
-		[System.GC]::WaitForPendingFinalizers()
-
-		# A COM Quit can return while Excel is still alive, or throw after Excel
-		# has become unresponsive. This PID was captured from the instance we
-		# created, so force-cleaning it cannot touch a user's visible Excel.
-		if ($excelPid -gt 0) {
+		# Quit Excel only if we launched it ourselves.
+		if (-not $Script:AppWasOpen -and $null -ne $Script:App) {
+			$excelPid = 0
+			if (Get-Command Get-ExcelProcessId -ErrorAction SilentlyContinue) {
+				try { $excelPid = Get-ExcelProcessId -ExcelApp $Script:App } catch {}
+			}
 			try {
-				if (Get-Process -Id $excelPid -ErrorAction SilentlyContinue) {
-					Stop-Process -Id $excelPid -Force -ErrorAction SilentlyContinue
-				}
-			} catch {}
+				$Script:App.Quit()
+			} catch {
+				# best-effort
+			}
+			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+			[System.GC]::Collect()
+			[System.GC]::WaitForPendingFinalizers()
+
+			# A COM Quit can return while Excel is still alive, or throw after Excel
+			# has become unresponsive. This PID was captured from the instance we
+			# created, so force-cleaning it cannot touch a user's visible Excel.
+			if ($excelPid -gt 0) {
+				try {
+					if (Get-Process -Id $excelPid -ErrorAction SilentlyContinue) {
+						Stop-Process -Id $excelPid -Force -ErrorAction SilentlyContinue
+					}
+				} catch {}
+			}
 		}
+	} finally {
+		if ($lockHeld) { Release-ExcelInstancesLock }
 	}
 	$Script:App = $null
 }
