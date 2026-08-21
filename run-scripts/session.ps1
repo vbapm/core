@@ -52,7 +52,6 @@ $Script:OpenWorkbook = $null  # current workbook COM ref
 $Script:WorkbookWasOpen = $false
 $Script:IsAddin = $false      # true when the current request targets an add-in
 $Script:LoadedAddins = @{}
-$Script:SessionAddinCopies = @{}
 $Script:LastRequestIsAddin = $null
 
 function Get-ScriptFileName {
@@ -216,25 +215,19 @@ function Ensure-ScriptAddin {
 		return $Script:LoadedAddins[$addinKey]
 	}
 
-	$loadPath = $fullPath
-	if (-not $Script:SessionAddinCopies.ContainsKey($addinKey)) {
-		$copyPath = Join-Path $env:TEMP "vbapm-session-$PID-$fileName"
-		Copy-Item -LiteralPath $fullPath -Destination $copyPath -Force
-		$Script:SessionAddinCopies[$addinKey] = $copyPath
-	}
-	$loadPath = $Script:SessionAddinCopies[$addinKey]
-
 	try {
 		if ($null -eq $Script:App) {
 			throw 'Excel application is unavailable'
 		}
 		foreach ($workbook in $Script:App.Workbooks) {
-			if ($workbook.FullName -eq $loadPath) {
+			if ($workbook.FullName -eq $fullPath) {
 				$Script:LoadedAddins[$addinKey] = $workbook
 				return $workbook
 			}
 		}
-		$workbook = $Script:App.Workbooks.Open($loadPath)
+		# UpdateLinks=0, ReadOnly=$true. The add-in is shared by workers, so
+		# opening it read-only avoids write-lock contention on the source file.
+		$workbook = $Script:App.Workbooks.Open($fullPath, 0, $true)
 		if ($null -eq $workbook) {
 			throw 'Excel returned no workbook object'
 		}
@@ -278,11 +271,7 @@ function Close-ScriptWorkbooks {
 		try { $addin.Close($false) } catch {}
 		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($addin) | Out-Null } catch {}
 	}
-	foreach ($copyPath in @($Script:SessionAddinCopies.Values)) {
-		try { Remove-Item -LiteralPath $copyPath -Force -ErrorAction SilentlyContinue } catch {}
-	}
 	$Script:LoadedAddins = @{}
-	$Script:SessionAddinCopies = @{}
 	$Script:OpenWorkbook = $null
 	$Script:WorkbookWasOpen = $false
 	[System.GC]::Collect()
@@ -298,7 +287,6 @@ function Reset-ScriptExcel {
 	$Script:App = $null
 	$Script:AppWasOpen = $false
 	$Script:LoadedAddins = @{}
-	$Script:SessionAddinCopies = @{}
 	[System.GC]::Collect()
 	[System.GC]::WaitForPendingFinalizers()
 }
