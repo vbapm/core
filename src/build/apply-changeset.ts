@@ -7,6 +7,7 @@ import { Project } from "../project";
 import { ensureDir, remove, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { dirname, join, relative } from "../utils/path";
+import * as iconv from "iconv-lite";
 import { Changeset } from "./changeset";
 import { Component, extensionToType } from "./component";
 import { codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
@@ -223,7 +224,6 @@ export async function writeComponent(path: string, component: Component) {
 	const srcEncoding = component.details.sourceEncoding;
 
 	if (srcEncoding) {
-		const iconv = require("iconv-lite");
 		const systemLabel = codepageToLabel(getSystemCodepage());
 
 		if (srcEncoding.toLowerCase() !== systemLabel.toLowerCase()) {
