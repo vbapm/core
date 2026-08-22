@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src-encoding` has moved from `[project]`/`[package]` to `[source]` as `encoding`. Existing `vbaproject.toml` files with `src-encoding` under `[project]` or `[package]` will now receive a clear error message suggesting the migration. Per-source `encoding` on `[src]` entries is unchanged.
 
 ### Fixed
+- Missing target files now report whether the target directory is missing and suggest `target.name` when matching workbook files are found.
 - Name conflict resolution on extract: when a `[src]` entry (e.g. `Module1`) points to a different component name (`Validation.bas`) but the workbook also contains a real `Module1`, both entries are preserved with a warning about the rename.
 - VBA addin errors now surface to the CLI via structured JSON output instead of being silently swallowed by `Err.Raise`.
 - Windows path separators are normalized when comparing wildcard-covered paths during extract.
