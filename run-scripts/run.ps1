@@ -249,6 +249,18 @@ class Excel {
 		$this.OpenExcel()
 	}
 
+	Excel([object]$App, [object]$Workbook) {
+		$this.App = $App
+		$this.ExcelWasOpen = $true
+		$this.Workbook = $Workbook
+		$this.WorkbookWasOpen = $true
+	}
+
+	Excel([object]$App) {
+		$this.App = $App
+		$this.ExcelWasOpen = $true
+	}
+
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
 		$this.OpenWorkbook($FilePath)
 
@@ -441,23 +453,29 @@ function Run {
 
 	switch ($AppName) {
 		"excel" {
-			$excel = [Excel]::new()
+			$found = $null
+			$backgroundBuild = $env:VBA_BACKGROUND_BUILD -match '^(1|true|yes)$'
+			$targetPath = Get-MacroTargetFile $MacroArgValues
+			$lookupPath = if ($FilePath -match '\.(xlam|xla)$' -and $targetPath) {
+				$targetPath
+			} else {
+				$FilePath
+			}
+			if ($HasRegistry -and -not $backgroundBuild) {
+				try {
+					$found = Find-OpenWorkbook -Path $lookupPath
+				} catch {
+					# best-effort; fall back to the normal Excel selection path
+				}
+			}
+
+			$excel = if ($null -ne $found) {
+				[Excel]::new($found.App)
+			} else {
+				[Excel]::new()
+			}
 			$registeredPid = 0
 			try {
-				# If the target workbook is already open in another living Excel
-				# instance, attach to that instance + workbook instead of opening
-				# a duplicate copy.
-				if ($HasRegistry) {
-					try {
-						$found = Find-OpenWorkbook -Path $FilePath
-						if ($null -ne $found) {
-							$excel.Attach($found.App, $found.Workbook)
-						}
-					} catch {
-						# best-effort; fall back to opening a fresh copy
-					}
-				}
-
 				# If we created a fresh Excel instance (not attaching to an
 				# already-running one), record it in the coordination registry
 				# so concurrent agents can distinguish it from a user/rogue
