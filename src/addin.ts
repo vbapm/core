@@ -1,11 +1,12 @@
 import { ImportGraph } from "./build/build-graph";
+import { readdir } from "fs/promises";
 import { env } from "./env";
 import { CliError, ErrorCode } from "./errors";
 import { resolvePeerReferencePaths } from "./manifest/reference";
 import { Target } from "./manifest/target";
 import { Project } from "./project";
 import { copy, ensureDir, pathExists } from "./utils/fs";
-import { dirname, join } from "./utils/path";
+import { dirname, extname, join } from "./utils/path";
 import { run } from "./utils/run";
 
 export type Application = "excel";
@@ -87,6 +88,7 @@ export async function exportTo(
 	options: AddinOptions = {}
 ): Promise<void> {
 	let { application, addin, file } = getTargetInfo(project, target);
+	await validateExportTarget(file, target, project.manifest.name);
 
 	// For Mac, stage target to avoid permission prompts
 	if (!env.isWindows) {
@@ -107,6 +109,52 @@ export async function exportTo(
 			includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
 		})
 	]);
+}
+
+export async function validateExportTarget(
+	file: string,
+	target: Target,
+	projectName: string
+): Promise<void> {
+	if (await pathExists(file)) return;
+
+	const directory = dirname(file);
+	if (!(await pathExists(directory))) {
+		let missingDirectory = directory;
+		let parent = dirname(missingDirectory);
+
+		while (parent !== missingDirectory && !(await pathExists(parent))) {
+			missingDirectory = parent;
+			parent = dirname(missingDirectory);
+		}
+
+		throw new CliError(
+			ErrorCode.ExportTargetNotFound,
+			`The directory containing the target file does not exist:\n\n  "${missingDirectory}"`
+		);
+	}
+
+	const extension = extname(file).toLowerCase();
+	const candidates = (await readdir(directory, { withFileTypes: true }))
+		.filter(entry => entry.isFile() && extname(entry.name).toLowerCase() === extension)
+		.map(entry => entry.name)
+		.sort((left, right) => left.localeCompare(right));
+
+	let message = `The target file does not exist:\n\n  "${file}"`;
+	if (candidates.length > 0) {
+		message += `\n\nFound other ${extension} files in "${directory}":\n${candidates
+			.map(candidate => `  - "${candidate}"`)
+			.join("\n")}`;
+
+		const suggestedName =
+			candidates.length === 1 ? candidates[0].slice(0, -extension.length) : "WORKBOOK_NAME";
+		message +=
+			`\n\nThe target filename defaults to the project name "${projectName}". ` +
+			`If the workbook name differs, set target.name in vbaproject.toml without the extension:\n\n` +
+			`  [project]\n  target = { type = "${target.type}", name = "${suggestedName}" }`;
+	}
+
+	throw new CliError(ErrorCode.ExportTargetNotFound, message);
 }
 
 /**
