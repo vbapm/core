@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The top-level `[src]` section in `vbaproject.toml` is deprecated in favor of `[source.files]`. Legacy manifests remain valid: `[src]` entries are treated as `[source.files]`, but a deprecation warning is printed until the manifest is updated.
 
 ### Added
+- `--vba-only` option for `vba build`, equivalent to `vba update`, to update VBA in an existing built target without rebuilding the workbook.
 - `vba extract` command as the new canonical name for extracting source from a built target (replaces `vba export`).
 - `include-empty-objects` option under `[source]` (default: `true`). When `false`, blank document objects (`ThisWorkbook`, sheet modules) are skipped during export, matching the pre-0.10 behavior. When `true`, all document objects are exported regardless of content.
 - `[source]` table in `vbaproject.toml` for optional enforcement of source file ordering. Keys: `sort.by-types`, `sort.alphabetical`, `subfolders`. When absent, the tool detects and respects the existing convention without enforcement via `detectSrcStructure()`.

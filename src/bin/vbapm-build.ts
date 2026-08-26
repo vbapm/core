@@ -3,6 +3,7 @@ import { Args } from "mri";
 import time from "pretty-hrtime";
 import { buildProject } from "../actions/build-project";
 import { openTarget } from "../actions/open-target";
+import { updateProject } from "../actions/update-project";
 import { resolveBackgroundMode } from "../config";
 
 const help = dedent`
@@ -13,6 +14,7 @@ const help = dedent`
   Options:
     --target=TYPE   Build target of type TYPE
     --release       Exclude dev-* items from build
+    --vba-only      Update VBA in an existing built target
     --background    Run the build in background mode (hidden Excel instance)
     --open          Keep the built target open after build (opens in visible Excel instance afterward for background builds)`;
 
@@ -26,9 +28,15 @@ export default async function (args: Args) {
 	const target = <string | undefined>args.target;
 	const addin = <string | undefined>args.addin;
 	const release = !!args.release;
-
 	const background =
 		typeof args.background === "boolean" ? !!args.background : await resolveBackgroundMode();
+	const vbaOnly = !!args["vba-only"];
+
+	if (vbaOnly) {
+		await updateProject({ target, addin, release, open: !!args.open, background });
+		console.log(`Done. ${time(process.hrtime(start))}`);
+		return;
+	}
 
 	// In a visible (foreground) build, `open` keeps the freshly imported
 	// workbook open in the user's existing Excel session. In a background build

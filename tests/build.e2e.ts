@@ -5,6 +5,7 @@
  * running a macro inside it (see `validateBuild`), snapshotting the result.
  */
 
+import { readFile, writeFile } from "fs-extra";
 import { join } from "path";
 import { single, standard, targetless } from "./__fixtures__";
 import { execute, closePersistentSession, run, RunResult, setup } from "./__helpers__/execute";
@@ -48,6 +49,25 @@ describe("build", () => {
 
 			const result = await validateBuild(cwd, "targetless.xlsm");
 			expect(result).toMatchSnapshot();
+		});
+	});
+
+	test("build --vba-only updates an existing target", async () => {
+		await setup(targetless, "build-vba-only", async cwd => {
+			await execute(cwd, "build --target xlsm");
+
+			await writeFile(
+				join(cwd, "src/Validation.bas"),
+				`Attribute VB_Name = "Validation"\nPublic Function GetMarker() As String\n    GetMarker = "build-vba-only"\nEnd Function\n`,
+				"utf8"
+			);
+
+			const { stdout } = await execute(cwd, "build --vba-only --target xlsm");
+			expect(stdout).toContain("Updating VBA");
+
+			await execute(cwd, "export --vba-only --target xlsm");
+			const content = await readFile(join(cwd, "src/Validation.bas"), "utf8");
+			expect(content).toContain('GetMarker = "build-vba-only"');
 		});
 	});
 });
