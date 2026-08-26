@@ -277,6 +277,14 @@ Build a project, excluding any development src, dependencies, or references:
 vba build --release
 ```
 
+Update only the VBA source in an existing built target, without rebuilding the workbook:
+
+```txt
+vba build --vba-only
+```
+
+This is equivalent to `vba update` and requires the target to already exist in the build directory.
+
 ### `extract`
 
 Once you've completed your edits and are ready to commit your changes, extract your project with `vba extract`.
