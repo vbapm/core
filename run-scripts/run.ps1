@@ -88,49 +88,13 @@ function PrintErr {
 	[Console]::Error.Write($Message)
 }
 
-# Emit an instance-lifecycle log line, only when VBA_DEBUG_INSTANCES is set.
-#
-# All lines go to a SINGLE LOG FILE (NOT stderr): stderr is treated as a fatal
-# error by the CLI's `toResult` (`if (stderr) { success = false }`), so any
-# debug noise on stderr would turn a successful run into a failure. The log path
-# is `%TEMP%\Excel-Instances\instances.log` (or VBA_INSTANCE_LOG). Each line is
-# timestamped + PID-tagged and includes a live count of EXCEL.EXE processes so
-# instance growth/leaks can be tracked by scanning the log.
+# Instance-lifecycle debug logging (`Get-InstanceLogPath` / `Write-InstanceLog`,
+# gated on VBA_DEBUG_INSTANCES) lives in scripts/ps/Excel-InstanceRegistry.ps1
+# alongside the rest of the instance-coordination machinery it reports on.
 #
 # A "run banner" (clear separator marking the start of a new e2e run) is written
 # by the test-side globalSetup before tests start, since `run.ps1` is a
 # short-lived process per macro call and can't detect run boundaries.
-function Get-InstanceLogPath {
-	$path = $env:VBA_INSTANCE_LOG
-	if (-not $path) {
-		$path = Join-Path $env:TEMP 'Excel-Instances\instances.log'
-	}
-	return $path
-}
-
-function LogInstance {
-	param([string]$Message)
-
-	if (-not ($env:VBA_DEBUG_INSTANCES -match '^(1|true|yes)$')) {
-		return
-	}
-
-	$count = -1
-	if (Get-Command Get-RunningExcelInstances -ErrorAction SilentlyContinue) {
-		try { $count = @(Get-RunningExcelInstances).Count } catch {}
-	}
-
-	$logPath = Get-InstanceLogPath
-
-	$stamp = (Get-Date).ToString('o')
-	$line = "[vbapm-instances] $stamp pid=$PID count=$count $Message"
-
-	try {
-		Add-Content -LiteralPath $logPath -Value $line -ErrorAction Stop
-	} catch {
-		# Never let logging itself break a run.
-	}
-}
 
 # Track the currently-active Excel.Application (script scope) so Fail can reveal
 # it if the run aborts. Implemented as a helper function because PowerShell 5.1
@@ -196,45 +160,11 @@ if ($HasRegistry) {
 # Excel
 # -------
 
-# Abort if too many EXCEL.EXE processes are already running (safeguard against
-# leaked instances piling up). Limit is VBA_MAX_EXCEL_INSTANCES (default 12).
-# In background mode, visible (user) instances are excluded from the count so a
-# user's normally-open Excel doesn't eat into the automation budget.
-# Implemented as a *function* rather than inline class-method code because
-# PowerShell 5.1 class methods can't safely reference script-scope variables or
-# local variables assigned inside try blocks.
-function Assert-ExcelInstanceLimit {
-	param([bool]$Background = $false)
-
-	# No-op when the coordination registry module isn't dot-sourced (e.g. an
-	# installed CLI without scripts/).
-	if (-not (Get-Command Get-RunningExcelInstances -ErrorAction SilentlyContinue)) {
-		return
-	}
-
-	$maxInstances = 12
-	if ($env:VBA_MAX_EXCEL_INSTANCES) {
-		$maxInstances = [int]$env:VBA_MAX_EXCEL_INSTANCES
-	}
-
-	$instanceCount = 0
-	try {
-		$running = @(Get-RunningExcelInstances)
-		if ($Background) {
-			# Only count invisible (automation) instances; ignore visible user sessions.
-			$instanceCount = @($running | Where-Object { -not $_.visible }).Count
-		} else {
-			$instanceCount = $running.Count
-		}
-	} catch {
-		# Best-effort safeguard; never block a legitimate run over a count failure.
-		return
-	}
-
-	if ($instanceCount -ge $maxInstances) {
-		Fail "ERROR #5d: Refusing to open a new Excel instance - $instanceCount EXCEL.EXE process(es) already running (limit $maxInstances). Run scripts/ps/Close-AllInvisibleExcelInstances.ps1 to clean up leaked instances."
-	}
-}
+# The EXCEL.EXE instance-count safeguard (`Assert-ExcelInstanceLimit`) lives in
+# scripts/ps/Excel-InstanceRegistry.ps1 next to `Get-RunningExcelInstances`,
+# which it depends on. The call site below no-ops when the function isn't
+# defined (e.g. an installed CLI without scripts/, so $RegistryModule was
+# never dot-sourced).
 
 class Excel {
 	hidden [object]$App
@@ -261,6 +191,15 @@ class Excel {
 		$this.ExcelWasOpen = $true
 	}
 
+	# Attach to a workbook that is already open in a different Excel instance
+	# (resolved by the coordination registry's Find-OpenWorkbook).
+	Excel([object]$App, [object]$Workbook) {
+		$this.App = $App
+		$this.ExcelWasOpen = $true
+		$this.Workbook = $Workbook
+		$this.WorkbookWasOpen = $true
+	}
+
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
 		$this.OpenWorkbook($FilePath)
 
@@ -284,15 +223,6 @@ class Excel {
 		return $result
 	}
 
-	# Attach to a workbook that is already open in a different Excel instance
-	# (resolved by the coordination registry helpers).
-	[void] Attach([object]$App, [object]$Workbook) {
-		$this.App = $App
-		$this.ExcelWasOpen = $true
-		$this.Workbook = $Workbook
-		$this.WorkbookWasOpen = $true
-	}
-
 	hidden [void] OpenExcel() {
 		# When VBA_BACKGROUND_BUILD is set, always create a new hidden instance
 		# instead of attaching to an already-running (visible) Excel process.
@@ -313,8 +243,15 @@ class Excel {
 			# already running too many EXCEL.EXE processes. This catches leaked
 			# instances from aborted/crashed automated runs before they pile up
 			# into the dozens, and aborts (with a clear error) instead of adding
-			# one more invisible instance to the pile.
-			Assert-ExcelInstanceLimit -Background $this.BackgroundBuild
+			# one more invisible instance to the pile. No-op when the registry
+			# module isn't dot-sourced (e.g. an installed CLI without scripts/).
+			if (Get-Command Assert-ExcelInstanceLimit -ErrorAction SilentlyContinue) {
+				try {
+					Assert-ExcelInstanceLimit -Background $this.BackgroundBuild
+				} catch {
+					Fail "ERROR #5d: $($_.Exception.Message)"
+				}
+			}
 
 			try {
 				$this.App = New-Object -ComObject "Excel.Application"
@@ -336,7 +273,7 @@ class Excel {
 			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
 			$this.Pid = $excelPid
 			$mode = if ($this.BackgroundBuild) { 'background' } else { 'foreground' }
-			LogInstance "created Excel instance excelPid=$excelPid mode=$mode"
+			Write-InstanceLog "created Excel instance excelPid=$excelPid mode=$mode"
 			Set-ActiveExcelInstance -App $this.App -IsBackground $this.BackgroundBuild
 		}
 	}
@@ -420,7 +357,7 @@ class Excel {
 		if (-not $this.ExcelWasOpen -and -not $KeepOpen -and $null -ne $this.App) {
 			$excelPid = 0
 			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
-			LogInstance "quitting Excel instance excelPid=$excelPid"
+			Write-InstanceLog "quitting Excel instance excelPid=$excelPid"
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null
@@ -470,7 +407,7 @@ function Run {
 			}
 
 			$excel = if ($null -ne $found) {
-				[Excel]::new($found.App)
+				[Excel]::new($found.App, $found.Workbook)
 			} else {
 				[Excel]::new()
 			}

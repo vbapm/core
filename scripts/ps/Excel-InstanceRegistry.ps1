@@ -35,6 +35,9 @@
 #     Register-ExcelInstance       -> track a newly created instance
 #     Unregister-ExcelInstance     -> deactivate an instance being torn down
 #     Get-RunningExcelInstances    -> enumerate live EXCEL.EXE processes w/ PIDs
+#     Assert-ExcelInstanceLimit    -> throw if too many EXCEL.EXE are running
+#     Get-InstanceLogPath          -> path to the instance-lifecycle debug log
+#     Write-InstanceLog            -> append a debug log line (VBA_DEBUG_INSTANCES)
 #
 # The registry is keyed by process id (Pid). The on-disk document is:
 #   {
@@ -939,6 +942,84 @@ function Get-RunningExcelInstances {
         }
     }
     return $result
+}
+
+<#
+.SYNOPSIS
+Guard against spawning a new Excel instance once too many EXCEL.EXE processes
+are already running (leaked/rogue instances piling up from aborted runs).
+Throws (does not call `Fail`, to keep this module decoupled from run.ps1's
+output helpers) when the live count is at or above the limit.
+
+`-Background` restricts the count to invisible (automation) instances only, so
+a user's normally-open, visible Excel session doesn't eat into the automation
+budget. Limit defaults to 12, overridable via VBA_MAX_EXCEL_INSTANCES.
+#>
+function Assert-ExcelInstanceLimit {
+    param([bool]$Background = $false)
+
+    $maxInstances = 12
+    if ($env:VBA_MAX_EXCEL_INSTANCES) {
+        $maxInstances = [int]$env:VBA_MAX_EXCEL_INSTANCES
+    }
+
+    $instanceCount = 0
+    try {
+        $running = @(Get-RunningExcelInstances)
+        $instanceCount = if ($Background) {
+            @($running | Where-Object { -not $_.visible }).Count
+        } else {
+            $running.Count
+        }
+    } catch {
+        # Best-effort safeguard; never block a legitimate run over a count failure.
+        return
+    }
+
+    if ($instanceCount -ge $maxInstances) {
+        throw "Refusing to open a new Excel instance - $instanceCount EXCEL.EXE process(es) already running (limit $maxInstances). Run scripts/ps/Close-AllInvisibleExcelInstances.ps1 to clean up leaked instances."
+    }
+}
+
+<#
+.SYNOPSIS
+Path to the instance-lifecycle debug log (%TEMP%\Excel-Instances\instances.log,
+overridable via VBA_INSTANCE_LOG).
+#>
+function Get-InstanceLogPath {
+    $path = $env:VBA_INSTANCE_LOG
+    if (-not $path) {
+        $path = Join-Path $env:TEMP 'Excel-Instances\instances.log'
+    }
+    return $path
+}
+
+<#
+.SYNOPSIS
+Append an instance-lifecycle log line (create/quit), only when
+VBA_DEBUG_INSTANCES is set. Writes to a FILE, never stderr/stdout: run.ps1's
+`toResult` on the Node side treats any stderr output as `success=false`, so
+debug noise on stderr would turn a successful run into a false failure.
+#>
+function Write-InstanceLog {
+    param([string]$Message)
+
+    if (-not ($env:VBA_DEBUG_INSTANCES -match '^(1|true|yes)$')) {
+        return
+    }
+
+    $count = -1
+    try { $count = @(Get-RunningExcelInstances).Count } catch {}
+
+    $logPath = Get-InstanceLogPath
+    $stamp = (Get-Date).ToString('o')
+    $line = "[vbapm-instances] $stamp pid=$PID count=$count $Message"
+
+    try {
+        Add-Content -LiteralPath $logPath -Value $line -ErrorAction Stop
+    } catch {
+        # Never let logging itself break a run.
+    }
 }
 
 <#
