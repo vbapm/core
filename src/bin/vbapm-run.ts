@@ -1,6 +1,7 @@
 import dedent from "@timhall/dedent";
 import { Args } from "mri";
 import { runMacro } from "../actions/run-macro";
+import { resolveBackgroundMode } from "../config";
 
 const help = dedent`
   Run macro in given workbook or add-in.
@@ -22,6 +23,7 @@ export default async function (args: Args) {
 	const [macro, ...macro_args] = args._;
 	const target = args.target as string | undefined;
 	let file = args.file as string | undefined;
+	const keepOpen = await resolveBackgroundMode();
 
-	await runMacro({ target, file, macro, args: macro_args });
+	await runMacro({ target, file, macro, args: macro_args, keepOpen });
 }

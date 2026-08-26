@@ -12,10 +12,27 @@ import { zip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 
 export interface BuildOptions {
+	/**
+	 * If true, devDependencies will be excluded from the build. 
+	 * This is useful for creating a "release" build.
+	 */
 	release?: boolean;
+	/**
+	 * The target type to build. If not specified, the default target will be used.
+	 */
 	target?: string;
+	/**
+	 * The add-in to build. If not specified, the default add-in will be used.
+	 */
 	addin?: string;
+	/**
+	 * If true, the built target will be kept open or opened after the build/operation.
+	 */
 	open?: boolean;
+	/**
+	 * If true, the build runs in background mode using a hidden Excel instance.
+	 */
+	background?: boolean;
 }
 
 const isCreateDocumentError = (message: string) => /1004/.test(message);
