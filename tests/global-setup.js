@@ -10,7 +10,7 @@
  * side-effects (opening Excel + the add-in) persist for the test process, which
  * attaches via GetActiveObject.
  *
- * In background mode (VBA_BACKGROUND_BUILD=1) this is a no-op: each test spin-up
+ * In background mode (E2E_BACKGROUND=1) this is a no-op: each test spins up
  * its own hidden instance and we don't reuse a visible one.
  */
 const { spawnSync } = require("child_process");
@@ -21,7 +21,7 @@ module.exports = async function globalSetup() {
 	clearInactiveInstances();
 	writeRunBanner();
 
-	const background = /^(1|true|yes)$/i.test(process.env.VBA_BACKGROUND_BUILD || "");
+	const background = /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "");
 
 	if (background) {
 		// Nothing to pre-open — background mode uses per-test hidden instances.
@@ -77,7 +77,7 @@ function writeRunBanner() {
 
 		fs.mkdirSync(require("path").dirname(logPath), { recursive: true });
 
-		const mode = /^(1|true|yes)$/i.test(process.env.VBA_BACKGROUND_BUILD || "")
+		const mode = /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "")
 			? "background"
 			: "visible";
 		const inProcess = /^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "")

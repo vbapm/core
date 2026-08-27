@@ -69,6 +69,27 @@ const keepTmp = /^(1|true|yes)$/i.test(process.env.KEEP_E2E_TMP || "");
 // To enable verbose logging of executed commands and their output, set the environment variable `E2E_VERBOSE` to `1`, `true`, or `yes`.
 const hasVerboseArg = process.argv.some(arg => arg === "--verbose" || arg === "-v");
 const isVerbose = /^(1|true|yes)$/i.test(process.env.E2E_VERBOSE || "") || hasVerboseArg;
+const backgroundCommands = new Set(["build", "update", "export", "extract", "test"]);
+
+function getE2EBackground(): boolean | undefined {
+	const value = process.env.E2E_BACKGROUND;
+	if (!value) return;
+	return /^(1|true|yes)$/i.test(value) ? true : /^(0|false|no)$/i.test(value) ? false : undefined;
+}
+
+function withE2EBackground(command: string): string {
+	const background = getE2EBackground();
+	const commandName = command.trim().split(/\s+/, 1)[0];
+	if (
+		background === undefined ||
+		!backgroundCommands.has(commandName) ||
+		/(^|\s)--background(?:=|\s|$)/.test(command)
+	) {
+		return command;
+	}
+	return `${command} ${background ? "--background" : "--background=false"}`;
+}
+
 const useSourcePersistentSession =
 	/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") &&
 	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
@@ -158,7 +179,7 @@ export async function execute(
 	}
 
 	const bin = getVbaBin(options?.binDir);
-	const result = await exec(`"${bin}" ${command}`, { cwd, env: process.env });
+	const result = await exec(`"${bin}" ${withE2EBackground(command)}`, { cwd, env: process.env });
 
 	if (isVerbose) {
 		const title = `[e2e] ${command} (${cwd})`;
@@ -189,6 +210,14 @@ async function executeInProcess(
 ): Promise<{ stdout: string; stderr: string }> {
 	const [cmdName, ...rest] = command.trim().split(/\s+/);
 	const args = mri(rest, {});
+	const background = getE2EBackground();
+	if (
+		background !== undefined &&
+		backgroundCommands.has(cmdName) &&
+		typeof args.background === "undefined"
+	) {
+		args.background = background;
+	}
 
 	// Capture stdout/stderr for the command's duration. console.log flows through
 	// process.stdout.write, but Jest intercepts console.warn/error (printing them
@@ -360,7 +389,9 @@ export async function run(
 ): Promise<RunResult> {
 	let result: RunResult;
 	try {
-		result = await (useSourcePersistentSession ? sourceRun : _run)(application, file, macro, args);
+		result = await (useSourcePersistentSession ? sourceRun : _run)(application, file, macro, args, {
+			background: getE2EBackground()
+		});
 
 		// Give Office time to clean up
 		await wait(500);

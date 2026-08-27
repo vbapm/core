@@ -13,7 +13,7 @@ import { ProjectInfo } from "./project-info";
 
 export interface BuildOptions {
 	/**
-	 * If true, devDependencies will be excluded from the build. 
+	 * If true, devDependencies will be excluded from the build.
 	 * This is useful for creating a "release" build.
 	 */
 	release?: boolean;
@@ -59,7 +59,10 @@ export async function buildTarget(target: Target, info: ProjectInfo, options: Bu
 	try {
 		staged = !info.blankTarget
 			? await createTarget(project, target)
-			: await createDocument(project, target, { staging: true });
+			: await createDocument(project, target, {
+					staging: true,
+					background: options.background
+				});
 	} catch (error: any) {
 		// Error "1004: Method 'CreateDocument' of object 'OfficeApplication' failed"
 		// occurs when trying to create a document with the same name on Mac

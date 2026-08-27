@@ -12,11 +12,12 @@ export interface RunOptions {
 	macro: string;
 	args: string[];
 	keepOpen?: boolean;
+	background?: boolean;
 }
 
 export async function runMacro(options: RunOptions): Promise<RunResult> {
-	let { target: targetType, file, macro, args = [""], keepOpen } = options;
-	keepOpen ??= await resolveBackgroundMode();
+	let { target: targetType, file, macro, args = [""], keepOpen, background } = options;
+	background ??= await resolveBackgroundMode();
 
 	if (!file) {
 		const project = await loadProject();
@@ -39,7 +40,7 @@ export async function runMacro(options: RunOptions): Promise<RunResult> {
 	}
 
 	const application = extensionToApplication(extname(file));
-	const result = await run(application, resolve(file), macro, args, { keepOpen });
+	const result = await run(application, resolve(file), macro, args, { keepOpen, background });
 	const { stdout } = result;
 
 	if (stdout && stdout.trim().length) console.log(stdout);

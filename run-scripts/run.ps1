@@ -10,6 +10,8 @@ param(
 
 	[switch]$KeepOpen,
 
+	[switch]$Background,
+
 	[Parameter(Position=3, ValueFromRemainingArguments=$true)]
 	[string[]]$MacroArgs
 )
@@ -176,7 +178,11 @@ class Excel {
 	hidden [int]$Pid = 0
 
 	Excel() {
-		$this.OpenExcel()
+		$this.OpenExcel($false)
+	}
+
+	Excel([bool]$BackgroundBuild) {
+		$this.OpenExcel($BackgroundBuild)
 	}
 
 	Excel([object]$App, [object]$Workbook) {
@@ -189,15 +195,6 @@ class Excel {
 	Excel([object]$App) {
 		$this.App = $App
 		$this.ExcelWasOpen = $true
-	}
-
-	# Attach to a workbook that is already open in a different Excel instance
-	# (resolved by the coordination registry's Find-OpenWorkbook).
-	Excel([object]$App, [object]$Workbook) {
-		$this.App = $App
-		$this.ExcelWasOpen = $true
-		$this.Workbook = $Workbook
-		$this.WorkbookWasOpen = $true
 	}
 
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
@@ -223,11 +220,11 @@ class Excel {
 		return $result
 	}
 
-	hidden [void] OpenExcel() {
-		# When VBA_BACKGROUND_BUILD is set, always create a new hidden instance
+	hidden [void] OpenExcel([bool]$BackgroundBuild) {
+		# Background mode always creates a new hidden instance
 		# instead of attaching to an already-running (visible) Excel process.
 		# This prevents the application window from flashing during automated runs.
-		$this.BackgroundBuild = $env:VBA_BACKGROUND_BUILD -match '^(1|true|yes)$'
+		$this.BackgroundBuild = $BackgroundBuild
 
 		if (-not $this.BackgroundBuild) {
 			try {
@@ -365,7 +362,7 @@ class Excel {
 
 			# Force release of any remaining COM references so Excel actually
 			# exits before this process returns. Without this, Excel lingers and
-			# a later command can attach to the dying instance (VBA_BACKGROUND_BUILD=0),
+			# a later command can attach to the dying instance in foreground mode,
 			# leaving file locks behind (e.g. `~$` owner files for addin references).
 			[System.GC]::Collect()
 			[System.GC]::WaitForPendingFinalizers()
@@ -384,6 +381,7 @@ function Run {
 		[string]$AppName,
 		[string]$FilePath,
 		[string]$MacroName,
+		[bool]$Background,
 		[bool]$KeepOpen,
 		[string[]]$MacroArgValues
 	)
@@ -391,7 +389,7 @@ function Run {
 	switch ($AppName) {
 		"excel" {
 			$found = $null
-			$backgroundBuild = $env:VBA_BACKGROUND_BUILD -match '^(1|true|yes)$'
+			$backgroundBuild = $Background
 			$targetPath = Get-MacroTargetFile $MacroArgValues
 			$lookupPath = if ($FilePath -match '\.(xlam|xla)$' -and $targetPath) {
 				$targetPath
@@ -409,7 +407,7 @@ function Run {
 			$excel = if ($null -ne $found) {
 				[Excel]::new($found.App, $found.Workbook)
 			} else {
-				[Excel]::new()
+				[Excel]::new($backgroundBuild)
 			}
 			$registeredPid = 0
 			try {
@@ -487,5 +485,5 @@ foreach ($arg in $MacroArgs) {
 	$UnescapedArgs += Unescape $arg
 }
 
-Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
+Run $AppName $File $Command $Background.IsPresent $KeepOpen.IsPresent $UnescapedArgs
 exit 0

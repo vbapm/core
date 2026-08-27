@@ -26,8 +26,8 @@
 # Special control requests:
 #   { "id": "__VBA_QUIT__" }  -> quit Excel (if we own it) and exit the loop.
 #
-# The instance is kept visible/hidden according to VBA_BACKGROUND_BUILD (as in
-# run.ps1). A workbook opened by a prior request that was NOT "keepOpen" is
+# The instance is kept visible/hidden according to each request's background
+# value. A workbook opened by a prior request that was NOT "keepOpen" is
 # closed after the macro runs, but the Application instance itself is retained
 # so the next request reuses it.
 
@@ -104,7 +104,9 @@ function Invoke-ScriptMacro {
 }
 
 function Open-ScriptExcel {
-	$Script:BackgroundBuild = $env:VBA_BACKGROUND_BUILD -match '^(1|true|yes)$'
+	param([bool]$BackgroundBuild)
+
+	$Script:BackgroundBuild = $BackgroundBuild
 
 	if (-not $Script:BackgroundBuild) {
 		try {
@@ -315,10 +317,14 @@ function Invoke-ScriptRun {
 		[string]$FilePath,
 		[string]$MacroName,
 		[bool]$KeepOpen,
+		[bool]$Background,
 		[string[]]$ArgValues
 	)
 
 	$requestIsAddin = $FilePath -match '\.(xlam|xla)$'
+	if ($null -ne $Script:App -and $Script:BackgroundBuild -ne $Background) {
+		Reset-ScriptExcel
+	}
 	if ($null -ne $Script:App) {
 		try {
 			$null = $Script:App.Workbooks.Count
@@ -335,7 +341,7 @@ function Invoke-ScriptRun {
 	}
 
 	if ($null -eq $Script:App) {
-		Open-ScriptExcel
+		Open-ScriptExcel $Background
 	}
 
 	# Per-request state. $Script:WorkbookWasOpen describes *this* request only;
@@ -365,7 +371,7 @@ function Invoke-ScriptRun {
 		# and closed workbooks internally. Recreate only the owned application and
 		# retry once; healthy request sequences still reuse the same process.
 		Reset-ScriptExcel
-		Open-ScriptExcel
+		Open-ScriptExcel $Background
 		$Script:WorkbookWasOpen = $false
 		if ($Script:IsAddin) {
 			$Script:OpenWorkbook = Ensure-ScriptAddin $FilePath
@@ -509,6 +515,7 @@ while ($true) {
 	$resolveFile = [string]$requestJson.file
 	$resolveMacro = [string]$requestJson.macro
 	$resolveKeepOpen = [bool]$requestJson.keepOpen
+	$resolveBackground = [bool]$requestJson.background
 	$resolveArgs = @()
 	if ($requestJson.args) {
 		foreach ($a in $requestJson.args) {
@@ -517,7 +524,7 @@ while ($true) {
 	}
 
 	try {
-		$result = Invoke-ScriptRun $resolveFile $resolveMacro $resolveKeepOpen $resolveArgs
+		$result = Invoke-ScriptRun $resolveFile $resolveMacro $resolveKeepOpen $resolveBackground $resolveArgs
 		$payload = @{ success = $true; result = $result } | ConvertTo-Json -Compress
 		Write-ScriptResponse $requestId $payload
 	} catch {

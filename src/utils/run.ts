@@ -20,13 +20,8 @@ const SPECIAL_FILE_STDOUT = env.isWindows ? "CON" : "/dev/stdout";
 // keeps the Excel.Application COM stub alive across invocations (avoids
 // re-launching Excel for every `vba run`). Defaults to off until stabilized.
 //
-// Only applies to the *background* build (VBA_BACKGROUND_BUILD=1), where we own
-// a dedicated hidden Excel instance worth reusing. In visible mode we attach to
-// an already-running user session, so a persistent session has no meaning.
 const PERSISTENT_SESSION =
-	env.isWindows &&
-	/^(1|true|yes)$/i.test(process.env.VBA_BACKGROUND_BUILD || "") &&
-	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+	env.isWindows && /^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
 
 export interface RunResult {
 	success: boolean;
@@ -54,6 +49,7 @@ export function isRunError(error: Error | RunError): error is RunError {
 
 export interface RunOptions {
 	keepOpen?: boolean;
+	background?: boolean;
 }
 
 export async function run(
@@ -84,6 +80,7 @@ export async function run(
 		return env.isWindows ? escape(arg) : arg;
 	});
 	const keepOpen = !!options.keepOpen;
+	const background = !!options.background;
 
 	// Gate the Excel-touching portion through the shared instance pool so
 	// parallel callers (e.g. parallel Jest workers) never exceed the configured
@@ -95,7 +92,8 @@ export async function run(
 			debug("params (persistent):", { application, file, macro, args });
 			const session = initPowerShellSession(join(env.scripts, "session.ps1"));
 			const sessionResult = await session.run(application, file, macro, formatted_args, {
-				keepOpen
+				keepOpen,
+				background
 			});
 			if (!sessionResult.success) {
 				throw new RunError(sessionResult);
@@ -130,7 +128,7 @@ export async function run(
 			// TODO: Replace execPowershell with execFile on Windows once upstream Node.js fix lands.
 			//       https://github.com/nodejs/node/issues/56645
 			const { stdout, stderr } = env.isWindows
-				? await execPowershell(script, keepOpen, parts, { env: process.env })
+				? await execPowershell(script, keepOpen, background, parts, { env: process.env })
 				: await execFile(command, commandArgs, { env: process.env });
 			result = toResult(stdout, stderr);
 		} catch (err: any) {
@@ -161,6 +159,7 @@ export async function run(
 function execPowershell(
 	script: string,
 	keepOpen: boolean,
+	background: boolean,
 	parts: string[],
 	options: { env: typeof process.env }
 ): Promise<{ stdout: string; stderr: string }> {
@@ -172,6 +171,7 @@ function execPowershell(
 			"-File",
 			script,
 			...(keepOpen ? ["-KeepOpen"] : []),
+			...(background ? ["-Background"] : []),
 			...parts
 		];
 

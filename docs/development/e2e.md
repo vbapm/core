@@ -10,9 +10,9 @@ From package.json:
 
 | Script | What it does |
 |---|---|
-| `pnpm run test:e2e` | `VBA_BACKGROUND_BUILD=0` (visible Excel), **spawns the real CLI** per command |
+| `pnpm run test:e2e` | explicit foreground override, **spawns the real CLI** per command |
 | `pnpm run test:e2e:in-process` | visible Excel + `E2E_IN_PROCESS=1`, **dispatches CLI commands in-process** (see below) |
-| `pnpm run test:e2e:background` | `VBA_BACKGROUND_BUILD=1` (hidden Excel) — what we just ran |
+| `pnpm run test:e2e:background` | explicit background override (hidden Excel) |
 | `pnpm run test:e2e:session` | background + `E2E_IN_PROCESS=1` + `VBA_PERSISTENT_SESSION=1`; reuses a PowerShell/Excel session per worker |
 | `pnpm run test:e2e:updateSnapshots` | same as background + `--updateSnapshot` |
 | `pnpm run test:e2e:multilang` | separate multilang config |
@@ -128,7 +128,7 @@ The CLI-side PowerShell bridge that actually launches Excel lives in [src/utils/
 
 `vba run` → run.ts → spawns `powershell.exe -File run-scripts/run.ps1` (or session.ps1 for the persistent mode) → run.ps1 drives Excel via COM:
 
-1. Attach to a running visible instance (`GetActiveObject`) **or** create a new instance (hidden if `VBA_BACKGROUND_BUILD=1`).
+1. Attach to a running visible instance (`GetActiveObject`) **or** create a new hidden instance when background mode is selected.
 2. Open the target file (a `.xlam` add-in, or a workbook).
 3. `Application.Run("Build.ImportGraph" | "Build.CreateDocument" | "Build.ExportTo")` to relay the build/extract instruction.
 4. Close the workbook (unless `keepOpen`), quit Excel (unless it was already running).

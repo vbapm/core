@@ -55,10 +55,9 @@ export async function getLocalConfigFile(dir = env.cwd): Promise<string | undefi
 	}
 }
 
-export async function loadToolSettings(
-	options: ToolSettingsOptions = {}
-): Promise<ToolSettings> {
-	const file = options.file ?? (options.global ? getGlobalConfigFile() : await getLocalConfigFile());
+export async function loadToolSettings(options: ToolSettingsOptions = {}): Promise<ToolSettings> {
+	const file =
+		options.file ?? (options.global ? getGlobalConfigFile() : await getLocalConfigFile());
 	if (!file || !(await pathExists(file))) return {};
 
 	const raw = await readFile(file);
@@ -78,7 +77,9 @@ export async function saveToolSettings(
 ): Promise<string> {
 	const file =
 		options.file ??
-		(options.global ? getGlobalConfigFile() : (await getLocalConfigFile()) ?? join(env.cwd, "vba.toml"));
+		(options.global
+			? getGlobalConfigFile()
+			: ((await getLocalConfigFile()) ?? join(env.cwd, "vba.toml")));
 
 	await ensureDir(dirname(file));
 	const existing = await loadToolSettings({ file });

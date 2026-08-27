@@ -26,7 +26,7 @@ import { execute, setup } from "./__helpers__/execute";
 // Always run this file against fresh hidden Excel instances: in visible mode
 // `run.ps1` attaches to any running Excel and never quits it, which left the
 // peer addin locked (`~$AddinPeer.xlam`) when a lingering instance was reused.
-process.env.VBA_BACKGROUND_BUILD = "1";
+process.env.E2E_BACKGROUND = "1";
 
 jest.setTimeout(180000);
 

@@ -26,7 +26,7 @@
 --     single instance (launching it if needed). There is nothing to register,
 --     count, or attach to; the "attach to an already-open workbook" case in
 --     run.ps1 (Find-OpenWorkbook / Attach) is simply always true here.
---   * VBA_BACKGROUND_BUILD (hidden Excel instance for e2e runs). NOT PORTABLE
+--   * Background mode is configured by the CLI/config on Windows. NOT PORTABLE
 --     as a separate *instance*: Excel for Mac has no equivalent to a second,
 --     invisible COM process. `visible` could be toggled on the single shared
 --     app, but that would affect any Excel window the user has open too, so

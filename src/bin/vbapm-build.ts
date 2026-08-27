@@ -3,7 +3,7 @@ import { Args } from "mri";
 import time from "pretty-hrtime";
 import { buildProject } from "../actions/build-project";
 import { openTarget } from "../actions/open-target";
-import { resolveBackgroundMode, saveToolSettings } from "../config";
+import { resolveBackgroundMode } from "../config";
 
 const help = dedent`
   Build project from manifest (after backing up any existing built targets).
@@ -28,10 +28,8 @@ export default async function (args: Args) {
 	const release = !!args.release;
 
 	const background =
-		typeof args.background === "boolean"
-			? !!args.background
-			: await resolveBackgroundMode();
-		
+		typeof args.background === "boolean" ? !!args.background : await resolveBackgroundMode();
+
 	// In a visible (foreground) build, `open` keeps the freshly imported
 	// workbook open in the user's existing Excel session. In a background build
 	// the hidden instance is torn down, so instead pass no `open` and reopen the

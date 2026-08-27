@@ -75,7 +75,7 @@ The e2e tests exercise the full pipeline — from the CLI binary through the Exc
 
 The e2e tests interact with Excel via the COM automation API (through the vbapm.xlam addin). Without the `:background` option, Excel opens visibly — you'll see workbook windows flash open and close as each test runs. This is expected behavior but can interfere with any work you have open in Excel.
 
-The `:background` variant (`pnpm run test:e2e:background`) sets `VBA_BACKGROUND_BUILD=1`, which creates a new hidden Excel instance via COM (`Excel.Visible = false`) instead of attaching to an already-running visible instance. This prevents the window flashing and keeps your existing Excel work undisturbed.
+The `:background` variant (`pnpm run test:e2e:background`) passes an explicit background option to the CLI, which creates a new hidden Excel instance via COM (`Excel.Visible = false`) instead of attaching to an already-running visible instance. This prevents the window flashing and keeps your existing Excel work undisturbed.
 
 ### Performance
 

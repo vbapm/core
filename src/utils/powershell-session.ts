@@ -14,6 +14,7 @@ interface SessionRequest {
 	file: string;
 	macro: string;
 	keepOpen: boolean;
+	background: boolean;
 	args: string[];
 }
 
@@ -95,7 +96,7 @@ export class PowerShellSession {
 		file: string,
 		macro: string,
 		args: string[],
-		options: { keepOpen?: boolean } = {}
+		options: { keepOpen?: boolean; background?: boolean } = {}
 	): Promise<SessionRunResult> {
 		await this.start();
 
@@ -107,6 +108,7 @@ export class PowerShellSession {
 			file,
 			macro,
 			keepOpen: !!options.keepOpen,
+			background: !!options.background,
 			args
 		};
 

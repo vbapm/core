@@ -33,7 +33,21 @@ describe("tool config", () => {
 			await saveToolSettings({ background: true }, { file: projectFile });
 
 			expect(await resolveBackgroundMode()).toBe(true);
+			expect(await resolveBackgroundMode(false)).toBe(false);
+			expect(await resolveBackgroundMode(true)).toBe(true);
 			expect(await loadEffectiveToolSettings()).toEqual({ background: true });
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	test("defaults to foreground when no background setting exists", async () => {
+		const root = await mkdtemp(join(tmpdir(), "vbapm-config-default-"));
+		try {
+			env.bin = join(root, "global");
+			env.cwd = join(root, "project");
+
+			expect(await resolveBackgroundMode()).toBe(false);
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
