@@ -95,6 +95,7 @@ describe("export", () => {
 			});
 		});
 	});
+
 	test("export preserves subfolders config in vbaproject.toml", async () => {
 		await setup(standard, "export-subfolder", async cwd => {
 			// 1. Add subfolders config via [source]
