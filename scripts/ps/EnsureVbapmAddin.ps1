@@ -27,6 +27,11 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
 
+function Write-SetupLog {
+    param([string]$Message)
+    Write-InstanceLog "bridge=EnsureVbapmAddin $Message"
+}
+
 if (-not $AddinPath) {
     $AddinPath = Join-Path $PSScriptRoot '..\..\addins\build\vbapm.xlam'
 }
@@ -45,6 +50,9 @@ try {
 if ($null -eq $app) {
     $app = New-Object -ComObject "Excel.Application"
     $app.Visible = $true
+    Write-SetupLog "create-complete visible=$($app.Visible)"
+} else {
+    Write-SetupLog "attach=get-active-object visible=$($app.Visible)"
 }
 
 # 2/3) Ensure vbapm.xlam is open and matches the repo build path.
@@ -78,9 +86,11 @@ if ($null -eq $openAddin) {
     } else {
         $null = $app.Workbooks.Open($AddinPath)
         Write-Output "Opened vbapm.xlam from $AddinPath"
+        Write-SetupLog "addin-opened path=$AddinPath"
     }
 } else {
     Write-Output "vbapm.xlam already open from the repo build: $AddinPath"
+    Write-SetupLog "addin-reused path=$AddinPath"
 }
 
 # 4) Print sha256 of the on-disk build for reference (best-effort — the file is

@@ -19,6 +19,11 @@ From package.json:
 
 Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which rebuilds lib if sources are newer than the build output (that's the `[ensure-fresh-build] lib/ is stale … rebuilding` line you saw).
 
+For Excel ownership and teardown diagnostics, set `VBA_DEBUG_INSTANCES=1`.
+Lifecycle records are written to `%TEMP%\Excel-Instances\instances.log` (or
+the path in `VBA_INSTANCE_LOG`) without being mixed into test stdout/stderr.
+For per-test and per-command timing in the export suites, set `E2E_TIMING=1`.
+
 The actual test runner is `jest --config e2e.config.mjs --runInBand` (serial, so no parallel Excel collisions).
 
 ### Two ways to drive the CLI: spawned vs in-process

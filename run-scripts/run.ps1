@@ -90,6 +90,14 @@ function PrintErr {
 	[Console]::Error.Write($Message)
 }
 
+function Write-BridgeLog {
+	param([string]$Message)
+
+	if (Get-Command Write-InstanceLog -ErrorAction SilentlyContinue) {
+		Write-InstanceLog "bridge=run.ps1 $Message"
+	}
+}
+
 # Instance-lifecycle debug logging (`Get-InstanceLogPath` / `Write-InstanceLog`,
 # gated on VBA_DEBUG_INSTANCES) lives in scripts/ps/Excel-InstanceRegistry.ps1
 # alongside the rest of the instance-coordination machinery it reports on.
@@ -190,11 +198,13 @@ class Excel {
 		$this.ExcelWasOpen = $true
 		$this.Workbook = $Workbook
 		$this.WorkbookWasOpen = $true
+		Write-BridgeLog "attach=target-workbook appWasOpen=true"
 	}
 
 	Excel([object]$App) {
 		$this.App = $App
 		$this.ExcelWasOpen = $true
+		Write-BridgeLog "attach=target-application appWasOpen=true"
 	}
 
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
@@ -225,17 +235,21 @@ class Excel {
 		# instead of attaching to an already-running (visible) Excel process.
 		# This prevents the application window from flashing during automated runs.
 		$this.BackgroundBuild = $BackgroundBuild
+		Write-BridgeLog "open-request background=$BackgroundBuild"
 
 		if (-not $this.BackgroundBuild) {
 			try {
 				$this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
 				$this.ExcelWasOpen = $true
+				Write-BridgeLog "attach=get-active-object appWasOpen=true"
 			} catch {
+				Write-BridgeLog "attach=get-active-object failed error=$($_.Exception.Message)"
 				# Excel not running; fall through to create a new instance
 			}
 		}
 
 		if (-not $this.ExcelWasOpen) {
+			Write-BridgeLog "create-start background=$($this.BackgroundBuild)"
 			# Safeguard: never spawn a new Excel instance once the machine is
 			# already running too many EXCEL.EXE processes. This catches leaked
 			# instances from aborted/crashed automated runs before they pile up
@@ -262,6 +276,7 @@ class Excel {
 				# via References.AddFromFile) so Close()/Quit() don't block and
 				# leave a lingering Excel process holding file locks.
 				$this.App.DisplayAlerts = $false
+				Write-BridgeLog "create-complete visible=$($this.App.Visible)"
 			} catch {
 				Fail "ERROR #5: Failed to open Excel - $($_.Exception.Message)"
 			}
@@ -333,12 +348,15 @@ class Excel {
 	}
 
 	[void] Dispose([bool]$KeepOpen) {
+		Write-BridgeLog "dispose-enter appWasOpen=$($this.ExcelWasOpen) background=$($this.BackgroundBuild) isAddin=$($this.IsAddin) workbookWasOpen=$($this.WorkbookWasOpen) keepOpen=$KeepOpen"
+
 		# An add-in we opened is left open for reuse across runs — but only in
 		# FOREGROUND mode, where we're reusing the user's already-running Excel.
 		# In BACKGROUND mode each run owns a dedicated hidden instance that is
 		# torn down after the run; skipping quit here would leak one EXCEL.EXE
 		# per run.
 		if ($this.IsAddin -and -not $this.BackgroundBuild) {
+			Write-BridgeLog "dispose-skip addin-foreground"
 			return
 		}
 
@@ -368,6 +386,8 @@ class Excel {
 			[System.GC]::WaitForPendingFinalizers()
 			[System.GC]::Collect()
 			[System.GC]::WaitForPendingFinalizers()
+		} else {
+			Write-BridgeLog "quit-skip appWasOpen=$($this.ExcelWasOpen) keepOpen=$KeepOpen appPresent=$($null -ne $this.App)"
 		}
 	}
 }
@@ -403,6 +423,7 @@ function Run {
 					# best-effort; fall back to the normal Excel selection path
 				}
 			}
+			Write-BridgeLog "run-start background=$backgroundBuild keepOpen=$KeepOpen file=$FilePath macro=$MacroName lookup=$lookupPath found=$($null -ne $found)"
 
 			$excel = if ($null -ne $found) {
 				[Excel]::new($found.App, $found.Workbook)
@@ -445,7 +466,9 @@ function Run {
 					}
 				}
 
+				Write-BridgeLog "dispose-start appWasOpen=$($excel.ExcelWasOpen) background=$($excel.BackgroundBuild) isAddin=$($excel.IsAddin) keepOpen=$KeepOpen registeredPid=$registeredPid"
 				$excel.Dispose($KeepOpen)
+				Write-BridgeLog "dispose-complete appWasOpen=$($excel.ExcelWasOpen) appPresent=$($null -ne $excel.App)"
 
 				# Untrack our instance now that it is torn down.
 				if ($HasRegistry -and $registeredPid -gt 0) {
