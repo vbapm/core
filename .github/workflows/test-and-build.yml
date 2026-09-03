@@ -9,6 +9,7 @@ on:
       - 'docs/**'
       - '**/*.md'
       - '*.md'
+      - 'renovate.jsonc'
   pull_request:
     paths-ignore:
       - 'docs/**'
