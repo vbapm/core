@@ -43,23 +43,23 @@
         "typecheck": "tsc",
         "deps": "pnpm install",
         "dev": "run-s deps typecheck format:check test build:cli",
-        
         "test:e2e": "pnpm run build:check && cross-env E2E_BACKGROUND=0 jest --config e2e.config.mjs --runInBand",
         "test:e2e:in-process": "pnpm run build:check && cross-env E2E_BACKGROUND=0 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --runInBand",
-        "test:e2e:background": "pnpm run build:check && cross-env E2E_BACKGROUND=1 jest --config e2e.config.mjs --maxWorkers=5" ,
+        "test:e2e:background": "pnpm run build:check && cross-env E2E_BACKGROUND=1 jest --config e2e.config.mjs --maxWorkers=5",
         "test:e2e:background:updateSnapshots": "pnpm run build:check && cross-env E2E_BACKGROUND=1 jest --config e2e.config.mjs --updateSnapshot --maxWorkers=5",
         "test:e2e:in-process:background": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --maxWorkers=5",
         "test:e2e:in-process:background:debug": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_DEBUG_INSTANCES=1 jest --config e2e.config.mjs --verbose --maxWorkers=5",
         "test:e2e:session": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --maxWorkers=3",
-        
         "test:e2e:multilang": "pnpm run build:check && cross-env E2E_ML=1 jest --config multilang.config.mjs --runInBand",
-        "build": "rimraf lib && rollup -c rollup.config.mjs",
+        "build": "node scripts/ensure-fresh-build.ts",
+        "build:js": "rimraf lib && rollup -c rollup.config.mjs",
         "build:check": "node scripts/ensure-fresh-build.ts",
-        "build:lib": "run-s build && tsc -p tsconfig.build.json",
-        "build:cli": "run-s build && node scripts/ensure-vendor",
+        "build:lib": "run-s build:js && tsc -p tsconfig.build.json",
+        "build:cli": "run-s build:js && node scripts/ensure-vendor",
         "build:dev": "cross-env NODE_ENV=development rollup -c rollup.config.mjs",
         "build:addins": "cd addins && node --no-warnings ../scripts/build-addins",
         "build:bootstrap": "cd scripts/bootstrap && node --no-warnings ../../lib/vbapm build",
+        "build:all": "run-s build:js build:cli build:addins build:bootstrap",
         "clean": "rimraf lib && rimraf dist && rimraf addins/build",
         "deploy:dev": "pnpm run build:dev && powershell -ExecutionPolicy Bypass -File ./installer/devinstall.ps1"
     },
@@ -144,7 +144,9 @@
             "overrides": "Pins vulnerable transitive dependencies to patched versions to remove critical npm audit findings without large upstream upgrades.",
             "overrides.minimist": "Prototype pollution fix, mainly needed for ts-jest/handlebars transitive chain.",
             "overrides.underscore": "Arbitrary code execution mitigation, mainly needed for logic-solver transitive dependency.",
-            "overrides.shell-quote": "Command injection advisory mitigation, mainly needed for npm-run-all transitive dependency."
+            "overrides.shell-quote": "Command injection advisory mitigation, mainly needed for npm-run-all transitive dependency.",
+            "scripts.build": "Shortcut to the most common build command (might change)",
+            "scripts.build:js": "Build the JS bundle"
         }
     }
 }
