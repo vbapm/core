@@ -40,7 +40,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Ensure toolchain, add-in, and bootstrap are fresh
-        run: pnpm run build:check
+        run: pnpm run build:check -- --force
 
       - name: Commit updated bootstrap artifacts
         shell: pwsh

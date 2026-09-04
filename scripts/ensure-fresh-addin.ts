@@ -17,6 +17,8 @@ function exitCode(err: unknown): number {
 }
 
 function main(): void {
+	const force = process.argv.includes("--force");
+
 	if (!existsSync(BOOTSTRAP)) {
 		console.error(
 			`[ensure-fresh-addin] ${BUILD_EMOJI} missing bootstrap host: ${displayPath(BOOTSTRAP)}`
@@ -24,7 +26,9 @@ function main(): void {
 		process.exit(1);
 	}
 
-	const result = checkFreshness(OUTPUT, METADATA);
+	const result = force
+		? { fresh: false, reason: "forced rebuild" }
+		: checkFreshness(OUTPUT, METADATA, "addin");
 	if (result.fresh) {
 		console.log(
 			`[ensure-fresh-addin] ${BUILD_EMOJI} ${displayPath(OUTPUT)} is up to date - skipping rebuild 🚀`
@@ -48,7 +52,7 @@ function main(): void {
 		process.exit(1);
 	}
 
-	writeFreshness(METADATA);
+	writeFreshness(METADATA, "addin");
 	console.log(`[ensure-fresh-addin] ${BUILD_EMOJI} ${displayPath(OUTPUT)} is fresh.`);
 }
 

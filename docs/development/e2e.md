@@ -17,7 +17,7 @@ From package.json:
 | `pnpm run test:e2e:updateSnapshots` | same as background + `--updateSnapshot` |
 | `pnpm run test:e2e:multilang` | separate multilang config |
 
-Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which rebuilds lib if sources are newer than the build output (that's the `[ensure-fresh-build] lib/ is stale … rebuilding` line you saw).
+Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which refreshes `lib/` and checks the add-in. The add-in check watches only VBA and XML inputs under `addins/`, so TypeScript changes do not trigger an Office-backed rebuild unless `--force` is passed. The `[ensure-fresh-build]` output identifies each check.
 
 For Excel ownership and teardown diagnostics, set `VBA_DEBUG_INSTANCES=1`.
 Lifecycle records are written to `%TEMP%\Excel-Instances\instances.log` (or

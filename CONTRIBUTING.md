@@ -51,6 +51,25 @@ The `dev` command is composed of:
 
 > **Note:** `build:addins` is not included in `dev`. Run it separately before e2e tests or whenever the VBA addin source changes.
 
+### Generated artifact freshness
+
+`pnpm run build` and `pnpm run build:check` refresh the compiled `lib/` output
+and run the add-in freshness check. The add-in check watches only VBA and XML
+files under `addins/`, so TypeScript changes do not start Excel by default.
+VBA or XML changes make the add-in stale and trigger its rebuild.
+
+When a TypeScript change is known to affect the add-in build or the bootstrap
+workbook, force the full freshness check:
+
+```powershell
+pnpm run build:check -- --force
+```
+
+The `--force` pass forces the add-in rebuild and checks the bootstrap artifact
+after refreshing `lib/`. Run `pnpm run build:addins` directly when you need to
+build the add-in independently. The bootstrap refresh workflow uses `--force`
+on CI.
+
 ### Test Commands
 
 - **Unit tests:** `pnpm run test`

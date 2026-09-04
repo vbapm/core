@@ -7,6 +7,7 @@ const SCHEMA_VERSION = 1;
 const ALGORITHM = "sha256";
 
 const INPUT_ROOTS = ["addins", "scripts/bootstrap", "lib"];
+const ADDIN_INPUT_ROOTS = ["addins"];
 const EXTRA_INPUTS = ["package.json", "pnpm-lock.yaml", "rollup.config.mjs"];
 const SCRIPT_INPUTS = [
 	"scripts/build-addins.js",
@@ -18,6 +19,7 @@ const SCRIPT_INPUTS = [
 ];
 const REQUIRED_LIB_OUTPUTS = ["lib/vbapm.js", "lib/index.js"];
 const EXCLUDED_ROOTS = ["addins/build", "scripts/bootstrap/build"];
+type FingerprintScope = "all" | "addin";
 
 function normalizeRepoPath(file: string): string {
 	return relative(ROOT, resolve(file)).replace(/\\/g, "/");
@@ -51,19 +53,23 @@ function walk(dir: string, files: string[] = []): string[] {
 	return files;
 }
 
-function getFingerprintInputs(): string[] {
+function getFingerprintInputs(scope: FingerprintScope = "all"): string[] {
 	const paths: string[] = [];
+	const inputRoots = scope === "addin" ? ADDIN_INPUT_ROOTS : INPUT_ROOTS;
+	const extraInputs = scope === "addin" ? [] : EXTRA_INPUTS;
+	const scriptInputs = scope === "addin" ? [] : SCRIPT_INPUTS;
+	const requiredLibOutputs = scope === "addin" ? [] : REQUIRED_LIB_OUTPUTS;
 
-	for (const root of INPUT_ROOTS) {
+	for (const root of inputRoots) {
 		walk(join(ROOT, root), paths);
 	}
-	for (const input of EXTRA_INPUTS) {
+	for (const input of extraInputs) {
 		paths.push(join(ROOT, input));
 	}
-	for (const input of SCRIPT_INPUTS) {
+	for (const input of scriptInputs) {
 		paths.push(join(ROOT, input));
 	}
-	for (const output of REQUIRED_LIB_OUTPUTS) {
+	for (const output of requiredLibOutputs) {
 		paths.push(join(ROOT, output));
 	}
 
@@ -101,8 +107,8 @@ function computeFingerprint(inputPaths: string[] = getFingerprintInputs()): stri
 	return `${ALGORITHM}-${hash.digest("hex")}`;
 }
 
-function createFreshnessRecord() {
-	const inputPaths = getFingerprintInputs();
+function createFreshnessRecord(scope: FingerprintScope = "all") {
+	const inputPaths = getFingerprintInputs(scope);
 
 	return {
 		schemaVersion: SCHEMA_VERSION,
@@ -124,7 +130,11 @@ function readFreshnessRecord(file: string) {
 	}
 }
 
-function checkFreshness(output: string, metadata: string): { fresh: boolean; reason: string } {
+function checkFreshness(
+	output: string,
+	metadata: string,
+	scope: FingerprintScope = "all"
+): { fresh: boolean; reason: string } {
 	if (!existsSync(output)) {
 		return { fresh: false, reason: `missing build output: ${displayPath(output)}` };
 	}
@@ -143,7 +153,7 @@ function checkFreshness(output: string, metadata: string): { fresh: boolean; rea
 		return { fresh: false, reason: `invalid freshness record: ${displayPath(metadata)}` };
 	}
 
-	const current = createFreshnessRecord();
+	const current = createFreshnessRecord(scope);
 	if (
 		record.fingerprint !== current.fingerprint ||
 		record.inputs.join("\n") !== current.inputs.join("\n")
@@ -154,8 +164,8 @@ function checkFreshness(output: string, metadata: string): { fresh: boolean; rea
 	return { fresh: true, reason: "" };
 }
 
-function writeFreshness(metadata: string) {
-	const record = createFreshnessRecord();
+function writeFreshness(metadata: string, scope: FingerprintScope = "all") {
+	const record = createFreshnessRecord(scope);
 	mkdirSync(dirname(metadata), { recursive: true });
 	writeFileSync(metadata, `${JSON.stringify(record, null, 2)}\n`, "utf8");
 	return record;

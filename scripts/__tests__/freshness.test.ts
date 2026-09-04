@@ -38,6 +38,23 @@ describe("freshness metadata", () => {
 		expect(getFingerprintInputs().length).toBe(record.inputs.length);
 	});
 
+	test("uses only add-in files for the add-in fingerprint", () => {
+		const inputs = createFreshnessRecord("addin").inputs;
+
+		expect(inputs.length).toBeGreaterThan(0);
+		expect(inputs.every((path: string) => path.startsWith("addins/"))).toBe(true);
+		expect(inputs.some((path: string) => path.startsWith("addins/build/"))).toBe(false);
+	});
+
+	test("validates add-in sidecars with the add-in fingerprint", () => {
+		const output = fixture("addin.xlam", "built");
+		const metadata = join(directory, "addin.xlam.fresh.json");
+		writeFreshness(metadata, "addin");
+
+		expect(checkFreshness(output, metadata, "addin").fresh).toBe(true);
+		expect(checkFreshness(output, metadata).fresh).toBe(false);
+	});
+
 	test("is deterministic regardless of input order", () => {
 		const first = fixture("first.txt", "first");
 		const second = fixture("second.txt", "second");
