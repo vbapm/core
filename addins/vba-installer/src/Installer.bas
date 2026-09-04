@@ -259,8 +259,14 @@ End Function
 
 Private Function GetProjectReference(Project As VBProject, FilePath As String) As Reference
     Dim Ref As Reference
+    Dim TargetPath As String
+    TargetPath = FileSystem.NormalizePath(FilePath)
+
     For Each Ref In Project.References
-        If Ref.FullPath = FilePath Then
+        ' Normalize both sides before comparing: Ref.FullPath uses OS
+        ' separators (backslashes on Windows) while the manifest stores
+        ' forward slashes. Compare case-insensitively (Windows paths).
+        If StrComp(FileSystem.NormalizePath(Ref.FullPath), TargetPath, vbTextCompare) = 0 Then
             Set GetProjectReference = Ref
             Exit Function
         End If
