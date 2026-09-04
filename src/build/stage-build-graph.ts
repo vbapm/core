@@ -1,6 +1,7 @@
 import { writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
+import * as iconv from "iconv-lite";
 import { BuildGraph, ImportGraph } from "./build-graph";
 import {
 	Codepage,
@@ -30,7 +31,6 @@ export async function stageBuildGraph(
 		// If source differs from target, iconv transcodes automatically.
 		let code: string | Buffer = component.code;
 		if (sourceLabel.toLowerCase() !== targetLabel.toLowerCase()) {
-			const iconv = require("iconv-lite");
 			code = iconv.encode(component.code, targetLabel);
 		} else {
 			code = encodeForCodepage(component.code, targetCp);

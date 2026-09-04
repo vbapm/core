@@ -1,134 +1,69 @@
 /**
- * Ensures the compiled `lib/` folder is up to date before running tests.
+ * Checks whether the generated library and add-in are up to date.
  *
- * This script mirrors the "is this build already up to date?" check that
- * compilers like MSBuild/C# perform: it compares the modification time of the
- * build outputs against every source input. If any input is newer than the
- * output, the build is considered stale and is regenerated.
+ * This entry point runs freshness checks in dependency order:
  *
- * Outputs (must all exist and be newer than every input):
- *   - `lib/vbapm.js`   (CLI entry point, used by `bin/vba`)
- *   - `lib/index.js`   (library entry point, mapped by e2e Jest config)
+ * 1. Rebuilds `lib/` when the TypeScript sources or build configuration are newer.
+ * 2. Checks `addins/build/vbapm.xlam` when its VBA or XML sources are newer.
+ * 3. With `--force`, checks `scripts/bootstrap/build/bootstrap.xlsm` when the
+ *    add-in or its related sources are newer.
  *
- * Inputs (any of these newer than an output marks the build stale):
- *   - all files under `src/` (code + templates + submodules)
- *   - `rollup.config.mjs` (build configuration)
- *   - `package.json` (`dependencies` changes can affect the bundle)
+ * The add-in check watches only files under `addins/`, so TypeScript changes do
+ * not trigger an Office-backed rebuild by default. The `--force` flag forces
+ * the add-in check and includes the bootstrap check. It does not bypass the
+ * bootstrap freshness record. If a check fails, this script exits with the
+ * child's exit code and does not run the remaining checks.
  *
- * When stale, it runs `pnpm run build:cli` to rebuild `lib/` and ensure the
- * vendored Node runtime is present, then exits with that command's status.
- *
- * Invoked via the `build:check` package.json script (which the `test:e2e*`
- * scripts run first): `pnpm run build:check`.
+ * @remarks
+ * The checks run as separate Node processes so each one can use its own
+ * freshness metadata and build command while this script provides one entry
+ * point for commands that need fresh build artifacts. Use `--force` when a
+ * TypeScript change is known to affect the generated Office artifacts.
  */
-const { execSync } = require("node:child_process");
-const { readdirSync, statSync, existsSync } = require("node:fs");
+const { execFileSync } = require("node:child_process");
 const { join, resolve } = require("node:path");
 
 const ROOT = resolve(__dirname, "..");
+const CHECKS = ["ensure-fresh-lib.ts", "ensure-fresh-addin.ts"];
+const FORCE_CHECKS = ["ensure-fresh-bootstrap.ts"];
+const CHECK_EMOJIS: Record<string, string> = {
+	"ensure-fresh-lib.ts": "📦",
+	"ensure-fresh-addin.ts": "📎",
+	"ensure-fresh-bootstrap.ts": "🥾"
+};
 
-const OUTPUTS = ["lib/vbapm.js", "lib/index.js"];
-const INPUT_ROOTS = ["src"];
-
-// Additional individual inputs that can invalidate the build.
-const EXTRA_INPUTS = ["rollup.config.mjs", "package.json"];
-
-function walk(dir: string, acc: string[] = []): string[] {
-	let entries: ReturnType<typeof readdirSync>;
-	try {
-		entries = readdirSync(dir, { withFileTypes: true });
-	} catch {
-		// Ignore directories that no longer exist (e.g. deleted submodule).
-		return acc;
+function exitCode(err: unknown): number {
+	if (err && typeof err === "object" && "status" in err) {
+		const status = (err as { status: unknown }).status;
+		if (typeof status === "number") return status;
 	}
-
-	for (const entry of entries) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			walk(full, acc);
-		} else if (entry.isFile()) {
-			acc.push(full);
-		}
-	}
-
-	return acc;
-}
-
-function latestMtime(paths: string[]): number {
-	let latest = 0;
-	for (const p of paths) {
-		if (!existsSync(p)) continue;
-		try {
-			const mtime = statSync(p).mtimeMs;
-			if (mtime > latest) latest = mtime;
-		} catch {
-			// Ignore unreadable files.
-		}
-	}
-	return latest;
-}
-
-function earliestMtime(paths: string[]): number | null {
-	let earliest: number | null = null;
-	for (const p of paths) {
-		if (!existsSync(p)) return null; // missing output => stale
-		try {
-			const mtime = statSync(p).mtimeMs;
-			if (earliest === null || mtime < earliest) earliest = mtime;
-		} catch {
-			return null;
-		}
-	}
-	return earliest;
-}
-
-function isStale(): { stale: boolean; reason?: string } {
-	const outputs = OUTPUTS.map(p => join(ROOT, p));
-	const outputMtime = earliestMtime(outputs);
-	if (outputMtime === null) {
-		const missing = OUTPUTS.filter(p => !existsSync(join(ROOT, p)));
-		return { stale: true, reason: `missing build output: ${missing.join(", ")}` };
-	}
-
-	const inputs = INPUT_ROOTS.flatMap(r => walk(join(ROOT, r)));
-	for (const p of EXTRA_INPUTS) {
-		inputs.push(join(ROOT, p));
-	}
-
-	const inputMtime = latestMtime(inputs);
-	if (inputMtime > outputMtime) {
-		const staleInputs = inputs
-			.filter(p => existsSync(p) && statSync(p).mtimeMs > outputMtime)
-			.slice(0, 5);
-		return {
-			stale: true,
-			reason: `sources newer than build output (e.g. ${staleInputs
-				.map(p => p.replace(ROOT + "/", "").replace(ROOT + "\\", ""))
-				.join(", ")})`
-		};
-	}
-
-	return { stale: false };
+	return 1;
 }
 
 function main(): void {
-	const { stale, reason } = isStale();
+	const force = process.argv.includes("--force");
+	const checks = force ? [...CHECKS, ...FORCE_CHECKS] : CHECKS;
 
-	if (!stale) {
-		console.log("[ensure-fresh-build] lib/ is up to date — skipping rebuild.");
-		return;
+	for (const check of checks) {
+		console.log(`[ensure-fresh-build] ${CHECK_EMOJIS[check]} running ${check}...`);
+		try {
+			const args =
+				force && check === "ensure-fresh-addin.ts"
+					? [join(__dirname, check), "--force"]
+					: [join(__dirname, check)];
+			execFileSync(process.execPath, args, {
+				cwd: ROOT,
+				stdio: "inherit"
+			});
+		} catch (err: unknown) {
+			process.exit(exitCode(err));
+		}
 	}
 
-	console.log(`[ensure-fresh-build] lib/ is stale (${reason}) — rebuilding...`);
-	try {
-		execSync("pnpm run build:cli", { cwd: ROOT, stdio: "inherit" });
-	} catch (err: unknown) {
-		const code =
-			err && typeof err === "object" && "status" in err ? (err as { status: number }).status : 1;
-		process.exit(typeof code === "number" ? code : 1);
-	}
-
-	console.log("[ensure-fresh-build] rebuild complete.");
+	console.log("[ensure-fresh-build] all requested build artifacts are fresh.");
 }
 
 main();
+
+type CommonJsEntryPoint = never;
+export type { CommonJsEntryPoint };

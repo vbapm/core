@@ -11,6 +11,7 @@ import {
 	move,
 	pathExists,
 	readFile,
+	remove,
 	tmpFile
 } from "../utils/fs";
 import { clone, isGitRepository, pull } from "../utils/git";
@@ -115,25 +116,7 @@ export class RegistrySource implements Source {
 			await move(unverifiedFile, file);
 		}
 
-		const src = getSource(this.sources, registration);
-		await ensureDir(src);
-		await unzip(file, src);
-
-		// Normalize legacy manifest name: packages published before the rename
-		// contain vba-block.toml; rename it so only vbaproject.toml exists.
-		// Uses native fs (not the mockable wrapper) because unzip writes real
-		// files to disk, so the cleanup must also operate on real disk.
-		const legacyManifest = join(src, "vba-block.toml");
-		const newManifest = join(src, "vbaproject.toml");
-		if (existsSync(legacyManifest)) {
-			if (existsSync(newManifest)) {
-				unlinkSync(legacyManifest);
-			} else {
-				renameSync(legacyManifest, newManifest);
-			}
-		}
-
-		return src;
+		return await extractSource(file, this.sources, registration);
 	}
 
 	async pull() {
@@ -231,4 +214,75 @@ export function getLocalPackage(packages: string, registration: Registration): s
 export function getSource(sources: string, registration: Registration): string {
 	const { name, version } = registration;
 	return join(sources, `${sanitizePackageName(name)}-v${version}`);
+}
+
+/**
+ * Extract a downloaded package into the shared sources cache atomically.
+ *
+ * `fetch` can run concurrently (parallel Jest workers each run their own `vba`
+ * process), so this must be safe when several processes fetch the same
+ * registration at once. Each caller extracts into a unique temp directory and
+ * then atomically renames it into place; a caller that loses the rename race
+ * reuses the directory the winner published. This avoids the
+ * `ENOENT: utime` crash that happened when two unzips wrote to the same
+ * directory while one renamed `vba-block.toml` → `vbaproject.toml`.
+ */
+export async function extractSource(
+	file: string,
+	sources: string,
+	registration: Registration
+): Promise<string> {
+	const src = getSource(sources, registration);
+
+	// Fast path: already extracted (legacy or current manifest present).
+	if (await isSourceExtracted(src)) {
+		return src;
+	}
+
+	// Extract into a unique sibling temp dir on the same volume so the final
+	// rename is atomic.
+	const tmp = join(sources, `.${basename(src)}-tmp-${process.pid}-${randomSuffix()}`);
+	await ensureDir(tmp);
+
+	try {
+		await unzip(file, tmp);
+
+		// Normalize the legacy manifest inside the private temp dir. Uses native
+		// fs (not the mockable wrapper) because unzip writes real files to disk.
+		const legacyManifest = join(tmp, "vba-block.toml");
+		const newManifest = join(tmp, "vbaproject.toml");
+		if (existsSync(legacyManifest)) {
+			if (existsSync(newManifest)) {
+				unlinkSync(legacyManifest);
+			} else {
+				renameSync(legacyManifest, newManifest);
+			}
+		}
+
+		try {
+			renameSync(tmp, src);
+		} catch (err) {
+			// Another process published `src` first; reuse theirs. If it isn't
+			// actually ready, surface the rename error instead.
+			if (!(await isSourceExtracted(src))) {
+				throw err;
+			}
+		}
+	} finally {
+		// Best-effort cleanup of our temp dir (no-op after a successful rename).
+		await remove(tmp).catch(() => {});
+	}
+
+	return src;
+}
+
+async function isSourceExtracted(src: string): Promise<boolean> {
+	return (
+		(await pathExists(join(src, "vbaproject.toml"))) ||
+		(await pathExists(join(src, "vba-block.toml")))
+	);
+}
+
+function randomSuffix(): string {
+	return Math.random().toString(36).slice(2, 10);
 }

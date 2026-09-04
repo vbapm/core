@@ -1,6 +1,12 @@
 export default {
 	testEnvironment: "node",
 	testTimeout: 120000,
+	globalSetup: "<rootDir>/tests/global-setup.js",
+	globalTeardown: "<rootDir>/tests/global-teardown.js",
+	// Runs per test file (i.e. per Jest worker), which is where a persistent
+	// PowerShell/Excel session lives. globalTeardown runs in the main process and
+	// cannot see worker-owned sessions, so cleanup must be registered here.
+	setupFilesAfterEnv: ["<rootDir>/tests/__helpers__/session-teardown.ts"],
 	testMatch: ["**/tests/**/*.e2e.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
@@ -13,7 +19,8 @@ export default {
 	},
 	moduleNameMapper: {
 		"^vbapm$": "<rootDir>/lib/index.js",
-		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js"
+		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js",
+		"^open$": "<rootDir>/tests/__helpers__/open-stub.ts"
 	},
 	snapshotFormat: {
 		escapeString: true,

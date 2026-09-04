@@ -1,6 +1,6 @@
 import { CliError, ErrorCode } from "../errors";
 import { readFile } from "../utils/fs";
-import { extname } from "../utils/path";
+import { dirname, extname, join } from "../utils/path";
 import { BY_LINE } from "../utils/text";
 import {
 	Codepage,
@@ -110,7 +110,10 @@ export class Component {
 		}
 
 		const code = await readFile(path);
-		const binary = <Buffer | undefined>(binary_path && (await readFile(binary_path)));
+		const binaryPath = binary_path || (type === "form" && findBinaryPath(code));
+		const resolvedBinaryPath =
+			binaryPath && (binary_path ? binaryPath : join(dirname(path), binaryPath));
+		const binary = <Buffer | undefined>(resolvedBinaryPath && (await readFile(resolvedBinaryPath)));
 
 		return new Component(type, code, codepage, { path, binary });
 	}
@@ -131,6 +134,15 @@ export const typeToExtension: { [type: string]: string } = {
 function findLine(code: string, search: string): string | undefined {
 	const lines = code.split(BY_LINE).map(line => line.trim());
 	return lines.find(line => line.startsWith(search));
+}
+
+function findBinaryPath(code: Buffer): string | undefined {
+	const line = findLine(code.toString(), "OleObjectBlob");
+	if (!line) return;
+
+	const [, value] = line.split("=", 2);
+	const [path] = value.split(":", 2);
+	return JSON.parse(path);
 }
 
 export function byComponentName(a: Component, b: Component): number {
