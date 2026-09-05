@@ -9,6 +9,7 @@ const { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = requ
 const { spawnSync } = require("node:child_process");
 const { createServer } = require("node:http");
 const { dirname, join, resolve } = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 function argumentValue(name: string): string | undefined {
 	const index = process.argv.indexOf(name);
@@ -59,8 +60,13 @@ function readSnapshot(listScript: string, snapshotPath: string): unknown {
 	}
 }
 
-function htmlPage(snapshots: Array<{ name: string; data: unknown }>): string {
-	const serialized = JSON.stringify(snapshots).replace(/</g, "\\u003c");
+function htmlPage(
+	runs: Array<{
+		name: string;
+		snapshots: Array<{ name: string; data: unknown; sourceUrl: string }>;
+	}>
+): string {
+	const serialized = JSON.stringify(runs).replace(/</g, "\\u003c");
 
 	return `<!doctype html>
 <html lang="en">
@@ -74,7 +80,12 @@ function htmlPage(snapshots: Array<{ name: string; data: unknown }>): string {
 body { margin: 0; min-height: 100vh; background: #edf1f5; }
 header { padding: 28px clamp(20px, 5vw, 72px) 18px; background: #17212b; color: #f5f8fa; }
 h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 42px); letter-spacing: 0; }
-#snapshot-label { color: #b8c6d1; font-size: 14px; }
+#snapshot-label { display: flex; align-items: center; gap: 8px; color: #b8c6d1; font-size: 14px; }
+#snapshot-stats { margin-left: 2px; }
+.snapshot-link { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid #718494; border-radius: 5px; color: #f5f8fa; }
+.snapshot-link:hover { background: #304353; border-color: #b8c6d1; }
+.snapshot-link:focus-visible { outline: 2px solid #f5f8fa; outline-offset: 2px; }
+.snapshot-link svg { width: 15px; height: 15px; }
 main { width: min(1180px, calc(100% - 32px)); margin: 24px auto 96px; }
 .summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
 .metric { padding: 10px 14px; border: 1px solid #ccd6de; border-radius: 7px; background: #fff; font-size: 14px; }
@@ -95,7 +106,7 @@ button:disabled { cursor: default; opacity: .38; }
 </style>
 </head>
 <body>
-<header><h1>Excel registry evolution</h1><div id="snapshot-label"></div></header>
+<header><h1>Excel registry evolution</h1><label for="run-select">Evolution run</label> <select id="run-select"></select><div id="snapshot-label"><span id="snapshot-name"></span><a id="open-snapshot" class="snapshot-link" target="_blank" rel="noopener" aria-label="Open snapshot JSON file" title="Open snapshot JSON file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"></path></svg></a><span id="snapshot-stats"></span></div></header>
 <main id="content"></main>
 <footer>
 <button id="previous" type="button" aria-label="Previous snapshot" title="Previous snapshot">&#8592;</button>
@@ -104,11 +115,15 @@ button:disabled { cursor: default; opacity: .38; }
 </footer>
 <script id="snapshot-data" type="application/json">${serialized}</script>
 <script>
-const snapshots = JSON.parse(document.getElementById("snapshot-data").textContent);
+const runs = JSON.parse(document.getElementById("snapshot-data").textContent);
+let currentRun = runs.length - 1;
 let current = 0;
 const content = document.getElementById("content");
-const label = document.getElementById("snapshot-label");
+const snapshotName = document.getElementById("snapshot-name");
+const openSnapshot = document.getElementById("open-snapshot");
+const snapshotStats = document.getElementById("snapshot-stats");
 const position = document.getElementById("position");
+const runSelect = document.getElementById("run-select");
 const previous = document.getElementById("previous");
 const next = document.getElementById("next");
 
@@ -116,13 +131,20 @@ function escapeHtml(value) {
 	return String(value ?? "").replace(/[&<>"']/g, character => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[character]));
 }
 function list(items, emptyText) {
-	const values = Array.isArray(items) ? items : [];
+	const values = collection(items);
 	return values.length ? '<ul>' + values.map(value => '<li>' + escapeHtml(value) + '</li>').join('') + '</ul>' : '<div class="muted">' + emptyText + '</div>';
+}
+function collection(value) {
+	if (Array.isArray(value)) return value;
+	if (value == null || (typeof value === "object" && Object.keys(value).length === 0)) return [];
+	return [value];
 }
 function workbookRows(instance) {
   const readOnly = instance.workbookReadOnly || {};
-  const ghosts = new Set((instance.ghostWorkbooks || []).map(ghost => String(ghost.file || "").toLowerCase()));
-  return (Array.isArray(instance.workbooks) ? instance.workbooks : []).map(workbook => {
+	const ghostItems = collection(instance.ghostWorkbooks);
+	const ghosts = new Set(ghostItems.map(ghost => String(ghost.file || "").toLowerCase()));
+	const workbooks = collection(instance.workbooks);
+	return workbooks.map(workbook => {
     const value = String(workbook);
     const key = value.toLowerCase();
     const icon = ghosts.has(key) ? "👻" : (readOnly[key] ? "📖🔭" : "📖✏️");
@@ -131,7 +153,8 @@ function workbookRows(instance) {
 }
 function renderInstance(instance) {
   const workbooks = workbookRows(instance);
-  const addins = (Array.isArray(instance.addins) ? instance.addins : [])
+	const addinItems = collection(instance.addins);
+	const addins = addinItems
     .filter(addin => addin.isOpen)
     .map(addin => "📚" + (addin.readOnly ? "🔭" : "✏️") + " " + escapeHtml(addin.fullPath || addin.name));
   const ghostCount = Number(instance.ghostDetection?.ghostCount || 0);
@@ -143,18 +166,27 @@ function renderInstance(instance) {
 		'</section><section><h3>Open add-ins</h3>' + list(addins, "None recorded") + '</section></div></article>';
 }
 function render() {
-  const snapshot = snapshots[current];
+	const run = runs[currentRun];
+	const snapshots = run.snapshots;
+	const snapshot = snapshots[current];
   const data = snapshot.data || {};
   const active = Array.isArray(data.active) ? data.active : [];
   const inactive = Array.isArray(data.inactive) ? data.inactive : [];
-  label.textContent = snapshot.name + " · " + active.length + " active · " + inactive.length + " inactive";
-  position.textContent = (current + 1) + " / " + snapshots.length;
+	snapshotName.textContent = snapshot.name;
+	openSnapshot.href = snapshot.sourceUrl;
+	openSnapshot.setAttribute("aria-label", "Open " + snapshot.name);
+	openSnapshot.title = "Open " + snapshot.name;
+	snapshotStats.textContent = " · " + active.length + " active · " + inactive.length + " inactive";
+	position.textContent = (current + 1) + " / " + snapshots.length;
 	content.innerHTML = active.length ? active.map(renderInstance).join("") : '<div class="error">No active Excel instances in this snapshot.</div>';
   previous.disabled = current === 0;
   next.disabled = current === snapshots.length - 1;
 }
+runSelect.innerHTML = runs.map((run, index) => '<option value="' + index + '">' + escapeHtml(run.name) + ' (' + run.snapshots.length + ' snapshots)</option>').join('');
+runSelect.value = String(currentRun);
+runSelect.addEventListener("change", event => { currentRun = Number(event.target.value); current = 0; render(); });
 previous.addEventListener("click", () => { if (current > 0) { current--; render(); } });
-next.addEventListener("click", () => { if (current < snapshots.length - 1) { current++; render(); } });
+next.addEventListener("click", () => { if (current < runs[currentRun].snapshots.length - 1) { current++; render(); } });
 document.addEventListener("keydown", event => { if (event.key === "ArrowLeft") previous.click(); if (event.key === "ArrowRight") next.click(); });
 render();
 </script>
@@ -169,19 +201,50 @@ function main(): void {
 	if (!existsSync(input)) throw new Error(`Evolution directory not found: ${input}`);
 
 	const listScript = join(__dirname, "ps", "List-ExcelInstances.ps1");
-	const files = readdirSync(input)
-		.filter((file: string) => /^instances-.*\.json$/i.test(file))
-		.sort((left: string, right: string) => left.localeCompare(right));
-	if (!files.length) throw new Error(`No evolution snapshots found in ${input}`);
+	const entries = readdirSync(input, { withFileTypes: true });
+	const runs = entries
+		.filter((entry: any) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}--/.test(entry.name))
+		.map((entry: any) => ({
+			name: entry.name,
+			snapshots: readdirSync(join(input, entry.name))
+				.filter(
+					(file: string) =>
+						/^instances-.*\.json$/i.test(file) && existsSync(join(input, entry.name, file))
+				)
+				.sort((left: string, right: string) => left.localeCompare(right))
+				.map((name: string) => ({
+					name,
+					data: readSnapshot(listScript, join(input, entry.name, name)),
+					sourceUrl: pathToFileURL(join(input, entry.name, name)).href
+				}))
+		}))
+		.filter((run: { snapshots: unknown[] }) => run.snapshots.length)
+		.sort((left: { name: string }, right: { name: string }) => left.name.localeCompare(right.name));
 
-	const snapshots = files.map((name: string) => ({
-		name,
-		data: readSnapshot(listScript, join(input, name))
-	}));
+	const legacyFiles = entries
+		.filter(
+			(entry: any) =>
+				entry.isFile() &&
+				/^instances-.*\.json$/i.test(entry.name) &&
+				existsSync(join(input, entry.name))
+		)
+		.map((entry: any) => entry.name)
+		.sort((left: string, right: string) => left.localeCompare(right));
+	if (legacyFiles.length) {
+		runs.unshift({
+			name: "Legacy snapshots",
+			snapshots: legacyFiles.map((name: string) => ({
+				name,
+				data: readSnapshot(listScript, join(input, name)),
+				sourceUrl: pathToFileURL(join(input, name)).href
+			}))
+		});
+	}
+	if (!runs.length) throw new Error(`No evolution snapshots found in ${input}`);
 
 	mkdirSync(dirname(output), { recursive: true });
-	writeFileSync(output, htmlPage(snapshots), "utf8");
-	console.log(`Generated ${output} from ${snapshots.length} snapshot(s).`);
+	writeFileSync(output, htmlPage(runs), "utf8");
+	console.log(`Generated ${output} from ${runs.length} evolution run(s).`);
 
 	if (hasArgument("--serve")) {
 		const server = createServer((request: any, response: any) => {

@@ -108,6 +108,29 @@ function Test-ExcelRegistryEvolution {
     return [string]$env:VBA_EVOLUTION -match '^(1|true|yes)$'
 }
 
+function Get-ExcelInstancesEvolutionRunDir {
+    $evolutionDir = Get-ExcelInstancesEvolutionDir
+    $marker = Join-Path $evolutionDir 'current-run.txt'
+    if (Test-Path -LiteralPath $marker -PathType Leaf) {
+        $runDir = (Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim()
+        if ($runDir -and (Test-Path -LiteralPath $runDir -PathType Container)) {
+            return $runDir
+        }
+    }
+
+    New-Item -ItemType Directory -Path $evolutionDir -Force | Out-Null
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd--HH'h'mm'm'ss's'fff")
+    $runDir = Join-Path $evolutionDir $stamp
+    $suffix = 1
+    while (Test-Path -LiteralPath $runDir) {
+        $runDir = Join-Path $evolutionDir "$stamp-$suffix"
+        $suffix++
+    }
+    New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+    [System.IO.File]::WriteAllText($marker, $runDir, [System.Text.UTF8Encoding]::new($false))
+    return $runDir
+}
+
 function Save-ExcelRegistryEvolutionSnapshot {
     param(
         [Parameter(Mandatory)][string]$Json,
@@ -116,10 +139,7 @@ function Save-ExcelRegistryEvolutionSnapshot {
 
     if (-not (Test-ExcelRegistryEvolution)) { return }
 
-    $evolutionDir = Get-ExcelInstancesEvolutionDir
-    if (-not (Test-Path -LiteralPath $evolutionDir)) {
-        New-Item -ItemType Directory -Path $evolutionDir -Force | Out-Null
-    }
+    $evolutionDir = Get-ExcelInstancesEvolutionRunDir
 
     $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd--HH'h'mm'm'ss's'fff")
     $snapshotPath = Join-Path $evolutionDir "instances-$stamp.json"
