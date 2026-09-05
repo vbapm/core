@@ -46,6 +46,9 @@ export async function addTarget(type: TargetType, info: ProjectInfo, options: Ad
 				filename: `${sanitize(name)}.${type}`
 			};
 
+			// Importing from an existing workbook has no previous XML target.
+			// Create an empty baseline so exportTarget can read and replace it.
+			await ensureDir(target.path);
 			await copy(from, join(project.paths.build, target.filename));
 			await exportTo(project, target, staging);
 			await exportTarget(target, info, staging);
