@@ -1,16 +1,16 @@
 # Make-ExcelInvisible.ps1
 #
-# Hide every top-level window owned by one Excel process.
+# Hide one Excel instance selected by its instances.json number.
 # Use -nb to select the active registry number shown by List-ExcelInstances.ps1.
-# Examples: .\Make-ExcelInvisible.ps1 -nb 2 or .\Make-ExcelInvisible.ps1 26368
+# Examples: .\Make-ExcelInvisible.ps1 1 or .\Make-ExcelInvisible.ps1 -ProcessId 26368
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [Parameter(Mandatory, Position = 0, ParameterSetName = 'ProcessId')]
+    [Parameter(Mandatory, ParameterSetName = 'ProcessId')]
     [Alias('Pid')]
     [int]$ProcessId,
 
-    [Parameter(Mandatory, ParameterSetName = 'Number')]
+    [Parameter(Mandatory, Position = 0, ParameterSetName = 'Number')]
     [Alias('nb')]
     [int]$Number
 )
