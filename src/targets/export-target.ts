@@ -17,6 +17,11 @@ import { unzip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 import { filterTarget, mapTarget } from "./transform-target";
 import { normalizeWorksheetNames } from "./transforms/normalize-worksheet-names";
+import {
+	preserveWorksheetSelections,
+	readPreviousWorksheetData,
+	PreviousWorksheetData
+} from "./transforms/preserve-worksheet-selection";
 
 export interface ExportOptions {
 	xmlOnly?: boolean;
@@ -43,8 +48,11 @@ export async function exportTarget(
 
 	// Extract target to staging
 	let extracted: string;
+	let previousWorksheetData: PreviousWorksheetData | undefined;
 	if (!blankTarget && !vbaOnly) {
+		previousWorksheetData = await readPreviousWorksheetData(target.path);
 		extracted = await extractTarget(project, target, staging);
+		await preserveWorksheetSelections(extracted, previousWorksheetData);
 		if (!skipSheetNameNormalization) {
 			await normalizeWorksheetNames(extracted);
 		}
