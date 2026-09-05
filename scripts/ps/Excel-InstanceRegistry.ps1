@@ -9,6 +9,7 @@
 #   instances.json  - JSON document describing tracked (active) and recently
 #                     deactivated (inactive) Excel instances
 #   instances.lock  - lock file used to serialize edits to instances.json
+#   evolution\     - timestamped instances.json copies when VBA_EVOLUTION=1
 #
 # This file is a *dot-sourced* library, not a standalone script. It exposes:
 #
@@ -97,6 +98,38 @@ function Get-ExcelInstancesPath {
 
 function Get-ExcelInstancesLockPath {
     return Join-Path (Get-ExcelInstancesDir) 'instances.lock'
+}
+
+function Get-ExcelInstancesEvolutionDir {
+    return Join-Path (Get-ExcelInstancesDir) 'evolution'
+}
+
+function Test-ExcelRegistryEvolution {
+    return [string]$env:VBA_EVOLUTION -match '^(1|true|yes)$'
+}
+
+function Save-ExcelRegistryEvolutionSnapshot {
+    param(
+        [Parameter(Mandatory)][string]$Json,
+        [Parameter(Mandatory)][string]$JsonPath
+    )
+
+    if (-not (Test-ExcelRegistryEvolution)) { return }
+
+    $evolutionDir = Get-ExcelInstancesEvolutionDir
+    if (-not (Test-Path -LiteralPath $evolutionDir)) {
+        New-Item -ItemType Directory -Path $evolutionDir -Force | Out-Null
+    }
+
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd--HH'h'mm'm'ss's'fff")
+    $snapshotPath = Join-Path $evolutionDir "instances-$stamp.json"
+    $suffix = 1
+    while (Test-Path -LiteralPath $snapshotPath) {
+        $snapshotPath = Join-Path $evolutionDir "instances-$stamp-$suffix.json"
+        $suffix++
+    }
+
+    [System.IO.File]::WriteAllText($snapshotPath, $Json, [System.Text.UTF8Encoding]::new($false))
 }
 
 # -------
@@ -356,7 +389,15 @@ function Write-ExcelRegistryDocument {
     }
 
     $json = $doc | ConvertTo-Json -Depth 6
-    [System.IO.File]::WriteAllText($jsonPath, $json, [System.Text.UTF8Encoding]::new($false))
+    $previousJson = $null
+    if (Test-Path -LiteralPath $jsonPath) {
+        try { $previousJson = [System.IO.File]::ReadAllText($jsonPath, [System.Text.UTF8Encoding]::new($false)) } catch {}
+    }
+
+    if ($previousJson -ne $json) {
+        [System.IO.File]::WriteAllText($jsonPath, $json, [System.Text.UTF8Encoding]::new($false))
+        Save-ExcelRegistryEvolutionSnapshot -Json $json -JsonPath $jsonPath
+    }
 }
 
 <#
