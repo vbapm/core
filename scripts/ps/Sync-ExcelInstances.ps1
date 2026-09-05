@@ -73,11 +73,6 @@ function Upsert-Instance {
         $prev = $existingByPid[[int]$InstanceId]
         $owner = if ($prev.owner) { $prev.owner } else { $owner }
         $reason = if ($prev.reason) { $prev.reason } else { $reason }
-        # Preserve a prior comReachable=true if this PID was ever COM-reachable,
-        # unless it is explicitly being re-observed as not reachable now.
-        if (-not $ComReachable -and $prev.comReachable -eq $true) {
-            $ComReachable = $true
-        }
     }
 
     Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -Addins $Addins -WindowTitle $windowTitle -ComReachable $ComReachable

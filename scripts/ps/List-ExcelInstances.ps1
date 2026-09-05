@@ -16,11 +16,15 @@ if ($LASTEXITCODE -ne 0) {
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
 
-$excelIcon = [char]::ConvertFromUtf32(0x1F4CA)
-$visibleIcon = [char]::ConvertFromUtf32(0x1F7E2)
-$invisibleIcon = [char]::ConvertFromUtf32(0x1F534)
-$workbookIcon = [char]::ConvertFromUtf32(0x1F4D6)
-$emptyIcon = [char]::ConvertFromUtf32(0x1F4ED)
+$excelIcon = [char]::ConvertFromUtf32(0x1F4CA) # 📊 Excel icon
+$visibleIcon = [char]::ConvertFromUtf32(0x1F441) + [char]0xFE0F # 👁️ Visible icon
+$invisibleIcon = [char]::ConvertFromUtf32(0x1F648) # 🙈 Invisible icon
+$workbookIcon = [char]::ConvertFromUtf32(0x1F4D6) # 📖 Workbook icon
+$emptyIcon = [char]::ConvertFromUtf32(0x1F4ED) # 📭 Empty icon
+$windowIcon = [char]::ConvertFromUtf32(0x1FA9F) # 🪟 Window icon
+$comIcon = [char]::ConvertFromUtf32(0x2B50) # ⭐ COM-reachable icon
+$windowScript = Join-Path $PSScriptRoot 'List-ExcelProcessWindows.ps1'
+$verboseOutput = $VerbosePreference -eq 'Continue'
 
 $instances = @(Read-ExcelInstances)
 if ($instances.Count -eq 0) {
@@ -38,16 +42,43 @@ foreach ($instance in $instances) {
         $stateColor = 'DarkYellow'
     }
 
-    Write-Host "$stateIcon PID=$($instance.pid) visible=$($instance.visible) owner=$($instance.owner) reason=$($instance.reason)" -ForegroundColor $stateColor
+    $reachabilityIcon = if ($instance.comReachable) { $comIcon } else { '' }
+    Write-Host "$stateIcon$reachabilityIcon PID=$($instance.pid) visible=$($instance.visible) comReachable=$($instance.comReachable) owner=$($instance.owner) reason=$($instance.reason)" -ForegroundColor $stateColor
 
     $workbooks = @($instance.workbooks)
-    if ($workbooks.Count -eq 0 -or $null -eq $workbooks[0]) {
-        Write-Host "  $emptyIcon workbooks: none" -ForegroundColor DarkGray
-        continue
-    }
+    if ($instance.comReachable) {
+        if ($workbooks.Count -eq 0 -or $null -eq $workbooks[0]) {
+            Write-Host "  $emptyIcon workbooks: none" -ForegroundColor DarkGray
+        } else {
+            foreach ($workbook in $workbooks) {
+                Write-Host "  $workbookIcon $workbook" -ForegroundColor White
+            }
+        }
+    } elseif (Test-Path -LiteralPath $windowScript) {
+        $windowLines = @(
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $windowScript -ProcessId ([int]$instance.pid) |
+                Where-Object { $_ -match 'class=EXCEL7' -and $_ -match 'title=' }
+        )
 
-    foreach ($workbook in $workbooks) {
-        Write-Host "  $workbookIcon $workbook" -ForegroundColor White
+        if ($windowLines.Count -eq 0) {
+            Write-Host "  $emptyIcon EXCEL7 window titles: none" -ForegroundColor DarkGray
+        } else {
+            foreach ($windowLine in $windowLines) {
+                if ($verboseOutput) {
+                    if ($windowLine -match 'title=(.*)$') {
+                        $windowTitle = $matches[1]
+                        $windowDetails = $windowLine.Substring(0, $windowLine.Length - $matches[0].Length).TrimEnd()
+                        Write-Host "  $windowIcon  $windowTitle [$windowDetails]" -ForegroundColor White
+                    } else {
+                        Write-Host "  $windowIcon  $($windowLine.Trim())" -ForegroundColor White
+                    }
+                } elseif ($windowLine -match 'title=(.*)$') {
+                    Write-Host "  $windowIcon  $($matches[1])" -ForegroundColor White
+                }
+            }
+        }
+    } else {
+        Write-Host "  $emptyIcon window titles: unavailable" -ForegroundColor DarkGray
     }
 
     Write-Host ''

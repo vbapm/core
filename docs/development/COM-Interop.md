@@ -1,65 +1,78 @@
 # Excel COM lookup on Windows
 
-## How to get a hold of the only Excel instance?
+## How to get the only Excel instance?
 
-In case there is only one Excel instance, it's very easy, just use 
+When there is exactly one running Excel instance, this can attach to it:
+
 ```powershell
 [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
 ```
-`Marshal.GetActiveObject` returned the visible Excel instance containing the
-user's workbooks (see demo-marshal-getactiveobject.ps1)
+
+`Marshal.GetActiveObject` returns the first object registered in the COM Running Object Table
+(ROT). It does not enumerate Excel processes, accept a process ID, or create a
+new Excel instance.
 
 Avoid using the following:
-```powershell
-[Microsoft.VisualBasic.Interaction]::GetObject($null, "Excel.Application")
-```
-It would create a new invisible instance of Excel (see demo-vb-getobject.ps1).
-
-
-## What happens when there's more than one Excel instance?
-
-A process ID. When more than one Excel process exists,
-the returned object depends on how Excel registered itself in the COM Running
-Object Table and on which COM lookup path the caller uses.
-
-
-
-
-## Why this matters
-
-Both methods ask COM for an Excel object. Neither method enumerates all Excel
-processes or accepts 
-
-In this environment, the VB.NET `GetObject` call can activate a new hidden
-Excel process when it cannot bind to the visible instance. Releasing the
-returned COM reference does not call `Excel.Quit()`, so the hidden process can
-remain alive until the cleanup script terminates it.
-
-The `Hwnd` value is a useful identity check. If two lookup calls return
-different `Hwnd` values, they refer to different Excel processes. Map the
-window handle to a process ID when diagnosing the result.
-
-## Warning
-
-Do not use this call as a general way to attach to Excel:
 
 ```powershell
 [Microsoft.VisualBasic.Interaction]::GetObject($null, "Excel.Application")
 ```
 
-On this machine, repeated calls returned new hidden Excel processes instead
-of the visible instance. If the goal is to attach to an existing COM object,
-use `Marshal.GetActiveObject` and verify the returned `Hwnd`, visibility,
-process ID, and workbooks.
+Based on experience, this will create a new instance of Excel, probably because there is some interoperability issues with `GetObject($null, "Excel.Application")` in powershell not being the same as `GetObject(, "Excel.Application")` in VB.NET. See `demo-vb-getobject.ps1`.
 
-`Marshal.GetActiveObject` does not create Excel. If the goal is to create a
-new instance intentionally, use an explicit creation call such as:
+## Multiple Excel instances
+
+When multiple Excel processes exist, `GetActiveObject` always returns the oldest Excel instance (assuming that they were not registered too close together and a race condition caused a different instance to be returned which has never occured to me so far).
+
+The `Hwnd` property identifies the returned Excel window. Map that handle to a
+process ID when diagnosing which instance was returned. Different Hwnd values can represent different Excel windows in the same process. Use the window handle to resolve the owning PID before treating it as an instance identifier.
+
+## Creating a new instance
+
+If the caller needs a specific new instance, create it and keep the returned
+COM object. Perform all workbook operations through that object. Do not create
+Excel with `Start-Process` and then call `GetActiveObject` to find it, because
+that can attach to another process.
 
 ```powershell
-$excel = New-Object -ComObject Excel.Application
+$excelType = [System.Type]::GetTypeFromProgID("Excel.Application")
+$excel = [System.Activator]::CreateInstance($excelType)
+$excel.Visible = $false
+$workbook = $excel.Workbooks.Add()
 ```
 
-The caller owns that instance and must call `$excel.Quit()` when finished.
+The caller owns the new instance. Release child COM references, release the
+application reference when finished, and call `$excel.Quit()` when the caller
+intends to close Excel.
+
+`Create-NewExcel.ps1` follows this pattern. It also records the exact PID and
+workbooks in `%TEMP%\Excel-Instances\instances.json`.
+
+## Registry and workbook listings
+
+`List-ExcelInstances.ps1` synchronizes the registry before reading it. A
+process can be visible in the registry while its workbooks are unknown if the
+process is not reachable through the ROT. Newly created instances avoid this
+gap because `Create-NewExcel.ps1` registers their workbook list using the
+exact COM object before releasing it.
+
+## Information available without COM
+
+When an Excel process is running but not COM-reachable, a PID and window handle
+still provide useful process-level information:
+
+- Process ID (`PID`)
+- Process name, normally `EXCEL`
+- Main window handle (`MainWindowHandle`)
+- Main window title (`MainWindowTitle`)
+- A visibility estimate based on whether `MainWindowHandle` is nonzero
+- Process start time
+- Process executable path and command line, when Windows permits access
+- Parent process ID, when available through process inspection
+- Registry metadata already recorded for that PID, such as owner, reason,
+  creation time, and previously recorded workbook names
+- Titled top-level Excel windows and their owning handles
+- Titled `EXCEL7` child windows, which are a useful proxy for workbook names!
 
 ## Reproduce the behavior
 
@@ -82,22 +95,27 @@ Clean them up without closing visible Excel:
 ## Guidance
 
 - Do not assume that either VB.NET `GetObject` or VBA `GetObject` returns the
-	visible Excel instance when multiple Excel processes exist.
-- Do not use either lookup method as a way to choose among multiple Excel
-	processes. Use a known process ID or window handle when the target matters.
-- Use `Marshal.GetActiveObject` from Windows PowerShell to retrieve an existing
-	COM object, and verify the returned `Hwnd`, visibility, process ID, and
-	workbooks before mutating anything.
+  visible Excel instance when multiple Excel processes exist.
+- Do not use a lookup API to choose among multiple Excel processes. Use the
+  exact COM object returned during creation, or verify a known `Hwnd` and PID
+  before mutating an existing instance.
+- Use `Marshal.GetActiveObject` from Windows PowerShell only to retrieve an
+  existing COM object, and verify its `Hwnd`, visibility, process ID, and
+  workbooks before mutating anything.
 - Treat `ReleaseComObject` as reference cleanup only. Call `Quit()` explicitly
-	for an Excel process created by the caller, or use the invisible-instance
-	cleanup script for a leaked process.
+  for an Excel process created by the caller, or use the cleanup scripts for a
+  leaked process.
 - When diagnosing an add-in lock, inspect both `Application.Workbooks` and
-	`VBE.VBProjects`. A VBE project that is missing from `Workbooks` may be a
-	ghost, but first confirm that the same COM object represents the Excel
-	instance being inspected.
+  `VBE.VBProjects`. A VBE project that is missing from `Workbooks` may be a
+  ghost, but first confirm that the same COM object represents the Excel
+  instance being inspected.
 
 Related scripts:
 
+- [demo-marshal-getactiveobject.ps1](../../scripts/ps/demo-marshal-getactiveobject.ps1)
 - [demo-vb-getobject.ps1](../../scripts/ps/demo-vb-getobject.ps1)
+- [Create-NewExcel.ps1](../../scripts/ps/Create-NewExcel.ps1)
+- [List-ExcelInstances.ps1](../../scripts/ps/List-ExcelInstances.ps1)
 - [Close-AllInvisibleExcelInstances.ps1](../../scripts/ps/Close-AllInvisibleExcelInstances.ps1)
-- [Close-Addin.ps1](../../scripts/ps/Close-Addin.ps1)
+- [Close-VisibleExcelInstances.ps1](../../scripts/ps/Close-VisibleExcelInstances.ps1)
+- [Close-AllExcelInstances.ps1](../../scripts/ps/Close-AllExcelInstances.ps1)
