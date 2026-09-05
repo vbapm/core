@@ -87,7 +87,7 @@ try {
     Write-Host "All Excel instances closed." -ForegroundColor Green
 
     Step "2. Open new visible Excel instance"
-    & (Join-Path $scripts "open-new-excel.ps1")
+    & (Join-Path $scripts "Create-NewExcel.ps1")
     Start-Sleep -Seconds 3
     Write-Host "Excel ready." -ForegroundColor Green
 

@@ -16,13 +16,13 @@
     Just list installed/loaded add-ins without unloading anything.
 
 .EXAMPLE
-    .\scripts\ps\close-addin.ps1 -List
+    .\scripts\ps\Close-Addin.ps1 -List
 
 .EXAMPLE
-    .\scripts\ps\close-addin.ps1 -Name "vbapm"
+    .\scripts\ps\Close-Addin.ps1 -Name "vbapm"
 
 .EXAMPLE
-    .\scripts\ps\close-addin.ps1 -Path "C:\Users\me\AppData\Roaming\vbapm\addins\build\vbapm.xlam"
+    .\scripts\ps\Close-Addin.ps1 -Path "C:\Users\me\AppData\Roaming\vbapm\addins\build\vbapm.xlam"
 #>
 
 param(

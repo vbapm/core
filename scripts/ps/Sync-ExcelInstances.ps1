@@ -140,6 +140,13 @@ foreach ($p in $allExcel) {
         }
     }
 
+    # A newly created hidden instance may be registered with exact workbook
+    # names, even though this sync process cannot bind to its COM object.
+    $previous = $existingByPid[[int]$instancePid]
+    if ($null -ne $previous -and $null -ne $previous.workbooks) {
+        $openWorkbooks = @($previous.workbooks)
+    }
+
     Upsert-Instance $instancePid $isVisible $openWorkbooks $null $false
     Write-Output "Synced (process) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count)"
 }
