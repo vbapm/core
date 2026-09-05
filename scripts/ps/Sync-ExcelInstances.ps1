@@ -93,20 +93,21 @@ $livePids = @{}
 foreach ($app in $apps) {
     try {
         $instancePid = Get-ExcelProcessId -ExcelApp $app
+        $livePids[[int]$instancePid] = $true
+
+        $isVisible = $false
+        try { $isVisible = [bool]$app.Visible } catch {}
+
+        $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $app)
+        $openAddins = @(Get-ExcelAddins -ExcelApp $app)
+
+        Upsert-Instance $instancePid $isVisible $openWorkbooks $openAddins $true
+        Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count) addins=$($openAddins.Count)"
     } catch {
-        Write-Warning "Could not resolve PID for a ROT Excel instance; skipping."
-        continue
+        Write-Warning "Could not sync a ROT Excel instance: $($_.Exception.Message)"
+    } finally {
+        try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
     }
-    $livePids[[int]$instancePid] = $true
-
-    $isVisible = $false
-    try { $isVisible = [bool]$app.Visible } catch {}
-
-    $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $app)
-    $openAddins = @(Get-ExcelAddins -ExcelApp $app)
-
-    Upsert-Instance $instancePid $isVisible $openWorkbooks $openAddins $true
-    Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count) addins=$($openAddins.Count)"
 }
 
 # 2) Discover any EXCEL process NOT reachable via ROT (e.g. a user-visible

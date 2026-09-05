@@ -221,7 +221,7 @@ function Read-ExcelRegistryDocument {
     }
 
     try {
-        $raw = Get-Content -LiteralPath $jsonPath -Raw -ErrorAction Stop
+        $raw = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 -ErrorAction Stop
         if ([string]::IsNullOrWhiteSpace($raw)) {
             return [ordered]@{ active = @(); inactive = @() }
         }
@@ -1143,15 +1143,15 @@ function Sync-ExcelInstanceSnapshot {
 <#
 .SYNOPSIS
 Enumerate every COM-reachable Excel.Application instance via the Running Object
-Table (ROT), de-duplicated by window handle. Excel can register either an
-Application moniker or a Workbook moniker, so workbook objects are resolved
-through their parent Application before deduplication.
+Table (ROT), de-duplicated by window handle. Bind every ROT moniker before
+inspecting it. Excel workbook monikers can be bare names such as `Book1`, so
+filtering display names before binding misses valid Excel applications.
 
-Excel registers its Application object under the CLSID moniker
-`!{00024500-0000-0000-C000-000000000046}`, which may repeat for the same
-instance, so we de-duplicate on Hwnd. Note that a user-launched instance is
-often NOT present in the ROT (hence GetActiveObject limitations) — this only
-returns instances Excel chose to register.
+Excel can register either an Application moniker or a Workbook moniker, so
+workbook objects are resolved through their parent Application before
+deduplication. A user-launched instance is often NOT present in the ROT (hence
+GetActiveObject limitations) — this only returns instances Excel chose to
+register.
 #>
 function Get-ExcelApplications {
     $rotClass = 'RotHelperExcel'
@@ -1171,28 +1171,38 @@ public static class RotHelperExcel {
 
     public static System.Collections.Generic.List<object> GetExcelInstances() {
         var list = new System.Collections.Generic.List<object>();
-        IRunningObjectTable rot;
-        IBindCtx ctx;
-        if (GetRunningObjectTable(0, out rot) != 0) return list;
-        if (CreateBindCtx(0, out ctx) != 0) return list;
-        IEnumMoniker monikers;
-        rot.EnumRunning(out monikers);
-        if (monikers == null) return list;
+        IRunningObjectTable rot = null;
+        IBindCtx ctx = null;
+        IEnumMoniker monikers = null;
+        if (GetRunningObjectTable(0, out rot) != 0 || rot == null) return list;
+        if (CreateBindCtx(0, out ctx) != 0 || ctx == null) {
+            Marshal.ReleaseComObject(rot);
+            return list;
+        }
         IMoniker[] fetched = new IMoniker[1];
-        const string excelAppClsid = "{00024500-0000-0000-C000-000000000046}";
         try {
+            rot.EnumRunning(out monikers);
+            if (monikers == null) return list;
+            monikers.Reset();
             while (monikers.Next(1, fetched, IntPtr.Zero) == 0) {
-                string displayName = null;
-                try { fetched[0].GetDisplayName(ctx, null, out displayName); } catch {}
-                if (displayName != null &&
-                    (displayName.IndexOf(excelAppClsid, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     displayName.IndexOf("Excel", StringComparison.OrdinalIgnoreCase) >= 0)) {
-                    object obj = null;
-                    try { if (rot.GetObject(fetched[0], out obj) == 0) { list.Add(obj); } } catch {}
+                var moniker = fetched[0];
+                object obj = null;
+                try {
+                    try {
+                        if (rot.GetObject(moniker, out obj) == 0 && obj != null) {
+                            list.Add(obj);
+                            obj = null;
+                        }
+                    } catch {}
+                } finally {
+                    if (obj != null) { try { Marshal.ReleaseComObject(obj); } catch {} }
+                    if (moniker != null) { try { Marshal.ReleaseComObject(moniker); } catch {} }
                 }
             }
         } finally {
-            Marshal.ReleaseComObject(monikers);
+            if (monikers != null) Marshal.ReleaseComObject(monikers);
+            if (ctx != null) Marshal.ReleaseComObject(ctx);
+            if (rot != null) Marshal.ReleaseComObject(rot);
         }
         return list;
     }
@@ -1218,18 +1228,44 @@ public static class RotHelperExcel {
     foreach ($candidate in $apps) {
         if ($null -eq $candidate) { continue }
 
-        $app = $candidate
+        $app = $null
         $isApplication = $false
         try {
-            $null = $candidate.Workbooks.Count
-            $isApplication = $true
+            if ([string]$candidate.Name -eq 'Microsoft Excel') {
+                $app = $candidate
+                $isApplication = $true
+            }
         } catch {}
 
-        if (-not $isApplication) {
+        if ($null -eq $app) {
             try { $app = $candidate.Application } catch { $app = $null }
         }
 
         if ($null -eq $app) {
+            try {
+                $null = $candidate.Workbooks.Count
+                $app = $candidate
+                $isApplication = $true
+            } catch {}
+        }
+
+        if ($null -eq $app) {
+            try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($candidate) | Out-Null } catch {}
+            continue
+        }
+
+        try {
+            if ([string]$app.Name -ne 'Microsoft Excel') {
+                if (-not $isApplication) {
+                    try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
+                }
+                try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($candidate) | Out-Null } catch {}
+                continue
+            }
+        } catch {
+            if (-not $isApplication) {
+                try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
+            }
             try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($candidate) | Out-Null } catch {}
             continue
         }
@@ -1239,8 +1275,6 @@ public static class RotHelperExcel {
         if (-not $seen.ContainsKey($key)) {
             $seen[$key] = $true
             $deduped += $app
-        } else {
-            try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
         }
 
         if (-not $isApplication) {
