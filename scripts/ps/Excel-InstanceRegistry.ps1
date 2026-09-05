@@ -112,6 +112,17 @@ function Test-ExcelRegistryEvolution {
 function Get-ExcelInstancesEvolutionRunDir {
     $evolutionDir = Get-ExcelInstancesEvolutionDir
     $marker = Join-Path $evolutionDir 'current-run.txt'
+
+    if ($env:VBA_EVOLUTION_RUN_ID) {
+        New-Item -ItemType Directory -Path $evolutionDir -Force | Out-Null
+        $runDir = Join-Path $evolutionDir $env:VBA_EVOLUTION_RUN_ID
+        if (-not (Test-Path -LiteralPath $runDir -PathType Container)) {
+            New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+        }
+        [System.IO.File]::WriteAllText($marker, $runDir, [System.Text.UTF8Encoding]::new($false))
+        return $runDir
+    }
+
     if (Test-Path -LiteralPath $marker -PathType Leaf) {
         $runDir = (Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim()
         if ($runDir -and (Test-Path -LiteralPath $runDir -PathType Container)) {

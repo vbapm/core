@@ -71,6 +71,14 @@ const hasVerboseArg = process.argv.some(arg => arg === "--verbose" || arg === "-
 const isVerbose = /^(1|true|yes)$/i.test(process.env.E2E_VERBOSE || "") || hasVerboseArg;
 const backgroundCommands = new Set(["build", "update", "export", "extract", "test"]);
 
+if (/^(1|true|yes)$/i.test(process.env.VBA_EVOLUTION || "") && !process.env.VBA_EVOLUTION_RUN_ID) {
+	const now = new Date();
+	const pad = (value: number, length = 2) => String(value).padStart(length, "0");
+	process.env.VBA_EVOLUTION_RUN_ID =
+		`${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}` +
+		`--${pad(now.getUTCHours())}h${pad(now.getUTCMinutes())}m${pad(now.getUTCSeconds())}s${pad(now.getUTCMilliseconds(), 3)}`;
+}
+
 function getE2EBackground(): boolean | undefined {
 	const value = process.env.E2E_BACKGROUND;
 	if (!value) return;
