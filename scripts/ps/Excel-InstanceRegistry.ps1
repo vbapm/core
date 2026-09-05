@@ -414,7 +414,8 @@ function Get-ExcelWorkbooks {
 Return the names (and installed/loaded status) of add-ins known to a COM
 Excel.Application [ref]. Add-ins that are currently loaded are flagged
 `isOpen = $true`. Names are unique per add-in and normalized to forward slashes
-for any path-like names.
+for any path-like names. `fullPath` contains the add-in's COM `FullName` when
+Excel provides it.
 #>
 function Get-ExcelAddins {
     param([Parameter(Mandatory)][object]$ExcelApp)
@@ -425,6 +426,12 @@ function Get-ExcelAddins {
             try {
                 $name = [string]$addin.Name
                 $isOpen = [bool]$addin.Installed
+                $fullPath = $null
+                try {
+                    if ($addin.FullName) {
+                        $fullPath = ([string]$addin.FullName -replace '\\', '/')
+                    }
+                } catch {}
             } catch {
                 continue
             }
@@ -432,8 +439,9 @@ function Get-ExcelAddins {
             if (-not $name) { continue }
 
             $addins += [pscustomobject]@{
-                name   = ($name -replace '\\', '/')
-                isOpen = $isOpen
+                name     = ($name -replace '\\', '/')
+                fullPath = $fullPath
+                isOpen   = $isOpen
             }
         }
     } catch {

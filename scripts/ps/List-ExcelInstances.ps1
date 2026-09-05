@@ -20,6 +20,7 @@ $excelIcon = [char]::ConvertFromUtf32(0x1F4CA) # 📊 Excel icon
 $visibleIcon = [char]::ConvertFromUtf32(0x1F441) + [char]0xFE0F # 👁️ Visible icon
 $invisibleIcon = [char]::ConvertFromUtf32(0x1F648) # 🙈 Invisible icon
 $workbookIcon = [char]::ConvertFromUtf32(0x1F4D6) # 📖 Workbook icon
+$addinIcon = [char]::ConvertFromUtf32(0x1F4DA) # 📚 Add-in icon
 $ghostIcon = [char]::ConvertFromUtf32(0x1F47B) # 👻 Ghost workbook icon
 $emptyIcon = [char]::ConvertFromUtf32(0x1F4ED) # 📭 Empty icon
 $windowIcon = [char]::ConvertFromUtf32(0x1FA9F) # 🪟 Window icon
@@ -102,6 +103,15 @@ foreach ($instance in $instances) {
         }
     } else {
         Write-Host "  $emptyIcon window titles: unavailable" -ForegroundColor DarkGray
+    }
+
+    $addins = @($instance.addins)
+    $openAddins = @($addins | Where-Object { $_.isOpen })
+    if ($openAddins.Count -gt 0) {
+        foreach ($addin in $openAddins) {
+            $addinPath = if ($addin.fullPath) { $addin.fullPath } else { $addin.name }
+            Write-Host "  $addinIcon $addinPath" -ForegroundColor DarkCyan
+        }
     }
 
     Write-Host ''
