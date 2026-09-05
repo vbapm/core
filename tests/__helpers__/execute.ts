@@ -90,6 +90,11 @@ function withE2EBackground(command: string): string {
 	return `${command} ${background ? "--background" : "--background=false"}`;
 }
 
+function getCurrentTestName(): string {
+	const jestExpect = (globalThis as any).expect;
+	return jestExpect?.getState?.().currentTestName || "unknown e2e test";
+}
+
 const useSourcePersistentSession =
 	/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") &&
 	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
@@ -179,7 +184,10 @@ export async function execute(
 	}
 
 	const bin = getVbaBin(options?.binDir);
-	const result = await exec(`"${bin}" ${withE2EBackground(command)}`, { cwd, env: process.env });
+	const result = await exec(`"${bin}" ${withE2EBackground(command)}`, {
+		cwd,
+		env: { ...process.env, VBA_E2E_TEST_NAME: getCurrentTestName() }
+	});
 
 	if (isVerbose) {
 		const title = `[e2e] ${command} (${cwd})`;
@@ -251,6 +259,8 @@ async function executeInProcess(
 
 	const prevCwd = process.cwd();
 	const prevEnvCwd = env.cwd;
+	const previousTestName = process.env.VBA_E2E_TEST_NAME;
+	process.env.VBA_E2E_TEST_NAME = getCurrentTestName();
 	try {
 		process.chdir(cwd);
 		// The CLI normally spawns a fresh process whose `env.cwd` is captured at
@@ -288,6 +298,8 @@ async function executeInProcess(
 		console.error = origConsoleError;
 		process.chdir(prevCwd);
 		env.cwd = prevEnvCwd;
+		if (previousTestName === undefined) delete process.env.VBA_E2E_TEST_NAME;
+		else process.env.VBA_E2E_TEST_NAME = previousTestName;
 	}
 
 	if (isVerbose) {

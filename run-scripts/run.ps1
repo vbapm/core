@@ -63,9 +63,11 @@ function Get-MacroTaskDescription {
 		[string[]]$MacroArgValues
 	)
 
+	$testName = $env:VBA_E2E_TEST_NAME
 	$target = Get-MacroTargetFile $MacroArgValues
-	if ($target) { return "$MacroName -> $target" }
-	return $MacroName
+	$task = if ($target) { "$MacroName -> $target" } else { $MacroName }
+	if ($testName) { return "$testName :: $task" }
+	return $task
 }
 
 function Fail {
