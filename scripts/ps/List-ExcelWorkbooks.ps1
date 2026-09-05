@@ -1,61 +1,129 @@
-# List-ExcelWorkbooks.ps1
-#
-# List each workbook exposed by every COM-reachable Excel.Application instance.
-# Use -Json when another script needs structured output.
+<#
+.SYNOPSIS
+Lists every open workbook in every running Excel.Application instance.
 
+.DESCRIPTION
+[Marshal]::GetActiveObject('Excel.Application') only returns the first instance
+registered in the Running Object Table (ROT). This script walks the ROT itself,
+picks up every Excel object it can find (workbooks and applications), resolves
+each one to its owning Application, dedupes by window handle, then enumerates
+Application.Workbooks so workbooks that are not themselves in the ROT (add-ins,
+hidden books, PERSONAL.XLSB) are also reported.
+
+.PARAMETER ShowRot
+Also print the raw ROT display names, for debugging.
+#>
 [CmdletBinding()]
 param(
-    [switch]$Json
+    [switch]$ShowRot
 )
 
-$ErrorActionPreference = 'Stop'
+Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 
-. (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
+public class RotEntry
+{
+    public string DisplayName;
+    public object Object;
+}
 
-$workbookRecords = @()
-$instanceNumber = 0
+public static class RotReader
+{
+    [DllImport("ole32.dll")]
+    private static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
 
-foreach ($excel in @(Get-ExcelApplications)) {
-    $instanceNumber++
+    [DllImport("ole32.dll")]
+    private static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
 
-    try {
-        $processId = Get-ExcelProcessId -ExcelApp $excel
-        $visible = [bool]$excel.Visible
+    [DllImport("user32.dll")]
+    private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int processId);
 
-        foreach ($workbook in @(Get-ExcelWorkbooks -ExcelApp $excel)) {
-            if ([string]::IsNullOrWhiteSpace([string]$workbook)) {
-                continue
+    public static int GetProcessIdFromHwnd(long hwnd)
+    {
+        int pid;
+        GetWindowThreadProcessId(new IntPtr(hwnd), out pid);
+        return pid;
+    }
+
+    public static List<RotEntry> GetEntries()
+    {
+        var result = new List<RotEntry>();
+        IRunningObjectTable rot;
+        if (GetRunningObjectTable(0, out rot) != 0 || rot == null) return result;
+
+        IEnumMoniker enumMoniker;
+        rot.EnumRunning(out enumMoniker);
+        enumMoniker.Reset();
+
+        var monikers = new IMoniker[1];
+        while (enumMoniker.Next(1, monikers, IntPtr.Zero) == 0)
+        {
+            var entry = new RotEntry();
+            IBindCtx ctx;
+            CreateBindCtx(0, out ctx);
+            try
+            {
+                monikers[0].GetDisplayName(ctx, null, out entry.DisplayName);
             }
+            catch { entry.DisplayName = "<unreadable>"; }
+            finally { Marshal.ReleaseComObject(ctx); }
 
-            $workbookRecords += [pscustomobject]@{
-                Instance  = $instanceNumber
-                ProcessId = $processId
-                Visible   = $visible
-                Workbook  = [string]$workbook
+            try
+            {
+                rot.GetObject(monikers[0], out entry.Object);
             }
+            catch { entry.Object = null; }
+
+            result.Add(entry);
         }
-    } catch {
-        Write-Warning "Could not read Excel instance ${instanceNumber}: $($_.Exception.Message)"
-    } finally {
-        try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($excel) | Out-Null } catch {}
+        return result;
+    }
+}
+'@
+
+$entries = [RotReader]::GetEntries()
+
+if ($ShowRot) {
+    Write-Host "ROT entries ($($entries.Count)):" -ForegroundColor Cyan
+    $entries | ForEach-Object { Write-Host "  $($_.DisplayName)" }
+    Write-Host
+}
+
+# Resolve every ROT object to its Excel Application, dedupe by Hwnd.
+$apps = @{}
+foreach ($entry in $entries) {
+    if ($null -eq $entry.Object) { continue }
+    try {
+        $app = $entry.Object.Application
+        if ($null -eq $app -or $app.Name -ne 'Microsoft Excel') { continue }
+        $hwnd = [long]$app.Hwnd
+        if (-not $apps.ContainsKey($hwnd)) { $apps[$hwnd] = $app }
+    }
+    catch {
+        # Not an Office object, or no Application property.
     }
 }
 
-if ($Json) {
-    if ($workbookRecords.Count -eq 0) {
-        Write-Output '[]'
-    } else {
-        $workbookRecords | ConvertTo-Json -Depth 3
+if ($apps.Count -eq 0) {
+    Write-Warning 'No Excel.Application found in the ROT.'
+    return
+}
+
+foreach ($hwnd in $apps.Keys | Sort-Object) {
+    $app = $apps[$hwnd]
+    $processId = [RotReader]::GetProcessIdFromHwnd($hwnd)
+    foreach ($wb in @($app.Workbooks)) {
+        [pscustomobject]@{
+            ProcessId = $processId
+            Hwnd      = $hwnd
+            Visible   = $app.Visible
+            Name      = $wb.Name
+            Saved     = $wb.Saved
+            ReadOnly  = $wb.ReadOnly
+            Path      = $wb.FullName
+        }
     }
-    exit 0
-}
-
-if ($workbookRecords.Count -eq 0) {
-    Write-Output 'No open workbooks found in COM-reachable Excel instances.'
-    exit 0
-}
-
-Write-Output "Open workbooks: $($workbookRecords.Count)"
-foreach ($record in $workbookRecords) {
-    Write-Output ("PID={0} visible={1} workbook={2}" -f $record.ProcessId, $record.Visible, $record.Workbook)
 }
