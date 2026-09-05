@@ -232,7 +232,8 @@ class Excel {
 		# lingering instance to the exact test that opened the workbook.
 		if (Get-Command Refresh-ExcelInstance -ErrorAction SilentlyContinue) {
 			try {
-				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Task (Get-MacroTaskDescription $MacroName $MacroArgValues)
+				$task = if ($this.ExcelWasOpen) { '' } else { Get-MacroTaskDescription $MacroName $MacroArgValues }
+				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Task $task
 			} catch {
 				# best-effort; never break a run over coordination bookkeeping
 			}

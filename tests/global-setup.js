@@ -18,6 +18,7 @@ const { join } = require("path");
 const fs = require("fs");
 
 module.exports = async function globalSetup() {
+	ensureExcelInstancesClean();
 	clearInactiveInstances();
 	writeRunBanner();
 
@@ -42,6 +43,21 @@ module.exports = async function globalSetup() {
 		console.warn("[e2e globalSetup] EnsureVbapmAddin.ps1 exited non-zero; continuing anyway.");
 	}
 };
+
+function ensureExcelInstancesClean() {
+	if (process.platform !== "win32") return;
+
+	const script = join(__dirname, "..", "scripts", "ps", "Ensure-ExcelInstancesClean.ps1");
+	const result = spawnSync(
+		"powershell.exe",
+		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
+		{ stdio: "inherit" }
+	);
+
+	if (result.status !== 0) {
+		throw new Error("Rogue Excel instances remain alive; refusing to start e2e tests.");
+	}
+}
 
 /**
  * Reset the registry's inactive (recently deactivated) list before tests run so
