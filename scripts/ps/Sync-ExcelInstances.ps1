@@ -56,6 +56,8 @@ function Upsert-Instance {
         [bool]$Visible,
         [string[]]$Workbooks,
         [object[]]$Addins,
+        [object[]]$GhostWorkbooks = @(),
+        [object]$GhostDetection = $null,
         [bool]$ComReachable = $false
     )
 
@@ -75,7 +77,39 @@ function Upsert-Instance {
         $reason = if ($prev.reason) { $prev.reason } else { $reason }
     }
 
-    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -Addins $Addins -WindowTitle $windowTitle -ComReachable $ComReachable
+    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -Addins $Addins -GhostWorkbooks $GhostWorkbooks -GhostDetection $GhostDetection -WindowTitle $windowTitle -ComReachable $ComReachable
+}
+
+function Get-GhostVbeReport {
+    param([Parameter(Mandatory)][int]$InstanceId)
+
+    $detector = Join-Path $PSScriptRoot 'detect-ghost-vbe.ps1'
+    try {
+        $json = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $detector -ProcessId $InstanceId -Quiet -Raw 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($json -join ''))) {
+            return [pscustomobject]@{ available = $false; error = 'Ghost detector failed.'; projectCount = 0; ghostCount = 0 }
+        }
+
+        $projects = @((($json -join [Environment]::NewLine) | ConvertFrom-Json -ErrorAction Stop))
+        $ghosts = @($projects | Where-Object { $_.IsGhost })
+        $ghostRecords = @($ghosts | ForEach-Object {
+            [pscustomobject]@{
+                name            = $_.Name
+                file            = $_.File
+                reason          = $_.Reason
+                componentCount  = $_.ComponentCount
+            }
+        })
+        return [pscustomobject]@{
+            available    = $true
+            error        = $null
+            projectCount = $projects.Count
+            ghostCount   = $ghosts.Count
+            ghosts       = $ghostRecords
+        }
+    } catch {
+        return [pscustomobject]@{ available = $false; error = $_.Exception.Message; projectCount = 0; ghostCount = 0; ghosts = @() }
+    }
 }
 
 $apps = @(Get-ExcelApplications)
@@ -100,9 +134,11 @@ foreach ($app in $apps) {
 
         $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $app)
         $openAddins = @(Get-ExcelAddins -ExcelApp $app)
+        $ghostDetection = Get-GhostVbeReport -InstanceId $instancePid
+        $ghostWorkbooks = @($ghostDetection.ghosts)
 
-        Upsert-Instance $instancePid $isVisible $openWorkbooks $openAddins $true
-        Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count) addins=$($openAddins.Count)"
+        Upsert-Instance -InstanceId $instancePid -Visible $isVisible -Workbooks $openWorkbooks -Addins $openAddins -GhostWorkbooks $ghostWorkbooks -GhostDetection $ghostDetection -ComReachable $true
+        Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count) ghosts=$($ghostWorkbooks.Count) addins=$($openAddins.Count)"
     } catch {
         Write-Warning "Could not sync a ROT Excel instance: $($_.Exception.Message)"
     } finally {

@@ -60,6 +60,8 @@
 #     "reason":     "<string>",   # e.g. "e2e", "vbapm-run", "unknown"
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
 #     "addins":     [{"name": "<addin name>", "isOpen": <bool>}, ...]
+#     "ghostWorkbooks": [{"name": "<VBE project>", "file": "<path>", ...}, ...]
+#     "ghostDetection": {"available": <bool>, "ghostCount": <int>, ...}
 #   }
 #
 # An INACTIVE entry is a full active entry that was deactivated instead of being
@@ -526,6 +528,8 @@ function Update-ExcelInstance {
         [string]$Reason = 'unknown',
         [string[]]$Workbooks = @(),
         [object[]]$Addins = @(),
+        [object[]]$GhostWorkbooks = @(),
+        [object]$GhostDetection = $null,
         [string]$WindowTitle = '',
         [bool]$ComReachable = $true
     )
@@ -569,6 +573,8 @@ function Update-ExcelInstance {
             createdAt    = (Get-Date).ToString('o')
             workbooks    = if ($null -eq $Workbooks) { $null } else { @($Workbooks) }
             addins       = if ($null -eq $Addins) { $null } else { @($Addins) }
+            ghostWorkbooks = @($GhostWorkbooks)
+            ghostDetection = $GhostDetection
         }
 
         $found = $false

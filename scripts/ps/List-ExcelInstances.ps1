@@ -20,6 +20,7 @@ $excelIcon = [char]::ConvertFromUtf32(0x1F4CA) # 📊 Excel icon
 $visibleIcon = [char]::ConvertFromUtf32(0x1F441) + [char]0xFE0F # 👁️ Visible icon
 $invisibleIcon = [char]::ConvertFromUtf32(0x1F648) # 🙈 Invisible icon
 $workbookIcon = [char]::ConvertFromUtf32(0x1F4D6) # 📖 Workbook icon
+$ghostIcon = [char]::ConvertFromUtf32(0x1F47B) # 👻 Ghost workbook icon
 $emptyIcon = [char]::ConvertFromUtf32(0x1F4ED) # 📭 Empty icon
 $windowIcon = [char]::ConvertFromUtf32(0x1FA9F) # 🪟 Window icon
 $comIcon = [char]::ConvertFromUtf32(0x2B50) # ⭐ COM-reachable icon
@@ -50,8 +51,30 @@ foreach ($instance in $instances) {
         if ($workbooks.Count -eq 0 -or $null -eq $workbooks[0]) {
             Write-Host "  $emptyIcon workbooks: none" -ForegroundColor DarkGray
         } else {
+            $ghostByPath = @{}
+            foreach ($ghost in @($instance.ghostWorkbooks)) {
+                if ($ghost.file) {
+                    try {
+                        $ghostPath = [System.IO.Path]::GetFullPath([string]$ghost.file).ToLowerInvariant()
+                        $ghostByPath[$ghostPath] = $ghost
+                    } catch {}
+                }
+            }
+
             foreach ($workbook in $workbooks) {
-                Write-Host "  $workbookIcon $workbook" -ForegroundColor White
+                $isGhost = $false
+                try {
+                    if ($workbook -notmatch '^\[.*\]$') {
+                        $workbookPath = [System.IO.Path]::GetFullPath([string]$workbook).ToLowerInvariant()
+                        $isGhost = $ghostByPath.ContainsKey($workbookPath)
+                    }
+                } catch {}
+
+                if ($isGhost) {
+                    Write-Host "  $ghostIcon $workbook" -ForegroundColor Red
+                } else {
+                    Write-Host "  $workbookIcon $workbook" -ForegroundColor White
+                }
             }
         }
     } elseif (Test-Path -LiteralPath $windowScript) {

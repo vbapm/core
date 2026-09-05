@@ -20,6 +20,10 @@
 .PARAMETER Raw
     Output a raw JSON array so the result can be consumed by another tool.
 
+.PARAMETER ProcessId
+    Check the Excel instance with this process ID instead of the first active
+    Excel instance.
+
 .EXAMPLE
     .\scripts\ps\detect-ghost-vbe.ps1
 
@@ -33,7 +37,8 @@
 param(
     [string]$Name,
     [switch]$Quiet,
-    [switch]$Raw
+    [switch]$Raw,
+    [int]$ProcessId
 )
 
 # ---------------------------------------------------------------
@@ -54,6 +59,7 @@ if ($PSVersionTable.PSEdition -eq 'Core') {
         if ($Name)  { $psArgs += '-Name'; $psArgs += $Name }
         if ($Quiet) { $psArgs += '-Quiet' }
         if ($Raw)   { $psArgs += '-Raw' }
+        if ($ProcessId) { $psArgs += '-ProcessId'; $psArgs += $ProcessId }
         & powershell.exe $psArgs
         exit $LASTEXITCODE
     }
@@ -76,15 +82,34 @@ if ($excelProcs.Count -eq 0) {
 $Excel = $null
 $lastError = ""
 
+if ($ProcessId -gt 0) {
+    . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
+    foreach ($candidate in @(Get-ExcelApplications)) {
+        try {
+            if ((Get-ExcelProcessId -ExcelApp $candidate) -eq $ProcessId) {
+                $Excel = $candidate
+                $candidate = $null
+                break
+            }
+        } catch {
+            $lastError = "ROT PID lookup: $($_.Exception.Message)"
+        } finally {
+            if ($null -ne $candidate) {
+                try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($candidate) | Out-Null } catch {}
+            }
+        }
+    }
+}
+
 # Strategy A: Marshal.GetActiveObject (available in .NET Framework)
-try {
+if (-not $Excel -and $ProcessId -le 0) { try {
     $Excel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
 } catch {
     $lastError = "GetActiveObject: $($_.Exception.Message)"
-}
+} }
 
 # Strategy B: versioned ProgIDs
-if (-not $Excel) {
+if (-not $Excel -and $ProcessId -le 0) {
     foreach ($suffix in @("16", "15")) {
         try {
             $Excel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application.$suffix")
@@ -94,7 +119,7 @@ if (-not $Excel) {
 }
 
 # Strategy C: VB GetObject
-if (-not $Excel) {
+if (-not $Excel -and $ProcessId -le 0) {
     try {
         Add-Type -AssemblyName Microsoft.VisualBasic -ErrorAction Stop
         $Excel = [Microsoft.VisualBasic.Interaction]::GetObject($null, "Excel.Application")
@@ -104,7 +129,7 @@ if (-not $Excel) {
 }
 
 # Strategy D: New-Object (creates fresh instance — last resort)
-if (-not $Excel) {
+if (-not $Excel -and $ProcessId -le 0) {
     try {
         $Excel = New-Object -ComObject "Excel.Application"
         if ($Excel.Workbooks.Count -eq 0 -and $excelProcs.Count -gt 0) {
