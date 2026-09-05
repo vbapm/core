@@ -57,7 +57,7 @@ function Get-MacroTargetFile {
 	return ''
 }
 
-function Get-MacroTaskDescription {
+function Get-MacroLogDescription {
 	param(
 		[string]$MacroName,
 		[string[]]$MacroArgValues
@@ -65,9 +65,28 @@ function Get-MacroTaskDescription {
 
 	$testName = $env:VBA_E2E_TEST_NAME
 	$target = Get-MacroTargetFile $MacroArgValues
-	$task = if ($target) { "$MacroName -> $target" } else { $MacroName }
-	if ($testName) { return "$testName :: $task" }
-	return $task
+	$log = if ($target) { "$MacroName -> $target" } else { $MacroName }
+	if ($testName) { $log = "$testName :: $log" }
+	return "$(Get-Date -Format o) :: $log"
+}
+
+function Get-MacroErrorLog {
+	param(
+		[string]$MacroName,
+		[string[]]$MacroArgValues,
+		[string]$Result
+	)
+
+	$log = Get-MacroLogDescription $MacroName $MacroArgValues
+	try {
+		$parsed = $Result | ConvertFrom-Json -ErrorAction Stop
+		$errors = @($parsed.errors | Where-Object { $_ })
+		if ($parsed.success -eq $false -or $errors.Count -gt 0) {
+			$detail = if ($errors.Count -gt 0) { $errors -join ' | ' } else { 'unknown error' }
+			return "$log :: ERROR: $detail"
+		}
+	} catch {}
+	return $log
 }
 
 function Fail {
@@ -232,8 +251,8 @@ class Excel {
 		# lingering instance to the exact test that opened the workbook.
 		if (Get-Command Refresh-ExcelInstance -ErrorAction SilentlyContinue) {
 			try {
-				$task = if ($this.ExcelWasOpen) { '' } else { Get-MacroTaskDescription $MacroName $MacroArgValues }
-				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Task $task
+				$log = if ($this.ExcelWasOpen) { '' } else { Get-MacroLogDescription $MacroName $MacroArgValues }
+				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Log $log
 			} catch {
 				# best-effort; never break a run over coordination bookkeeping
 			}
@@ -458,7 +477,7 @@ function Run {
 							-Owner "terminal-$PID" `
 							-Visible (-not $excel.BackgroundBuild) `
 							-Reason $reason `
-							-Task (Get-MacroTaskDescription $MacroName $MacroArgValues)
+							-Log (Get-MacroLogDescription $MacroName $MacroArgValues)
 					} catch {
 						$registeredPid = 0
 					}
@@ -475,7 +494,8 @@ function Run {
 				# the e2e test that opened them.
 				if ($HasRegistry -and $registeredPid -gt 0 -and $null -ne $excel.App) {
 					try {
-						Refresh-ExcelInstance -ExcelApp $excel.App -ProcessId $registeredPid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Task (Get-MacroTaskDescription $MacroName $MacroArgValues)
+						$log = Get-MacroErrorLog $MacroName $MacroArgValues $result
+						Refresh-ExcelInstance -ExcelApp $excel.App -ProcessId $registeredPid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Log $log
 					} catch {
 						# best-effort
 					}

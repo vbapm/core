@@ -60,7 +60,7 @@
 #     "windowTitle": "<string>",  # main window title (may be null)
 #     "reason":     "<string>",   # e.g. "e2e", "vbapm-run", "unknown"
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
-#     "tasks":      ["<macro task>", ...]  # tasks assigned to this instance
+#     "logs":       ["<task or error log>", ...]  # instance activity log
 #     "workbookReadOnly": {"<normalized path>": <bool>, ...}
 #     "addins":     [{"name": "<addin name>", "fullPath": "<path>", "isOpen": <bool>, "readOnly": <bool>}, ...]
 #     "ghostWorkbooks": [{"name": "<VBE project>", "file": "<path>", ...}, ...]
@@ -658,7 +658,7 @@ function Update-ExcelInstance {
         [bool]$Visible = $false,
         [string]$Reason = 'unknown',
         [string[]]$Workbooks = @(),
-        [string[]]$Tasks = $null,
+        [string[]]$Logs = $null,
         [object]$WorkbookReadOnly = $null,
         [object[]]$Addins = @(),
         [object[]]$GhostWorkbooks = @(),
@@ -695,10 +695,10 @@ function Update-ExcelInstance {
         }
 
         $existingEntry = @($instances | Where-Object { [int]$_.pid -eq $InstanceId })[0]
-        if ($null -eq $Tasks) {
-            $Tasks = if ($existingEntry -and $null -ne $existingEntry.tasks) { @($existingEntry.tasks) } else { @() }
+        if ($null -eq $Logs) {
+            $Logs = if ($existingEntry -and $null -ne $existingEntry.logs) { @($existingEntry.logs) } else { @() }
         }
-        $Tasks = @($Tasks | Where-Object { $_ } | Select-Object -Unique)
+        $Logs = @($Logs | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
         if ($null -eq $WorkbookReadOnly) {
             $WorkbookReadOnly = if ($existingEntry -and $null -ne $existingEntry.workbookReadOnly) {
                 $existingEntry.workbookReadOnly
@@ -718,7 +718,7 @@ function Update-ExcelInstance {
             windowTitle  = if ([string]::IsNullOrEmpty($WindowTitle)) { $null } else { $WindowTitle }
             createdAt    = (Get-Date).ToString('o')
             workbooks    = if ($null -eq $Workbooks) { $null } else { @($Workbooks) }
-            tasks        = @($Tasks)
+            logs         = @($Logs)
             workbookReadOnly = $WorkbookReadOnly
             addins       = if ($null -eq $Addins) { $null } else { @($Addins) }
             ghostWorkbooks = @($GhostWorkbooks)
@@ -989,7 +989,7 @@ function Register-ExcelInstance {
         [string]$Owner,
         [bool]$Visible = $false,
         [string]$Reason = 'unknown',
-        [string]$Task = ''
+        [string]$Log = ''
     )
 
     if (-not $Owner) {
@@ -1017,8 +1017,8 @@ function Register-ExcelInstance {
         $openAddins = @(Get-ExcelAddins -ExcelApp $ExcelApp)
 
         # This instance was just obtained via COM, so it is COM-reachable.
-        $tasks = if ($Task) { @($Task) } else { @() }
-        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -Tasks $tasks -Addins $openAddins -ComReachable $true
+        $logs = if ($Log) { @($Log) } else { @() }
+        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -Logs $logs -Addins $openAddins -ComReachable $true
         return $instancePid
     } catch {
         Write-Warning "Failed to register Excel instance: $($_.Exception.Message)"
@@ -1040,7 +1040,7 @@ function Refresh-ExcelInstance {
         [Parameter(Mandatory)][object]$ExcelApp,
         [int]$ProcessId = 0,
         [string]$TargetPath = '',
-        [string]$Task = ''
+        [string]$Log = ''
     )
 
     try {
@@ -1077,11 +1077,11 @@ function Refresh-ExcelInstance {
                 if ([int]$active[$i].pid -eq $ProcessId) {
                     $active[$i].workbooks = @($openWorkbooks)
                     $active[$i].addins = @($openAddins)
-                    if ($Task) {
-                        $activeTasks = @($active[$i].tasks) + @($Task)
-                        $active[$i].tasks = @($activeTasks | Where-Object { $_ } | Select-Object -Unique)
-                    } elseif ($null -eq $active[$i].tasks) {
-                        $active[$i].tasks = @()
+                    if ($Log) {
+                        $activeLogs = @($active[$i].logs) + @($Log)
+                        $active[$i].logs = @($activeLogs | Where-Object { $_ } | Select-Object -Unique)
+                    } elseif ($null -eq $active[$i].logs) {
+                        $active[$i].logs = @()
                     }
                     $active[$i].visible = [bool]$isVisible
                     $found = $true
