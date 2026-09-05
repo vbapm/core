@@ -18,6 +18,7 @@ param(
     [switch]$ShowRot
 )
 
+if (-not ('RotReader' -as [type])) {
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
@@ -48,41 +49,66 @@ public static class RotReader
         return pid;
     }
 
+    public static void Release(object o)
+    {
+        if (o != null && Marshal.IsComObject(o)) Marshal.ReleaseComObject(o);
+    }
+
     public static List<RotEntry> GetEntries()
     {
         var result = new List<RotEntry>();
-        IRunningObjectTable rot;
-        if (GetRunningObjectTable(0, out rot) != 0 || rot == null) return result;
-
-        IEnumMoniker enumMoniker;
-        rot.EnumRunning(out enumMoniker);
-        enumMoniker.Reset();
-
-        var monikers = new IMoniker[1];
-        while (enumMoniker.Next(1, monikers, IntPtr.Zero) == 0)
+        IRunningObjectTable rot = null;
+        IEnumMoniker enumMoniker = null;
+        IBindCtx ctx = null;
+        try
         {
-            var entry = new RotEntry();
-            IBindCtx ctx;
-            CreateBindCtx(0, out ctx);
-            try
-            {
-                monikers[0].GetDisplayName(ctx, null, out entry.DisplayName);
-            }
-            catch { entry.DisplayName = "<unreadable>"; }
-            finally { Marshal.ReleaseComObject(ctx); }
+            int hr = GetRunningObjectTable(0, out rot);
+            if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+            if (rot == null) return result;
 
-            try
-            {
-                rot.GetObject(monikers[0], out entry.Object);
-            }
-            catch { entry.Object = null; }
+            // ComTypes interface methods throw COMException on failing HRESULTs.
+            rot.EnumRunning(out enumMoniker);
+            if (enumMoniker == null) return result;
+            enumMoniker.Reset();
 
-            result.Add(entry);
+            hr = CreateBindCtx(0, out ctx);
+            if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+
+            var monikers = new IMoniker[1];
+            while (enumMoniker.Next(1, monikers, IntPtr.Zero) == 0)
+            {
+                var entry = new RotEntry();
+                try
+                {
+                    try { monikers[0].GetDisplayName(ctx, null, out entry.DisplayName); }
+                    catch { entry.DisplayName = "<unreadable>"; }
+
+                    try
+                    {
+                        hr = rot.GetObject(monikers[0], out entry.Object);
+                        if (hr != 0) entry.Object = null;
+                    }
+                    catch { entry.Object = null; }
+                }
+                finally
+                {
+                    Release(monikers[0]);
+                    monikers[0] = null;
+                }
+                result.Add(entry);
+            }
+            return result;
         }
-        return result;
+        finally
+        {
+            Release(ctx);
+            Release(enumMoniker);
+            Release(rot);
+        }
     }
 }
 '@
+}
 
 $entries = [RotReader]::GetEntries()
 
@@ -94,36 +120,75 @@ if ($ShowRot) {
 
 # Resolve every ROT object to its Excel Application, dedupe by Hwnd.
 $apps = @{}
-foreach ($entry in $entries) {
-    if ($null -eq $entry.Object) { continue }
-    try {
-        $app = $entry.Object.Application
-        if ($null -eq $app -or $app.Name -ne 'Microsoft Excel') { continue }
-        $hwnd = [long]$app.Hwnd
-        if (-not $apps.ContainsKey($hwnd)) { $apps[$hwnd] = $app }
-    }
-    catch {
-        # Not an Office object, or no Application property.
-    }
-}
-
-if ($apps.Count -eq 0) {
-    Write-Warning 'No Excel.Application found in the ROT.'
-    return
-}
-
-foreach ($hwnd in $apps.Keys | Sort-Object) {
-    $app = $apps[$hwnd]
-    $processId = [RotReader]::GetProcessIdFromHwnd($hwnd)
-    foreach ($wb in @($app.Workbooks)) {
-        [pscustomobject]@{
-            ProcessId = $processId
-            Hwnd      = $hwnd
-            Visible   = $app.Visible
-            Name      = $wb.Name
-            Saved     = $wb.Saved
-            ReadOnly  = $wb.ReadOnly
-            Path      = $wb.FullName
+try {
+    foreach ($entry in $entries) {
+        if ($null -eq $entry.Object) { continue }
+        $app = $null
+        try {
+            $app = $entry.Object.Application
+            if ($null -eq $app -or $app.Name -ne 'Microsoft Excel') { continue }
+            $hwnd = [long]$app.Hwnd
+            if (-not $apps.ContainsKey($hwnd)) {
+                $apps[$hwnd] = $app
+                $app = $null
+            }
+        }
+        catch {
+            # Not an Office object, or no Application property.
+        }
+        finally {
+            [RotReader]::Release($app)
+            [RotReader]::Release($entry.Object)
+            $entry.Object = $null
         }
     }
+
+    if ($apps.Count -eq 0) {
+        Write-Warning 'No Excel.Application found in the ROT.'
+        return
+    }
+
+    foreach ($hwnd in $apps.Keys | Sort-Object) {
+        $app = $apps[$hwnd]
+        $processId = [RotReader]::GetProcessIdFromHwnd($hwnd)
+        $visible = $null
+        try { $visible = $app.Visible } catch { }
+
+        $workbooks = $null
+        try {
+            $workbooks = $app.Workbooks
+            $count = $workbooks.Count
+            for ($i = 1; $i -le $count; $i++) {
+                $wb = $null
+                try {
+                    $wb = $workbooks.Item($i)
+                    [pscustomobject]@{
+                        ProcessId = $processId
+                        Hwnd      = $hwnd
+                        Visible   = $visible
+                        Name      = $wb.Name
+                        Saved     = $wb.Saved
+                        ReadOnly  = $wb.ReadOnly
+                        Path      = if ($wb.Path) { $wb.FullName } else { $null }
+                    }
+                }
+                catch {
+                    Write-Warning "PID ${processId}: workbook #$i is inaccessible: $($_.Exception.Message)"
+                }
+                finally {
+                    [RotReader]::Release($wb)
+                }
+            }
+        }
+        catch {
+            Write-Warning "PID ${processId}: cannot enumerate workbooks: $($_.Exception.Message)"
+        }
+        finally {
+            [RotReader]::Release($workbooks)
+        }
+    }
+}
+finally {
+    foreach ($app in $apps.Values) { [RotReader]::Release($app) }
+    $apps.Clear()
 }
