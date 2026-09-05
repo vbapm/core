@@ -4,7 +4,10 @@
 # workbooks from instances.json.
 
 [CmdletBinding()]
-param()
+param(
+    [Alias('Window')]
+    [switch]$Windows
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -21,6 +24,8 @@ $visibleIcon = [char]::ConvertFromUtf32(0x1F441) + [char]0xFE0F # 👁️ Visibl
 $invisibleIcon = [char]::ConvertFromUtf32(0x1F648) # 🙈 Invisible icon
 $workbookIcon = [char]::ConvertFromUtf32(0x1F4D6) # 📖 Workbook icon
 $addinIcon = [char]::ConvertFromUtf32(0x1F4DA) # 📚 Add-in icon
+$editableIcon = [char]0x270F + [char]0xFE0F # ✏️ Editable icon
+$readOnlyIcon = [char]::ConvertFromUtf32(0x1F52D) # 🔭 Read-only icon
 $ghostIcon = [char]::ConvertFromUtf32(0x1F47B) # 👻 Ghost workbook icon
 $emptyIcon = [char]::ConvertFromUtf32(0x1F4ED) # 📭 Empty icon
 $windowIcon = [char]::ConvertFromUtf32(0x1FA9F) # 🪟 Window icon
@@ -74,35 +79,45 @@ foreach ($instance in $instances) {
                 if ($isGhost) {
                     Write-Host "  $ghostIcon $workbook" -ForegroundColor Red
                 } else {
-                    Write-Host "  $workbookIcon $workbook" -ForegroundColor White
-                }
-            }
-        }
-    } elseif (Test-Path -LiteralPath $windowScript) {
-        $windowLines = @(
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $windowScript -ProcessId ([int]$instance.pid) |
-                Where-Object { $_ -match 'class=EXCEL7' -and $_ -match 'title=' }
-        )
-
-        if ($windowLines.Count -eq 0) {
-            Write-Host "  $emptyIcon EXCEL7 window titles: none" -ForegroundColor DarkGray
-        } else {
-            foreach ($windowLine in $windowLines) {
-                if ($verboseOutput) {
-                    if ($windowLine -match 'title=(.*)$') {
-                        $windowTitle = $matches[1]
-                        $windowDetails = $windowLine.Substring(0, $windowLine.Length - $matches[0].Length).TrimEnd()
-                        Write-Host "  $windowIcon  $windowTitle [$windowDetails]" -ForegroundColor White
-                    } else {
-                        Write-Host "  $windowIcon  $($windowLine.Trim())" -ForegroundColor White
+                    $workbookKey = ([string]$workbook).ToLowerInvariant()
+                    $workbookReadOnly = $false
+                    if ($instance.workbookReadOnly -and $instance.workbookReadOnly.PSObject.Properties.Name -contains $workbookKey) {
+                        $workbookReadOnly = [bool]$instance.workbookReadOnly.PSObject.Properties[$workbookKey].Value
                     }
-                } elseif ($windowLine -match 'title=(.*)$') {
-                    Write-Host "  $windowIcon  $($matches[1])" -ForegroundColor White
+                    $fileStateIcon = if ($workbookReadOnly) { $readOnlyIcon } else { $editableIcon }
+                    Write-Host "  $workbookIcon$fileStateIcon $workbook" -ForegroundColor White
                 }
             }
         }
-    } else {
-        Write-Host "  $emptyIcon window titles: unavailable" -ForegroundColor DarkGray
+    }
+
+    if (-not $instance.comReachable -or $Windows) {
+        if (Test-Path -LiteralPath $windowScript) {
+            $windowLines = @(
+                & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $windowScript -ProcessId ([int]$instance.pid) |
+                    Where-Object { $_ -match 'class=EXCEL7' -and $_ -match 'title=' }
+            )
+
+            if ($windowLines.Count -eq 0) {
+                Write-Host "  $emptyIcon EXCEL7 window titles: none" -ForegroundColor DarkGray
+            } else {
+                foreach ($windowLine in $windowLines) {
+                    if ($verboseOutput) {
+                        if ($windowLine -match 'title=(.*)$') {
+                            $windowTitle = $matches[1]
+                            $windowDetails = $windowLine.Substring(0, $windowLine.Length - $matches[0].Length).TrimEnd()
+                            Write-Host "  $windowIcon  $windowTitle [$windowDetails]" -ForegroundColor White
+                        } else {
+                            Write-Host "  $windowIcon  $($windowLine.Trim())" -ForegroundColor White
+                        }
+                    } elseif ($windowLine -match 'title=(.*)$') {
+                        Write-Host "  $windowIcon  $($matches[1])" -ForegroundColor White
+                    }
+                }
+            }
+        } else {
+            Write-Host "  $emptyIcon window titles: unavailable" -ForegroundColor DarkGray
+        }
     }
 
     $addins = @($instance.addins)
@@ -110,7 +125,8 @@ foreach ($instance in $instances) {
     if ($openAddins.Count -gt 0) {
         foreach ($addin in $openAddins) {
             $addinPath = if ($addin.fullPath) { $addin.fullPath } else { $addin.name }
-            Write-Host "  $addinIcon $addinPath" -ForegroundColor DarkCyan
+            $fileStateIcon = if ($addin.readOnly) { $readOnlyIcon } else { $editableIcon }
+            Write-Host "  $addinIcon$fileStateIcon $addinPath" -ForegroundColor DarkCyan
         }
     }
 

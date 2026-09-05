@@ -59,7 +59,8 @@
 #     "windowTitle": "<string>",  # main window title (may be null)
 #     "reason":     "<string>",   # e.g. "e2e", "vbapm-run", "unknown"
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
-#     "addins":     [{"name": "<addin name>", "isOpen": <bool>}, ...]
+#     "workbookReadOnly": {"<normalized path>": <bool>, ...}
+#     "addins":     [{"name": "<addin name>", "fullPath": "<path>", "isOpen": <bool>, "readOnly": <bool>}, ...]
 #     "ghostWorkbooks": [{"name": "<VBE project>", "file": "<path>", ...}, ...]
 #     "ghostDetection": {"available": <bool>, "ghostCount": <int>, ...}
 #   }
@@ -411,16 +412,56 @@ function Get-ExcelWorkbooks {
 
 <#
 .SYNOPSIS
+Return read-only state keyed by the normalized workbook value used in the
+instance registry.
+#>
+function Get-ExcelWorkbookReadOnly {
+    param([Parameter(Mandatory)][object]$ExcelApp)
+
+    $readOnlyByWorkbook = @{}
+    try {
+        foreach ($workbook in $ExcelApp.Workbooks) {
+            try {
+                $fullName = [string]$workbook.FullName
+                $name = [string]$workbook.Name
+                $registryValue = if ($fullName -and $fullName -ne $name) {
+                    ($fullName -replace '\\', '/')
+                } else {
+                    "[$name]"
+                }
+                $key = $registryValue.ToLowerInvariant()
+                $readOnlyByWorkbook[$key] = [bool]$workbook.ReadOnly
+            } catch {}
+        }
+    } catch {}
+    return $readOnlyByWorkbook
+}
+
+<#
+.SYNOPSIS
 Return the names (and installed/loaded status) of add-ins known to a COM
 Excel.Application [ref]. Add-ins that are currently loaded are flagged
 `isOpen = $true`. Names are unique per add-in and normalized to forward slashes
 for any path-like names. `fullPath` contains the add-in's COM `FullName` when
-Excel provides it.
+Excel provides it. `readOnly` comes from the matching open workbook.
 #>
 function Get-ExcelAddins {
     param([Parameter(Mandatory)][object]$ExcelApp)
 
     $addins = @()
+    $readOnlyByPath = @{}
+    try {
+        foreach ($workbook in $ExcelApp.Workbooks) {
+            try {
+                $workbookPath = [string]$workbook.FullName
+                if ($workbookPath) {
+                    $normalizedPath = ($workbookPath -replace '\\', '/').ToLowerInvariant()
+                    $readOnlyByPath[$normalizedPath] = [bool]$workbook.ReadOnly
+                }
+            } catch {}
+        }
+    } catch {}
+
     try {
         foreach ($addin in $ExcelApp.AddIns) {
             try {
@@ -432,6 +473,14 @@ function Get-ExcelAddins {
                         $fullPath = ([string]$addin.FullName -replace '\\', '/')
                     }
                 } catch {}
+
+                $readOnly = $false
+                if ($fullPath) {
+                    $normalizedPath = $fullPath.ToLowerInvariant()
+                    if ($readOnlyByPath.ContainsKey($normalizedPath)) {
+                        $readOnly = [bool]$readOnlyByPath[$normalizedPath]
+                    }
+                }
             } catch {
                 continue
             }
@@ -442,6 +491,7 @@ function Get-ExcelAddins {
                 name     = ($name -replace '\\', '/')
                 fullPath = $fullPath
                 isOpen   = $isOpen
+                readOnly = $readOnly
             }
         }
     } catch {
@@ -535,6 +585,7 @@ function Update-ExcelInstance {
         [bool]$Visible = $false,
         [string]$Reason = 'unknown',
         [string[]]$Workbooks = @(),
+        [object]$WorkbookReadOnly = $null,
         [object[]]$Addins = @(),
         [object[]]$GhostWorkbooks = @(),
         [object]$GhostDetection = $null,
@@ -569,6 +620,15 @@ function Update-ExcelInstance {
             $existingId = New-ExcelInstanceId
         }
 
+        $existingEntry = @($instances | Where-Object { [int]$_.pid -eq $InstanceId })[0]
+        if ($null -eq $WorkbookReadOnly) {
+            $WorkbookReadOnly = if ($existingEntry -and $null -ne $existingEntry.workbookReadOnly) {
+                $existingEntry.workbookReadOnly
+            } else {
+                @{}
+            }
+        }
+
         $entry = @{
             id           = $existingId
             number       = $null
@@ -580,6 +640,7 @@ function Update-ExcelInstance {
             windowTitle  = if ([string]::IsNullOrEmpty($WindowTitle)) { $null } else { $WindowTitle }
             createdAt    = (Get-Date).ToString('o')
             workbooks    = if ($null -eq $Workbooks) { $null } else { @($Workbooks) }
+            workbookReadOnly = $WorkbookReadOnly
             addins       = if ($null -eq $Addins) { $null } else { @($Addins) }
             ghostWorkbooks = @($GhostWorkbooks)
             ghostDetection = $GhostDetection

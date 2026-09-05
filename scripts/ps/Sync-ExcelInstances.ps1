@@ -55,6 +55,7 @@ function Upsert-Instance {
         [int]$InstanceId,
         [bool]$Visible,
         [string[]]$Workbooks,
+        [object]$WorkbookReadOnly = $null,
         [object[]]$Addins,
         [object[]]$GhostWorkbooks = @(),
         [object]$GhostDetection = $null,
@@ -77,7 +78,7 @@ function Upsert-Instance {
         $reason = if ($prev.reason) { $prev.reason } else { $reason }
     }
 
-    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -Addins $Addins -GhostWorkbooks $GhostWorkbooks -GhostDetection $GhostDetection -WindowTitle $windowTitle -ComReachable $ComReachable
+    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -WorkbookReadOnly $WorkbookReadOnly -Addins $Addins -GhostWorkbooks $GhostWorkbooks -GhostDetection $GhostDetection -WindowTitle $windowTitle -ComReachable $ComReachable
 }
 
 function Get-GhostVbeReport {
@@ -133,11 +134,12 @@ foreach ($app in $apps) {
         try { $isVisible = [bool]$app.Visible } catch {}
 
         $openWorkbooks = @(Get-ExcelWorkbooks -ExcelApp $app)
+        $workbookReadOnly = Get-ExcelWorkbookReadOnly -ExcelApp $app
         $openAddins = @(Get-ExcelAddins -ExcelApp $app)
         $ghostDetection = Get-GhostVbeReport -InstanceId $instancePid
         $ghostWorkbooks = @($ghostDetection.ghosts)
 
-        Upsert-Instance -InstanceId $instancePid -Visible $isVisible -Workbooks $openWorkbooks -Addins $openAddins -GhostWorkbooks $ghostWorkbooks -GhostDetection $ghostDetection -ComReachable $true
+        Upsert-Instance -InstanceId $instancePid -Visible $isVisible -Workbooks $openWorkbooks -WorkbookReadOnly $workbookReadOnly -Addins $openAddins -GhostWorkbooks $ghostWorkbooks -GhostDetection $ghostDetection -ComReachable $true
         Write-Output "Synced (ROT) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count) ghosts=$($ghostWorkbooks.Count) addins=$($openAddins.Count)"
     } catch {
         Write-Warning "Could not sync a ROT Excel instance: $($_.Exception.Message)"
