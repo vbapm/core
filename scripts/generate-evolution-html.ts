@@ -157,12 +157,14 @@ function renderInstance(instance) {
 	const addins = addinItems
     .filter(addin => addin.isOpen)
     .map(addin => "📚" + (addin.readOnly ? "🔭" : "✏️") + " " + escapeHtml(addin.fullPath || addin.name));
+  const tasks = collection(instance.tasks);
   const ghostCount = Number(instance.ghostDetection?.ghostCount || 0);
 	return '<article class="instance"><h2>' + escapeHtml(instance.number) + ') PID ' + escapeHtml(instance.pid) + '</h2>' +
 		'<div class="instance-meta">' + escapeHtml(instance.visible ? "Visible" : "Hidden") + ' · ' +
     escapeHtml(instance.comReachable ? "COM reachable" : "COM unavailable") + " · " +
 		escapeHtml(instance.owner || "unknown") + ' · ghost projects: ' + ghostCount + '</div>' +
-		'<div class="columns"><section><h3>Workbooks</h3>' + list(workbooks, "None recorded") +
+		'<div class="columns"><section><h3>Tasks</h3>' + list(tasks, "None recorded") +
+		'</section><section><h3>Workbooks</h3>' + list(workbooks, "None recorded") +
 		'</section><section><h3>Open add-ins</h3>' + list(addins, "None recorded") + '</section></div></article>';
 }
 function render() {

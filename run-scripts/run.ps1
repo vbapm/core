@@ -57,6 +57,17 @@ function Get-MacroTargetFile {
 	return ''
 }
 
+function Get-MacroTaskDescription {
+	param(
+		[string]$MacroName,
+		[string[]]$MacroArgValues
+	)
+
+	$target = Get-MacroTargetFile $MacroArgValues
+	if ($target) { return "$MacroName -> $target" }
+	return $MacroName
+}
+
 function Fail {
 	param([string]$Message)
 
@@ -219,7 +230,7 @@ class Excel {
 		# lingering instance to the exact test that opened the workbook.
 		if (Get-Command Refresh-ExcelInstance -ErrorAction SilentlyContinue) {
 			try {
-				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues)
+				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Task (Get-MacroTaskDescription $MacroName $MacroArgValues)
 			} catch {
 				# best-effort; never break a run over coordination bookkeeping
 			}
@@ -443,7 +454,8 @@ function Run {
 							-ExcelApp $excel.App `
 							-Owner "terminal-$PID" `
 							-Visible (-not $excel.BackgroundBuild) `
-							-Reason $reason
+							-Reason $reason `
+							-Task (Get-MacroTaskDescription $MacroName $MacroArgValues)
 					} catch {
 						$registeredPid = 0
 					}
@@ -460,7 +472,7 @@ function Run {
 				# the e2e test that opened them.
 				if ($HasRegistry -and $registeredPid -gt 0 -and $null -ne $excel.App) {
 					try {
-						Refresh-ExcelInstance -ExcelApp $excel.App -ProcessId $registeredPid -TargetPath (Get-MacroTargetFile $MacroArgValues)
+						Refresh-ExcelInstance -ExcelApp $excel.App -ProcessId $registeredPid -TargetPath (Get-MacroTargetFile $MacroArgValues) -Task (Get-MacroTaskDescription $MacroName $MacroArgValues)
 					} catch {
 						# best-effort
 					}

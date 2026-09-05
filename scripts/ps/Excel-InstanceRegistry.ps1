@@ -60,6 +60,7 @@
 #     "windowTitle": "<string>",  # main window title (may be null)
 #     "reason":     "<string>",   # e.g. "e2e", "vbapm-run", "unknown"
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
+#     "tasks":      ["<macro task>", ...]  # tasks assigned to this instance
 #     "workbookReadOnly": {"<normalized path>": <bool>, ...}
 #     "addins":     [{"name": "<addin name>", "fullPath": "<path>", "isOpen": <bool>, "readOnly": <bool>}, ...]
 #     "ghostWorkbooks": [{"name": "<VBE project>", "file": "<path>", ...}, ...]
@@ -646,6 +647,7 @@ function Update-ExcelInstance {
         [bool]$Visible = $false,
         [string]$Reason = 'unknown',
         [string[]]$Workbooks = @(),
+        [string[]]$Tasks = $null,
         [object]$WorkbookReadOnly = $null,
         [object[]]$Addins = @(),
         [object[]]$GhostWorkbooks = @(),
@@ -682,6 +684,10 @@ function Update-ExcelInstance {
         }
 
         $existingEntry = @($instances | Where-Object { [int]$_.pid -eq $InstanceId })[0]
+        if ($null -eq $Tasks) {
+            $Tasks = if ($existingEntry -and $null -ne $existingEntry.tasks) { @($existingEntry.tasks) } else { @() }
+        }
+        $Tasks = @($Tasks | Where-Object { $_ } | Select-Object -Unique)
         if ($null -eq $WorkbookReadOnly) {
             $WorkbookReadOnly = if ($existingEntry -and $null -ne $existingEntry.workbookReadOnly) {
                 $existingEntry.workbookReadOnly
@@ -701,6 +707,7 @@ function Update-ExcelInstance {
             windowTitle  = if ([string]::IsNullOrEmpty($WindowTitle)) { $null } else { $WindowTitle }
             createdAt    = (Get-Date).ToString('o')
             workbooks    = if ($null -eq $Workbooks) { $null } else { @($Workbooks) }
+            tasks        = @($Tasks)
             workbookReadOnly = $WorkbookReadOnly
             addins       = if ($null -eq $Addins) { $null } else { @($Addins) }
             ghostWorkbooks = @($GhostWorkbooks)
@@ -970,7 +977,8 @@ function Register-ExcelInstance {
         [Parameter(Mandatory)][object]$ExcelApp,
         [string]$Owner,
         [bool]$Visible = $false,
-        [string]$Reason = 'unknown'
+        [string]$Reason = 'unknown',
+        [string]$Task = ''
     )
 
     if (-not $Owner) {
@@ -998,7 +1006,8 @@ function Register-ExcelInstance {
         $openAddins = @(Get-ExcelAddins -ExcelApp $ExcelApp)
 
         # This instance was just obtained via COM, so it is COM-reachable.
-        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -Addins $openAddins -ComReachable $true
+        $tasks = if ($Task) { @($Task) } else { @() }
+        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -Tasks $tasks -Addins $openAddins -ComReachable $true
         return $instancePid
     } catch {
         Write-Warning "Failed to register Excel instance: $($_.Exception.Message)"
@@ -1019,7 +1028,8 @@ function Refresh-ExcelInstance {
     param(
         [Parameter(Mandatory)][object]$ExcelApp,
         [int]$ProcessId = 0,
-        [string]$TargetPath = ''
+        [string]$TargetPath = '',
+        [string]$Task = ''
     )
 
     try {
@@ -1056,6 +1066,12 @@ function Refresh-ExcelInstance {
                 if ([int]$active[$i].pid -eq $ProcessId) {
                     $active[$i].workbooks = @($openWorkbooks)
                     $active[$i].addins = @($openAddins)
+                    if ($Task) {
+                        $activeTasks = @($active[$i].tasks) + @($Task)
+                        $active[$i].tasks = @($activeTasks | Where-Object { $_ } | Select-Object -Unique)
+                    } elseif ($null -eq $active[$i].tasks) {
+                        $active[$i].tasks = @()
+                    }
                     $active[$i].visible = [bool]$isVisible
                     $found = $true
                     break
