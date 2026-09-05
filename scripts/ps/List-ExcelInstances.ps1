@@ -6,18 +6,54 @@
 [CmdletBinding()]
 param(
     [Alias('Window')]
-    [switch]$Windows
+    [switch]$Windows,
+
+    [string]$RegistryPath,
+
+    [switch]$OutputJson
 )
 
 $ErrorActionPreference = 'Stop'
 
-$syncScript = Join-Path $PSScriptRoot 'Sync-ExcelInstances.ps1'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -PruneDead | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "Could not sync the Excel instance registry. Exit code: $LASTEXITCODE"
+if ($env:EVOLUTION_JSON -eq '1' -and $env:SNAPSHOT_FILE) {
+    $env:VBA_JSON_BASE64 = '1'
+    $RegistryPath = $env:SNAPSHOT_FILE
 }
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
+
+if ($RegistryPath) {
+    if (-not (Test-Path -LiteralPath $RegistryPath -PathType Leaf)) {
+        throw "Registry snapshot not found: $RegistryPath"
+    }
+
+    $snapshot = Get-Content -LiteralPath $RegistryPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+    $instances = @($snapshot.active)
+    $inactive = @($snapshot.inactive)
+} else {
+    $syncScript = Join-Path $PSScriptRoot 'Sync-ExcelInstances.ps1'
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -PruneDead | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not sync the Excel instance registry. Exit code: $LASTEXITCODE"
+    }
+
+    $instances = @(Read-ExcelInstances)
+    $inactive = @(Read-InactiveExcelInstances)
+}
+
+if ($OutputJson -or ($RegistryPath -and [string]$env:VBA_JSON_BASE64 -match '^(1|true|yes)$')) {
+    $json = [ordered]@{
+        active   = $instances
+        inactive = $inactive
+    } | ConvertTo-Json -Depth 20
+    if ([string]$env:VBA_JSON_BASE64 -match '^(1|true|yes)$') {
+        [Convert]::ToBase64String([System.Text.UTF8Encoding]::new($false).GetBytes($json))
+    } else {
+        [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        $json
+    }
+    exit 0
+}
 
 $excelIcon = [char]::ConvertFromUtf32(0x1F4CA) # 📊 Excel icon
 $visibleIcon = [char]::ConvertFromUtf32(0x1F441) + [char]0xFE0F # 👁️ Visible icon
@@ -33,7 +69,6 @@ $comIcon = [char]::ConvertFromUtf32(0x2B50) # ⭐ COM-reachable icon
 $windowScript = Join-Path $PSScriptRoot 'List-ExcelProcessWindows.ps1'
 $verboseOutput = $VerbosePreference -eq 'Continue'
 
-$instances = @(Read-ExcelInstances)
 if ($instances.Count -eq 0) {
     Write-Host "$excelIcon No Excel instances found." -ForegroundColor Yellow
     exit 0
