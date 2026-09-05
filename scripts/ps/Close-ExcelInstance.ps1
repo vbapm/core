@@ -6,6 +6,7 @@
 # change which remaining instance is COM-reachable via the ROT).
 #
 # Usage:
+#   .\scripts\ps\Close-ExcelInstance.ps1 -Number 1
 #   .\scripts\ps\Close-ExcelInstance.ps1 -Id a1b2c3d4
 #   .\scripts\ps\Close-ExcelInstance.ps1 -ProcessId 1234
 
@@ -13,6 +14,9 @@
 param(
     [Parameter(Mandatory, ParameterSetName = 'ById')]
     [string]$Id,
+
+    [Parameter(Mandatory, ParameterSetName = 'ByNumber')]
+    [int]$Number,
 
     [Parameter(Mandatory, ParameterSetName = 'ByPid')]
     [int]$ProcessId
@@ -33,6 +37,14 @@ if ($PSCmdlet.ParameterSetName -eq 'ById') {
     }
     $closed = Close-ExcelInstanceById -Id $Id
     $closeMessage = "Closed Excel instance id=$Id pid=$($entry.pid) (killed=$closed)"
+} elseif ($PSCmdlet.ParameterSetName -eq 'ByNumber') {
+    $entry = Find-ExcelInstanceByNumber -Number $Number
+    if (-not $entry) {
+        Write-Output "No Excel instance with number=$Number found in the registry."
+        exit 1
+    }
+    $closed = Close-ExcelInstanceById -Id $entry.id
+    $closeMessage = "Closed Excel instance number=$Number id=$($entry.id) pid=$($entry.pid) (killed=$closed)"
 } else {
     # For PID-based close, kill the process then remove it from the registry.
     $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue

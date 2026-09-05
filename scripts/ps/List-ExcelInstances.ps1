@@ -43,7 +43,7 @@ foreach ($instance in $instances) {
     }
 
     $reachabilityIcon = if ($instance.comReachable) { $comIcon } else { '' }
-    Write-Host "$stateIcon$reachabilityIcon PID=$($instance.pid) visible=$($instance.visible) comReachable=$($instance.comReachable) owner=$($instance.owner) reason=$($instance.reason)" -ForegroundColor $stateColor
+    Write-Host "$($instance.number)) $stateIcon$reachabilityIcon PID=$($instance.pid) visible=$($instance.visible) comReachable=$($instance.comReachable) owner=$($instance.owner) reason=$($instance.reason)" -ForegroundColor $stateColor
 
     $workbooks = @($instance.workbooks)
     if ($instance.comReachable) {

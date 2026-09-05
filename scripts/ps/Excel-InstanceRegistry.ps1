@@ -309,6 +309,29 @@ function Write-ExcelRegistryDocument {
     $activeList = @($Active)
     $inactiveList = @($Inactive)
 
+    # Assign a stable, human-friendly number to every entry. Existing numbers
+    # are preserved; missing or duplicate numbers receive the next available
+    # value. Active entries are assigned before inactive history.
+    $usedNumbers = @{}
+    $nextNumber = 1
+    foreach ($entry in @($activeList + $inactiveList)) {
+        $entryNumber = 0
+        try { $entryNumber = [int]$entry.number } catch {}
+        if ($entryNumber -gt 0 -and -not $usedNumbers.ContainsKey($entryNumber)) {
+            $usedNumbers[$entryNumber] = $true
+            if ($entryNumber -ge $nextNumber) { $nextNumber = $entryNumber + 1 }
+        } else {
+            while ($usedNumbers.ContainsKey($nextNumber)) { $nextNumber++ }
+            if ($null -eq $entry.PSObject.Properties['number']) {
+                $entry | Add-Member -MemberType NoteProperty -Name number -Value $nextNumber
+            } else {
+                $entry.number = $nextNumber
+            }
+            $usedNumbers[$nextNumber] = $true
+            $nextNumber++
+        }
+    }
+
     # "registered" = entries that carry a real owner (explicitly tracked by an
     # agent), as opposed to `rogue`/`unknown` entries discovered only via the
     # live process list.
@@ -536,6 +559,7 @@ function Update-ExcelInstance {
 
         $entry = @{
             id           = $existingId
+            number       = $null
             pid          = $InstanceId
             owner        = $Owner
             visible      = $Visible
@@ -632,6 +656,22 @@ function Find-ExcelInstanceById {
     $instances = @(Read-ExcelInstances)
     foreach ($inst in $instances) {
         if ($inst.id -and [string]$inst.id -eq $Id) {
+            return $inst
+        }
+    }
+    return $null
+}
+
+<#
+.SYNOPSIS
+Look up an active registry entry by its human-friendly number.
+#>
+function Find-ExcelInstanceByNumber {
+    param([Parameter(Mandatory)][int]$Number)
+
+    $instances = @(Read-ExcelInstances)
+    foreach ($inst in $instances) {
+        if ($inst.number -and [int]$inst.number -eq $Number) {
             return $inst
         }
     }
@@ -1067,6 +1107,7 @@ function Sync-ExcelInstanceSnapshot {
             # the registry (and the status report) as an unattributed instance.
             $snapshot += [pscustomobject]@{
                 id           = (New-ExcelInstanceId)
+                number       = $null
                 pid          = $instancePid
                 owner        = 'rogue'
                 visible      = [bool]$p.visible
@@ -1102,7 +1143,9 @@ function Sync-ExcelInstanceSnapshot {
 <#
 .SYNOPSIS
 Enumerate every COM-reachable Excel.Application instance via the Running Object
-Table (ROT), de-duplicated by window handle.
+Table (ROT), de-duplicated by window handle. Excel can register either an
+Application moniker or a Workbook moniker, so workbook objects are resolved
+through their parent Application before deduplication.
 
 Excel registers its Application object under the CLSID moniker
 `!{00024500-0000-0000-C000-000000000046}`, which may repeat for the same
@@ -1142,7 +1185,8 @@ public static class RotHelperExcel {
                 string displayName = null;
                 try { fetched[0].GetDisplayName(ctx, null, out displayName); } catch {}
                 if (displayName != null &&
-                    displayName.IndexOf(excelAppClsid, StringComparison.OrdinalIgnoreCase) >= 0) {
+                    (displayName.IndexOf(excelAppClsid, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     displayName.IndexOf("Excel", StringComparison.OrdinalIgnoreCase) >= 0)) {
                     object obj = null;
                     try { if (rot.GetObject(fetched[0], out obj) == 0) { list.Add(obj); } } catch {}
                 }
@@ -1167,16 +1211,40 @@ public static class RotHelperExcel {
         return @()
     }
 
-    # De-duplicate by Hwnd (the same Application can appear under multiple monikers).
+    # Resolve workbook monikers to their parent Application, then de-duplicate
+    # by Hwnd because the same Application can appear under multiple monikers.
     $seen = @{}
     $deduped = @()
-    foreach ($a in $apps) {
-        if ($null -eq $a) { continue }
+    foreach ($candidate in $apps) {
+        if ($null -eq $candidate) { continue }
+
+        $app = $candidate
+        $isApplication = $false
+        try {
+            $null = $candidate.Workbooks.Count
+            $isApplication = $true
+        } catch {}
+
+        if (-not $isApplication) {
+            try { $app = $candidate.Application } catch { $app = $null }
+        }
+
+        if ($null -eq $app) {
+            try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($candidate) | Out-Null } catch {}
+            continue
+        }
+
         $key = $null
-        try { $key = [string]$a.Hwnd } catch { $key = [string]$a.GetHashCode() }
+        try { $key = [string]$app.Hwnd } catch { $key = [string]$app.GetHashCode() }
         if (-not $seen.ContainsKey($key)) {
             $seen[$key] = $true
-            $deduped += $a
+            $deduped += $app
+        } else {
+            try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
+        }
+
+        if (-not $isApplication) {
+            try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($candidate) | Out-Null } catch {}
         }
     }
     return @($deduped)
