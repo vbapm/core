@@ -66,6 +66,7 @@ function Upsert-Instance {
 
     $owner = Resolve-ExcelInstanceOwner $InstanceId
     $reason = 'unknown'
+    $intent = 'one-shot'
     $windowTitle = $null
     try {
         $proc = Get-Process -Id $InstanceId -ErrorAction Stop
@@ -78,9 +79,10 @@ function Upsert-Instance {
         $prev = $existingByPid[[int]$InstanceId]
         $owner = if ($prev.owner) { $prev.owner } else { $owner }
         $reason = if ($prev.reason) { $prev.reason } else { $reason }
+        $intent = if ($prev.intent) { $prev.intent } else { $intent }
     }
 
-    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Workbooks $Workbooks -WorkbookReadOnly $WorkbookReadOnly -Addins $Addins -GhostWorkbooks $GhostWorkbooks -GhostDetection $GhostDetection -WindowTitle $windowTitle -ComReachable $ComReachable
+    Update-ExcelInstance -InstanceId $InstanceId -Owner $owner -Visible $Visible -Reason $reason -Intent $intent -Workbooks $Workbooks -WorkbookReadOnly $WorkbookReadOnly -Addins $Addins -GhostWorkbooks $GhostWorkbooks -GhostDetection $GhostDetection -WindowTitle $windowTitle -ComReachable $ComReachable
 }
 
 function Get-GhostVbeReport {

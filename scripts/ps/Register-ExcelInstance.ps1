@@ -17,6 +17,8 @@ param(
 
     [string]$Reason = 'manual',
 
+    [string]$Intent = 'one-shot',
+
     [switch]$Visible
 )
 
@@ -30,6 +32,6 @@ if (-not $Owner) {
     $Owner = "terminal-$PID"
 }
 
-Update-ExcelInstance -InstanceId $ProcessId -Owner $Owner -Visible ([bool]$Visible) -Reason $Reason
+Update-ExcelInstance -InstanceId $ProcessId -Owner $Owner -Visible ([bool]$Visible) -Reason $Reason -Intent $Intent
 
-Write-Output "Registered Excel instance pid=$ProcessId owner=$Owner reason=$Reason visible=$Visible"
+Write-Output "Registered Excel instance pid=$ProcessId owner=$Owner reason=$Reason intent=$Intent visible=$Visible"

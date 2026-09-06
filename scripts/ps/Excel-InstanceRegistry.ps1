@@ -59,6 +59,7 @@
 #     "comReachable": <bool>,     # whether the instance is accessible via COM/ROT
 #     "windowTitle": "<string>",  # main window title (may be null)
 #     "reason":     "<string>",   # e.g. "e2e", "vbapm-run", "unknown"
+#     "intent":     "<string>",   # e.g. "keep-warm" (persists) or "one-shot"
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
 #     "logs":       ["<task or error log>", ...]  # instance activity log
 #     "workbookReadOnly": {"<normalized path>": <bool>, ...}
@@ -738,7 +739,11 @@ function Update-ExcelInstance {
         [object[]]$GhostWorkbooks = @(),
         [object]$GhostDetection = $null,
         [string]$WindowTitle = '',
-        [bool]$ComReachable = $true
+        [bool]$ComReachable = $true,
+        # Whether this instance is intended to be kept alive (warm) beyond the
+        # operation that created it. 'keep-warm' = a long-lived/persistent session
+        # instance; 'one-shot' = created for a single operation then torn down.
+        [string]$Intent = ''
     )
 
     Get-ExcelInstancesLock | Out-Null
@@ -781,6 +786,11 @@ function Update-ExcelInstance {
                 @{}
             }
         }
+        # Preserve an existing intent unless the caller explicitly overrides it,
+        # so refreshes/syncs never downgrade a warm instance to one-shot.
+        if ([string]::IsNullOrWhiteSpace($Intent)) {
+            $Intent = if ($existingEntry -and $existingEntry.intent) { [string]$existingEntry.intent } else { 'one-shot' }
+        }
 
         $entry = @{
             id           = $existingId
@@ -789,6 +799,7 @@ function Update-ExcelInstance {
             owner        = $Owner
             visible      = $Visible
             reason       = $Reason
+            intent       = $Intent
             comReachable = [bool]$ComReachable
             windowTitle  = if ([string]::IsNullOrEmpty($WindowTitle)) { $null } else { $WindowTitle }
             createdAt    = (Get-Date).ToString('o')
@@ -1064,7 +1075,8 @@ function Register-ExcelInstance {
         [string]$Owner,
         [bool]$Visible = $false,
         [string]$Reason = 'unknown',
-        [string]$Log = ''
+        [string]$Log = '',
+        [string]$Intent = 'one-shot'
     )
 
     if (-not $Owner) {
@@ -1093,7 +1105,7 @@ function Register-ExcelInstance {
 
         # This instance was just obtained via COM, so it is COM-reachable.
         $logs = if ($Log) { @($Log) } else { @() }
-        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Workbooks $openWorkbooks -Logs $logs -Addins $openAddins -ComReachable $true
+        Update-ExcelInstance -InstanceId $instancePid -Owner $Owner -Visible $isVisible -Reason $Reason -Intent $Intent -Workbooks $openWorkbooks -Logs $logs -Addins $openAddins -ComReachable $true
         return $instancePid
     } catch {
         Write-Warning "Failed to register Excel instance: $($_.Exception.Message)"

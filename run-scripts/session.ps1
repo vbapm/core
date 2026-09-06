@@ -201,7 +201,7 @@ function Open-ScriptExcel {
 			$Script:RegisteredPid = [int]$reusable.ProcessId
 			$Script:WarmInstance = $true
 			try {
-				Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Visible $false -Reason 'e2e' | Out-Null
+				Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Visible $false -Reason 'e2e' -Intent 'keep-warm' | Out-Null
 			} catch {}
 			Close-ScriptWorkbooks
 			if ($reusable.PreviousSessionPid -gt 0 -and $reusable.PreviousSessionPid -ne $PID) {
@@ -261,6 +261,7 @@ function Open-ScriptExcel {
 						-ExcelApp $Script:App `
 						-Owner "session#$PID" `
 						-Reason $reason `
+						-Intent 'keep-warm' `
 						-Log (Get-ScriptMacroLogDescription $MacroName $ArgValues)
 					$Script:RegisteredPid = if ($null -ne $registeredPid) { [int]$registeredPid } else { 0 }
 				} catch {
