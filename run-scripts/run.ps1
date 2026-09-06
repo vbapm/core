@@ -89,6 +89,48 @@ function Get-MacroErrorLog {
 	return $log
 }
 
+function Write-WorkbookCloseLog {
+	param(
+		[object]$ExcelApp,
+		[int]$ProcessId,
+		[string]$WorkbookPath
+	)
+
+	if (-not $WorkbookPath -or -not (Get-Command Refresh-ExcelInstance -ErrorAction SilentlyContinue)) {
+		return
+	}
+
+	try {
+		$testName = $env:VBA_E2E_TEST_NAME
+		$log = "Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
+		if ($testName) { $log = "$testName :: $log" }
+		$log = "$(Get-Date -Format o) :: $log"
+		Refresh-ExcelInstance -ExcelApp $ExcelApp -ProcessId $ProcessId -Log $log
+	} catch {
+		# Registry attribution is best-effort; never mask workbook cleanup.
+	}
+}
+
+function Test-WorkbookOpen {
+	param(
+		[object]$ExcelApp,
+		[string]$WorkbookPath
+	)
+
+	if ($null -eq $ExcelApp -or -not $WorkbookPath) { return $false }
+	try {
+		$normalizedPath = [System.IO.Path]::GetFullPath($WorkbookPath)
+		foreach ($workbook in @($ExcelApp.Workbooks)) {
+			try {
+				if ([string]::Equals([System.IO.Path]::GetFullPath([string]$workbook.FullName), $normalizedPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+					return $true
+				}
+			} catch {}
+		}
+	} catch {}
+	return $false
+}
+
 function Fail {
 	param([string]$Message)
 
@@ -241,6 +283,8 @@ class Excel {
 
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
 		$this.OpenWorkbook($FilePath)
+		$targetPath = Get-MacroTargetFile $MacroArgValues
+		$targetWasOpen = $MacroName -eq 'Build.CloseFile' -and (Test-WorkbookOpen -ExcelApp $this.App -WorkbookPath $targetPath)
 
 		# Record the just-opened workbook/addin in the coordination registry NOW,
 		# while the COM object is still in memory and the workbook is open, and
@@ -259,6 +303,9 @@ class Excel {
 		}
 
 		$result = RunMacro $this.App $MacroName $MacroArgValues
+		if ($targetWasOpen -and -not (Test-WorkbookOpen -ExcelApp $this.App -WorkbookPath $targetPath)) {
+			Write-WorkbookCloseLog -ExcelApp $this.App -ProcessId $this.Pid -WorkbookPath $targetPath
+		}
 
 		return $result
 	}
@@ -411,7 +458,10 @@ class Excel {
 		$closeWorkbook = -not $this.WorkbookWasOpen -and -not $KeepOpen
 
 		if ($closeWorkbook -and $null -ne $this.Workbook) {
+			$workbookPath = ''
+			try { $workbookPath = [string]$this.Workbook.FullName } catch {}
 			$this.Workbook.Close($true)
+			Write-WorkbookCloseLog -ExcelApp $this.App -ProcessId $this.Pid -WorkbookPath $workbookPath
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.Workbook) | Out-Null
 			$this.Workbook = $null
 		}

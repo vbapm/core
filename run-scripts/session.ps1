@@ -127,11 +127,28 @@ function Get-ScriptMacroErrorLog {
 	return $log
 }
 
+function Test-ScriptWorkbookOpen {
+	param([string]$WorkbookPath)
+
+	if (-not $WorkbookPath -or $null -eq $Script:App) { return $false }
+	try {
+		$normalizedPath = [System.IO.Path]::GetFullPath($WorkbookPath)
+		foreach ($workbook in @($Script:App.Workbooks)) {
+			try {
+				if ([string]::Equals([System.IO.Path]::GetFullPath([string]$workbook.FullName), $normalizedPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+					return $true
+				}
+			} catch {}
+		}
+	} catch {}
+	return $false
+}
+
 function Refresh-ScriptInstanceLog {
 	param(
 		[string]$MacroName,
 		[string[]]$ArgValues,
-		[string]$Result = '',
+		[object]$Result = '',
 		[string]$ErrorMessage = ''
 	)
 
@@ -148,6 +165,24 @@ function Refresh-ScriptInstanceLog {
 			-Log $log
 	} catch {
 		# Registry attribution is best-effort; never mask the macro result.
+	}
+}
+
+function Write-ScriptWorkbookCloseLog {
+	param([string]$WorkbookPath)
+
+	if (-not $WorkbookPath -or -not $HasRegistry -or $Script:RegisteredPid -le 0 -or $null -eq $Script:App) {
+		return
+	}
+
+	try {
+		$log = "$(Get-Date -Format o) :: Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
+		if ($env:VBA_E2E_TEST_NAME) {
+			$log = "$(Get-Date -Format o) :: $env:VBA_E2E_TEST_NAME :: Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
+		}
+		Refresh-ExcelInstance -ExcelApp $Script:App -ProcessId $Script:RegisteredPid -Log $log
+	} catch {
+		# Registry attribution is best-effort; never mask workbook cleanup.
 	}
 }
 $Script:RegisteredPid = 0
@@ -362,8 +397,10 @@ function Ensure-ScriptAddin {
 function Close-ScriptWorkbooks {
 	try {
 		foreach ($workbook in @($Script:App.Workbooks)) {
+			$displayPath = ''
+			try { $displayPath = [string]$workbook.FullName } catch {}
 			$fullPath = ''
-			try { $fullPath = [System.IO.Path]::GetFullPath([string]$workbook.FullName).ToLowerInvariant() } catch {}
+			try { $fullPath = [System.IO.Path]::GetFullPath($displayPath).ToLowerInvariant() } catch {}
 
 			$isLoadedAddin = $false
 			if ($fullPath) {
@@ -373,7 +410,9 @@ function Close-ScriptWorkbooks {
 				continue
 			}
 
-			try { $workbook.Close($true) } catch {}
+			$closed = $false
+			try { $workbook.Close($true); $closed = $true } catch {}
+			if ($closed) { Write-ScriptWorkbookCloseLog $displayPath }
 			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($workbook) | Out-Null } catch {}
 		}
 	} catch {
@@ -384,8 +423,12 @@ function Close-ScriptWorkbooks {
 	# loaded changes the macro context for a later workbook request, so unload
 	# session-owned add-ins while retaining the Excel.Application itself.
 	foreach ($addin in @($Script:LoadedAddins.Values)) {
+		$displayPath = ''
+		try { $displayPath = [string]$addin.FullName } catch {}
 		try { $addin.Installed = $false } catch {}
-		try { $addin.Close($false) } catch {}
+		$closed = $false
+		try { $addin.Close($false); $closed = $true } catch {}
+		if ($closed) { Write-ScriptWorkbookCloseLog $displayPath }
 		try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($addin) | Out-Null } catch {}
 	}
 	$Script:LoadedAddins = @{}
@@ -448,6 +491,8 @@ function Invoke-ScriptRun {
 	if ($null -eq $Script:App) {
 		Open-ScriptExcel $Background $MacroName $ArgValues
 	}
+	$targetPath = Get-ScriptMacroTargetFile $ArgValues
+	$targetWasOpen = $MacroName -eq 'Build.CloseFile' -and (Test-ScriptWorkbookOpen $targetPath)
 
 	# Per-request state. $Script:WorkbookWasOpen describes *this* request only;
 	# leaving it sticky from a previous request means we stop closing workbooks we
@@ -471,6 +516,9 @@ function Invoke-ScriptRun {
 	$workbookName = if ($Script:IsAddin) { '' } else { Get-ScriptFileBase $FilePath }
 	try {
 		$result = Invoke-ScriptMacro $Script:App $MacroName $ArgValues $workbookName
+		if ($targetWasOpen -and -not (Test-ScriptWorkbookOpen $targetPath)) {
+			Write-ScriptWorkbookCloseLog $targetPath
+		}
 	} catch {
 		# Excel can retain an unusable VBA project context after a macro opened
 		# and closed workbooks internally. Recreate only the owned application and
@@ -633,7 +681,7 @@ while ($true) {
 		Refresh-ScriptInstanceLog `
 			-MacroName $resolveMacro `
 			-ArgValues $resolveArgs `
-			-Result ([string]$result)
+			-Result $result
 		$payload = @{ success = $true; result = $result } | ConvertTo-Json -Compress
 		Write-ScriptResponse $requestId $payload
 	} catch {
