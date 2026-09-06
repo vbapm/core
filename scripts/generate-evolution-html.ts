@@ -29,6 +29,15 @@ function powershellLiteral(value: string): string {
 	return `'${value.replace(/'/g, "''")}'`;
 }
 
+/** Read the optional run-info.json (flags + start/finish + duration) for a run dir. */
+function readRunInfo(dir: string): Record<string, unknown> | null {
+	try {
+		return JSON.parse(readFileSync(join(dir, "run-info.json"), "utf8"));
+	} catch {
+		return null;
+	}
+}
+
 function readSnapshot(listScript: string, snapshotPath: string): unknown {
 	const result = spawnSync(
 		"powershell.exe",
@@ -64,6 +73,7 @@ function htmlPage(
 	runs: Array<{
 		name: string;
 		snapshots: Array<{ name: string; data: unknown; sourceUrl: string }>;
+		meta?: Record<string, unknown> | null;
 	}>
 ): string {
 	const serialized = JSON.stringify(runs).replace(/</g, "\\u003c");
@@ -97,6 +107,13 @@ section h3 { margin: 0 0 8px; font-size: 14px; color: #304353; }
 ul { margin: 0; padding-left: 22px; }
 li { margin: 5px 0; overflow-wrap: anywhere; }
 .muted { color: #7b8994; }
+.run-meta { margin: 14px 0 2px; }
+.run-meta-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.run-chip { padding: 4px 10px; border: 1px solid #3e5868; border-radius: 999px; background: #22303c; color: #e9f1f6; font-size: 12.5px; }
+.run-chip code { color: #ffd479; }
+.run-chip strong { color: #8fe3a0; }
+.run-command { flex-basis: 100%; font-size: 12px; color: #9fb3c2; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.run-meta .muted { color: #7b8994; font-size: 13px; }
 footer { position: fixed; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 12px 16px; border-top: 1px solid #ccd6de; background: #ffffffee; backdrop-filter: blur(8px); }
 button { width: 44px; height: 38px; border: 1px solid #9eabb5; border-radius: 6px; background: #fff; color: #17212b; font-size: 23px; line-height: 1; cursor: pointer; }
 button:hover:not(:disabled) { background: #e6f0f5; border-color: #31708f; }
@@ -106,7 +123,7 @@ button:disabled { cursor: default; opacity: .38; }
 </style>
 </head>
 <body>
-<header><h1>Excel registry evolution</h1><label for="run-select">Evolution run</label> <select id="run-select"></select><div id="snapshot-label"><span id="snapshot-name"></span><a id="open-snapshot" class="snapshot-link" target="_blank" rel="noopener" aria-label="Open snapshot JSON file" title="Open snapshot JSON file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"></path></svg></a><span id="snapshot-stats"></span></div></header>
+<header><h1>Excel registry evolution</h1><div id="run-meta" class="run-meta"></div><label for="run-select">Evolution run</label> <select id="run-select"></select><div id="snapshot-label"><span id="snapshot-name"></span><a id="open-snapshot" class="snapshot-link" target="_blank" rel="noopener" aria-label="Open snapshot JSON file" title="Open snapshot JSON file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"></path></svg></a><span id="snapshot-stats"></span></div></header>
 <main id="content"></main>
 <footer>
 <button id="previous" type="button" aria-label="Previous snapshot" title="Previous snapshot">&#8592;</button>
@@ -171,6 +188,41 @@ function renderInstance(instance, state = "Active") {
 		'</section><section><h3>Open add-ins</h3>' + list(addins, "None recorded") + '</section></div>' +
 		'<section><h3>Logs</h3>' + list(logs, "None recorded") + '</section>' : '') + '</article>';
 }
+function isoLocal(value) {
+	if (!value) return '';
+	return String(value).replace('T', ' ').replace('Z', '').slice(0, 19) + ' UTC';
+}
+function durationText(meta) {
+	const ms = meta && typeof meta.elapsedMs === 'number' ? meta.elapsedMs : 0;
+	if (!ms) return '';
+	const total = Math.round(ms / 1000);
+	const m = Math.floor(total / 60);
+	const s = total % 60;
+	return m > 0 ? m + 'm ' + s + 's' : s + 's';
+}
+function renderRunMeta() {
+	const el = document.getElementById('run-meta');
+	if (!el) return;
+	const run = runs[currentRun];
+	const meta = (run && run.meta) || {};
+	const flags = meta.flags && typeof meta.flags === 'object' ? meta.flags : {};
+	const keys = Object.keys(flags).sort();
+	const chips = [];
+	if (meta.script) chips.push('<span class="run-chip">script: <code>' + escapeHtml(meta.script) + '</code></span>');
+	const duration = durationText(meta);
+	if (duration) chips.push('<span class="run-chip">duration: <strong>' + escapeHtml(duration) + '</strong></span>');
+	const started = isoLocal(meta.startedAt);
+	const finished = isoLocal(meta.finishedAt);
+	if (started) chips.push('<span class="run-chip">started: <code>' + escapeHtml(started) + '</code></span>');
+	if (finished) chips.push('<span class="run-chip">finished: <code>' + escapeHtml(finished) + '</code></span>');
+	if (keys.length) chips.push('<span class="run-chip">flags: <code>' + keys.map(key => escapeHtml(key + '=' + String(flags[key]))).join(' &nbsp;·&nbsp; ') + '</code></span>');
+	const command = meta.command ? '<div class="run-command">$ ' + escapeHtml(meta.command) + '</div>' : '';
+	if (!chips.length && !command) {
+		el.innerHTML = '<div class="muted">No run metadata recorded for this evolution run.</div>';
+		return;
+	}
+	el.innerHTML = '<div class="run-meta-grid">' + chips.join('') + '</div>' + command;
+}
 function render() {
 	const run = runs[currentRun];
 	const snapshots = run.snapshots;
@@ -190,6 +242,7 @@ function render() {
 	content.innerHTML = instances.length ? instances.join("") : '<div class="error">No Excel instances in this snapshot.</div>';
   previous.disabled = current === 0;
   next.disabled = current === snapshots.length - 1;
+  renderRunMeta();
 }
 runSelect.innerHTML = runs.map((run, index) => '<option value="' + index + '">' + escapeHtml(run.name) + ' (' + run.snapshots.length + ' snapshots)</option>').join('');
 runSelect.value = String(currentRun);
@@ -215,6 +268,7 @@ function main(): void {
 		.filter((entry: any) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}--/.test(entry.name))
 		.map((entry: any) => ({
 			name: entry.name,
+			meta: readRunInfo(join(input, entry.name)),
 			snapshots: readdirSync(join(input, entry.name))
 				.filter(
 					(file: string) =>
@@ -242,6 +296,7 @@ function main(): void {
 	if (legacyFiles.length) {
 		runs.unshift({
 			name: "Legacy snapshots",
+			meta: readRunInfo(input),
 			snapshots: legacyFiles.map((name: string) => ({
 				name,
 				data: readSnapshot(listScript, join(input, name)),

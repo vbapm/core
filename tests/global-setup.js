@@ -18,6 +18,7 @@ const { join } = require("path");
 const fs = require("fs");
 
 module.exports = async function globalSetup() {
+	recordEvolutionRunStart();
 	ensureExcelInstancesClean();
 	clearInactiveInstances();
 	clearActiveE2EInstanceLogs();
@@ -45,6 +46,43 @@ module.exports = async function globalSetup() {
 	}
 };
 
+/**
+ * Write a `run-info.json` (configuration flags + start time) into the current
+ * evolution run directory — the one chosen by Clear-ExcelRegistryEvolution.ps1
+ * and recorded in `current-run.txt`. The Excel registry writes all of the run's
+ * evolution snapshots to that same directory (no per-worker RUN_ID override),
+ * and `global-teardown` later stamps the finish time + elapsed duration so the
+ * HTML report header can show how the suite was configured and how long it ran.
+ */
+function recordEvolutionRunStart() {
+	if (!/^(1|true|yes)$/i.test(process.env.VBA_EVOLUTION || "")) return;
+	try {
+		const evolutionDir = join(process.env.TEMP, "Excel-Instances", "evolution");
+		const marker = join(evolutionDir, "current-run.txt");
+		if (!fs.existsSync(marker)) return;
+		const runDir = fs.readFileSync(marker, "utf8").trim();
+		if (!runDir) return;
+		fs.mkdirSync(runDir, { recursive: true });
+
+		const flags = {};
+		for (const [key, value] of Object.entries(process.env)) {
+			if (!value) continue;
+			if (/^(E2E_|VBA_)/.test(key) || key === "KEEP_E2E_TMP") flags[key] = value;
+		}
+
+		const info = {
+			runId: runDir.split(/[\\/]/).pop(),
+			startedAt: new Date().toISOString(),
+			script: process.env.npm_lifecycle_event || "",
+			command: process.env.npm_lifecycle_script || "",
+			flags
+		};
+		fs.writeFileSync(join(runDir, "run-info.json"), JSON.stringify(info, null, 2), "utf8");
+	} catch (err) {
+		console.warn(`[e2e globalSetup] failed to record evolution run start: ${err.message}`);
+	}
+}
+
 function ensureExcelInstancesClean() {
 	if (process.platform !== "win32") return;
 
@@ -52,11 +90,7 @@ function ensureExcelInstancesClean() {
 	const clean = /^(1|true|yes)$/i.test(process.env.E2E_CLEAN || "");
 	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
 	if (clean) args.push("-Clean");
-	const result = spawnSync(
-		"powershell.exe",
-		args,
-		{ stdio: "inherit" }
-	);
+	const result = spawnSync("powershell.exe", args, { stdio: "inherit" });
 
 	if (result.status !== 0) {
 		throw new Error("Rogue Excel instances remain alive; refusing to start e2e tests.");
