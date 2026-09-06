@@ -127,6 +127,30 @@ export class PowerShellSession {
 		});
 	}
 
+	async reset(): Promise<void> {
+		if (!this.child) return;
+
+		const id = "__VBA_RESET__";
+		const encoded = Buffer.from(JSON.stringify({ id: "__VBA_RESET__" }), "utf8").toString("base64");
+
+		await new Promise<void>((resolve, reject) => {
+			this.pending.set(id, {
+				resolve: (response: SessionResponse) => {
+					if (response.success) {
+						resolve();
+					} else {
+						reject(
+							new Error((response.errors ?? []).join("\n") || "PowerShell session reset failed")
+						);
+					}
+				},
+				reject
+			});
+
+			this.child!.stdin.write(encoded + "\n");
+		});
+	}
+
 	async close(): Promise<void> {
 		if (!this.child) return;
 
@@ -255,4 +279,10 @@ export function initPowerShellSession(sessionScript: string): PowerShellSession 
 		session = new PowerShellSession(sessionScript);
 	}
 	return session;
+}
+
+export async function resetPowerShellSession(): Promise<void> {
+	if (session) {
+		await session.reset();
+	}
 }

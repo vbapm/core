@@ -460,6 +460,16 @@ function Reset-ScriptExcel {
 	[System.GC]::WaitForPendingFinalizers()
 }
 
+function Reset-ScriptWorkbooks {
+	if ($null -eq $Script:App) {
+		return
+	}
+
+	Close-ScriptWorkbooks
+	$Script:IsAddin = $false
+	$Script:LastRequestIsAddin = $null
+}
+
 function Invoke-ScriptRun {
 	param(
 		[string]$FilePath,
@@ -657,6 +667,18 @@ while ($true) {
 	if ($requestId -eq '__VBA_QUIT__') {
 		Close-ScriptSession
 		break
+	}
+
+	# Control: clear session-owned workbook/add-in state while retaining Excel for
+	# the next test in the same Jest file.
+	if ($requestId -eq '__VBA_RESET__') {
+		try {
+			Reset-ScriptWorkbooks
+			Write-ScriptResponse $requestId (@{ success = $true; result = 'reset' } | ConvertTo-Json -Compress)
+		} catch {
+			Write-ScriptResponse $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress)
+		}
+		continue
 	}
 
 	$resolveAppName = if ($requestJson.appName) { [string]$requestJson.appName } else { 'excel' }

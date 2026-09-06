@@ -8,7 +8,11 @@ import { has } from "./has";
 import { parallel } from "./parallel";
 import { join } from "./path";
 import { createStdoutFile } from "./stdout-file";
-import { getPowerShellSession, initPowerShellSession } from "./powershell-session";
+import {
+	getPowerShellSession,
+	initPowerShellSession,
+	resetPowerShellSession
+} from "./powershell-session";
 import { withExcelSlot } from "./excel-pool";
 
 const execFile = promisify(_execFile);
@@ -227,6 +231,10 @@ export async function closePowerShellSession(): Promise<void> {
 	if (session) {
 		await session.close();
 	}
+}
+
+export async function resetPersistentPowerShellSession(): Promise<void> {
+	await resetPowerShellSession();
 }
 
 export function toResult(stdout: string, stderr: string, err?: Error): RunResult {

@@ -14,4 +14,7 @@ declare module "vbapm" {
 		macro: string,
 		args: string[]
 	): Promise<RunResult>;
+
+	export function closePowerShellSession(): Promise<void>;
+	export function resetPersistentPowerShellSession(): Promise<void>;
 }

@@ -1,6 +1,6 @@
 import { copy, ensureDirSync, readFile, remove } from "fs-extra";
 import { promisify } from "util";
-import { run as _run, closePowerShellSession } from "vbapm";
+import { run as _run, closePowerShellSession, resetPersistentPowerShellSession } from "vbapm";
 import walkSync from "walk-sync";
 import mri from "mri";
 import { env } from "../../src/env";
@@ -9,6 +9,7 @@ import { basename, extname, join, resolve } from "../../src/utils/path";
 import { RunResult } from "../../src/utils/run";
 import {
 	closePowerShellSession as closeSourcePowerShellSession,
+	resetPersistentPowerShellSession as resetSourcePowerShellSession,
 	run as sourceRun
 } from "../../src/utils/run";
 import { truncate } from "../../src/utils/text";
@@ -114,7 +115,7 @@ export async function tmp(id: string, action: (cwd: string) => void) {
 		await action(path);
 	} finally {
 		if (useSourcePersistentSession) {
-			await closePersistentSession();
+			await resetPersistentSession();
 		}
 		if (!keepTmp) {
 			await removeWithRetry(path);
@@ -446,4 +447,8 @@ function normalize(value: string): string {
  */
 export async function closePersistentSession(): Promise<void> {
 	await Promise.all([closePowerShellSession(), closeSourcePowerShellSession()]);
+}
+
+export async function resetPersistentSession(): Promise<void> {
+	await Promise.all([resetPersistentPowerShellSession(), resetSourcePowerShellSession()]);
 }
