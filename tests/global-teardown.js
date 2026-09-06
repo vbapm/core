@@ -46,7 +46,39 @@ module.exports = async function globalTeardown() {
 	teardownTrace("tracked-cleanup-complete");
 	await sweepTemporaryRepos();
 	teardownTrace("temporary-sweep-complete");
+	finishEvolutionRun();
+	teardownTrace("run-info-complete");
 };
+
+/**
+ * Stamp the finish time + total elapsed duration onto the evolution run's
+ * `run-info.json` (created by tests/__helpers__/execute.ts at run start). The
+ * marker `current-run.txt` points at the run directory that received the
+ * snapshots, so this works even though global-teardown runs without
+ * `VBA_EVOLUTION_RUN_ID` set.
+ */
+function finishEvolutionRun() {
+	if (!/^(1|true|yes)$/i.test(process.env.VBA_EVOLUTION || "")) return;
+	try {
+		const marker = join(process.env.TEMP, "Excel-Instances", "evolution", "current-run.txt");
+		if (!fs.existsSync(marker)) return;
+		const runDir = fs.readFileSync(marker, "utf8").trim();
+		if (!runDir || !fs.existsSync(runDir)) return;
+
+		const infoPath = join(runDir, "run-info.json");
+		if (!fs.existsSync(infoPath)) return;
+		const info = JSON.parse(fs.readFileSync(infoPath, "utf8"));
+		info.finishedAt = new Date().toISOString();
+		const start = new Date(info.startedAt).getTime();
+		if (Number.isFinite(start)) {
+			info.elapsedMs = Date.now() - start;
+		}
+		fs.writeFileSync(infoPath, JSON.stringify(info, null, 2), "utf8");
+		teardownTrace(`run-info finished elapsedMs=${info.elapsedMs}`);
+	} catch (err) {
+		teardownTrace(`run-info finish failed: ${err.message}`);
+	}
+}
 
 async function cleanupTrackedE2EInstances() {
 	const script = join(__dirname, "..", "scripts", "ps", "Close-TrackedE2EExcelInstances.ps1");
@@ -55,17 +87,57 @@ async function cleanupTrackedE2EInstances() {
 		/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
 	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
 	if (keepOneWarm) args.push("-KeepOneWarm");
-	const result = spawnSync(
-		"powershell.exe",
-		args,
-		{
-			stdio: "inherit"
-		}
-	);
+	const result = spawnSync("powershell.exe", args, {
+		stdio: "inherit"
+	});
 
 	if (result.status !== 0) {
 		console.warn(`[e2e] tracked Excel cleanup exited with status ${result.status}`);
 	}
+}
+
+function registryPath() {
+	return join(process.env.TEMP || ".", "Excel-Instances", "instances.json");
+}
+
+function normalizePathJs(value) {
+	return String(value).replace(/\\/g, "/").toLowerCase();
+}
+
+/** File paths (workbooks + loaded add-ins) every ACTIVE keep-warm instance holds. */
+function warmHeldPathSet() {
+	try {
+		const doc = JSON.parse(fs.readFileSync(registryPath(), "utf8"));
+		const held = [];
+		for (const inst of Array.isArray(doc.active) ? doc.active : []) {
+			const warm = inst.intent === "keep-warm" || String(inst.owner || "").startsWith("session#");
+			if (!warm) continue;
+			const workbooks = inst.workbooks;
+			if (Array.isArray(workbooks)) {
+				for (const wb of workbooks) {
+					if (wb) held.push(normalizePathJs(wb));
+				}
+			} else if (typeof workbooks === "string" && workbooks) {
+				held.push(normalizePathJs(workbooks));
+			}
+			if (Array.isArray(inst.addins)) {
+				for (const addin of inst.addins) {
+					if (addin && addin.fullPath) held.push(normalizePathJs(addin.fullPath));
+				}
+			}
+		}
+		return new Set(held);
+	} catch {
+		return new Set();
+	}
+}
+
+function isWarmHeld(path, warmHeld) {
+	const prefix = normalizePathJs(path).replace(/\/+$/, "") + "/";
+	for (const held of warmHeld) {
+		if (held.startsWith(prefix)) return true;
+	}
+	return false;
 }
 
 async function sweepTemporaryRepos() {
@@ -78,17 +150,35 @@ async function sweepTemporaryRepos() {
 		return;
 	}
 
+	const started = Date.now();
+	// A keep-warm Excel instance may still be alive (teardown deliberately keeps
+	// one warm) holding a file inside a leftover temp folder. Deleting such a
+	// folder is futile while that instance lives — skip the attempt and leave it
+	// for the `clean` script (which closes invisible Excel instances first).
+	const warmHeld = warmHeldPathSet();
+	teardownTrace(`sweep start root=${tempRoot} warmHeld=${warmHeld.size}`);
 	for (const entry of fs.readdirSync(tempRoot)) {
 		const path = join(tempRoot, entry);
+		if (isWarmHeld(path, warmHeld)) {
+			console.warn(
+				`[e2e] temporary repo sweep skipped (held by keep-warm Excel instance): ${path}`
+			);
+			teardownTrace(`sweep skipped-held-warm path=${path}`);
+			continue;
+		}
 		try {
+			teardownTrace(`sweep attempt path=${path}`);
 			await fs.promises.rm(path, {
 				recursive: true,
 				force: true,
 				maxRetries: 1,
 				retryDelay: 250
 			});
+			teardownTrace(`sweep removed path=${path}`);
 		} catch (err) {
 			console.warn(`[e2e] final temporary repo sweep deferred: ${path} (${err.message})`);
+			teardownTrace(`sweep deferred path=${path} (${err.message})`);
 		}
 	}
+	teardownTrace(`sweep complete elapsed=${Date.now() - started}ms`);
 }

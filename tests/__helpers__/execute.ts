@@ -1,3 +1,4 @@
+import { appendFileSync } from "fs";
 import { copy, ensureDirSync, readFile, remove } from "fs-extra";
 import { promisify } from "util";
 import { run as _run, closePowerShellSession, resetPersistentPowerShellSession } from "vbapm";
@@ -72,14 +73,6 @@ const hasVerboseArg = process.argv.some(arg => arg === "--verbose" || arg === "-
 const isVerbose = /^(1|true|yes)$/i.test(process.env.E2E_VERBOSE || "") || hasVerboseArg;
 const backgroundCommands = new Set(["build", "update", "export", "extract", "test"]);
 
-if (/^(1|true|yes)$/i.test(process.env.VBA_EVOLUTION || "") && !process.env.VBA_EVOLUTION_RUN_ID) {
-	const now = new Date();
-	const pad = (value: number, length = 2) => String(value).padStart(length, "0");
-	process.env.VBA_EVOLUTION_RUN_ID =
-		`${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}` +
-		`--${pad(now.getUTCHours())}h${pad(now.getUTCMinutes())}m${pad(now.getUTCSeconds())}s${pad(now.getUTCMilliseconds(), 3)}`;
-}
-
 function getE2EBackground(): boolean | undefined {
 	const value = process.env.E2E_BACKGROUND;
 	if (!value) return;
@@ -108,6 +101,27 @@ const useSourcePersistentSession =
 	/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") &&
 	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
 
+/**
+ * Append a line to the shared session trace log (`%TEMP%\Excel-Instances\session-client-trace.log`),
+ * mirroring the PowerShell-session client (`src/utils/powershell-session.ts`). Gated on
+ * `VBA_SESSION_TRACE`; used to correlate temp-folder deletion attempts with the Excel
+ * instance registry/evolution data.
+ */
+function cleanupTrace(message: string): void {
+	if (!/^(1|true|yes)$/i.test(process.env.VBA_SESSION_TRACE || "")) return;
+	try {
+		const directory = join(process.env.TEMP || process.env.TMP || ".", "Excel-Instances");
+		ensureDirSync(directory);
+		appendFileSync(
+			join(directory, "session-client-trace.log"),
+			`${new Date().toISOString()} worker=${process.env.JEST_WORKER_ID || "main"} ${message}\n`,
+			"utf8"
+		);
+	} catch {
+		// Diagnostic tracing must never affect test execution.
+	}
+}
+
 export async function tmp(id: string, action: (cwd: string) => void) {
 	const path = await tmpFolder({ dir: tmp_dir, prefix: `${id}-` });
 
@@ -118,9 +132,113 @@ export async function tmp(id: string, action: (cwd: string) => void) {
 			await resetPersistentSession();
 		}
 		if (!keepTmp) {
-			await removeWithRetry(path);
+			await removeTmpFolder(path);
 		}
 	}
+}
+
+/**
+ * Remove an e2e temp folder.
+ *
+ * Before trying, check whether a *keep-warm* Excel instance (one intended to
+ * persist past this test) still holds a workbook/add-in file inside the folder.
+ * In that case deletion is futile — Excel keeps the file (and therefore the
+ * folder) locked — so we skip the attempt entirely and leave the folder for
+ * the end-of-run sweep / `clean` script, rather than burning retries on a
+ * deletion we know cannot succeed.
+ */
+async function removeTmpFolder(path: string): Promise<boolean> {
+	if (await isHeldByPersistentExcel(path)) {
+		console.warn(
+			`[e2e] temporary repo cleanup skipped (held by keep-warm Excel instance): ${path}`
+		);
+		cleanupTrace(`tmp-cleanup skipped-held-warm path=${path}`);
+		return false;
+	}
+	return removeWithRetry(path);
+}
+
+interface ExcelRegistryInstance {
+	pid: number;
+	owner?: string;
+	reason?: string;
+	intent?: string;
+	visible?: boolean;
+	workbooks?: string[] | string | null;
+	addins?: Array<{ fullPath?: string }> | null;
+}
+
+function instancesJsonPath(): string {
+	return join(process.env.TEMP || process.env.TMP || ".", "Excel-Instances", "instances.json");
+}
+
+function normalizePath(value: string): string {
+	return value.replace(/\\/g, "/").toLowerCase();
+}
+
+/**
+ * Whether a registry instance is intended to be kept alive (warm) beyond the
+ * operation that created it — i.e. an Excel instance that *will persist* and
+ * keep holding any file it has open. Persistent sessions stamp `intent` =
+ * "keep-warm" at creation; `session#*` owners are treated as warm for registry
+ * entries written before the intent field existed.
+ */
+function isWarmIntended(instance: ExcelRegistryInstance): boolean {
+	if (instance.intent === "keep-warm") return true;
+	const owner = String(instance.owner || "");
+	return owner.startsWith("session#");
+}
+
+/** Every file path (workbook or loaded add-in) an instance reports holding. */
+function instanceHeldPaths(instance: ExcelRegistryInstance): string[] {
+	const paths: string[] = [];
+	if (Array.isArray(instance.workbooks)) {
+		for (const wb of instance.workbooks) if (wb) paths.push(wb);
+	} else if (typeof instance.workbooks === "string" && instance.workbooks) {
+		paths.push(instance.workbooks);
+	}
+	if (Array.isArray(instance.addins)) {
+		for (const addin of instance.addins) {
+			if (addin && typeof addin.fullPath === "string" && addin.fullPath) {
+				paths.push(addin.fullPath);
+			}
+		}
+	}
+	return paths;
+}
+
+/**
+ * True when a keep-warm Excel instance (one intended to persist past this
+ * test) currently holds a workbook/add-in file inside `folder`.
+ *
+ * Reads the shared instance registry (`%TEMP%\Excel-Instances\instances.json`)
+ * maintained by the PowerShell bridge. Returns `false` when the registry is
+ * missing/unreadable so callers fall back to attempting deletion.
+ */
+export async function isHeldByPersistentExcel(folder: string): Promise<boolean> {
+	let raw: string;
+	try {
+		raw = await readFile(instancesJsonPath(), "utf8");
+	} catch {
+		return false;
+	}
+
+	let doc: { active?: ExcelRegistryInstance[] };
+	try {
+		doc = JSON.parse(raw);
+	} catch {
+		return false;
+	}
+
+	const folderPrefix = `${normalizePath(folder).replace(/\/+$/, "")}/`;
+	for (const instance of doc.active ?? []) {
+		if (!isWarmIntended(instance)) continue;
+		for (const held of instanceHeldPaths(instance)) {
+			if (!held) continue;
+			if (normalizePath(held).startsWith(folderPrefix)) return true;
+		}
+	}
+	return false;
 }
 
 /**
@@ -130,25 +248,39 @@ export async function tmp(id: string, action: (cwd: string) => void) {
  * `References.AddFromFile`) for a moment after the CLI command returns, which
  * makes `fs-extra.remove` fail with EBUSY/EPERM on Windows. Retry with a short
  * backoff so temp-directory cleanup isn't flaky on CI.
+ *
+ * Returns `true` when the path was removed, `false` when the deletion was
+ * deferred (or failed). Every attempt and its outcome is traced when
+ * `VBA_SESSION_TRACE=1` so failing temp folders can be correlated with the
+ * Excel instances that still hold workbooks inside them.
  */
-async function removeWithRetry(path: string, attempts = 2): Promise<void> {
+async function removeWithRetry(path: string, attempts = 2): Promise<boolean> {
 	const cleanupStarted = Date.now();
+	cleanupTrace(`tmp-cleanup begin path=${path} attempts=${attempts}`);
 	for (let attempt = 0; attempt < attempts; attempt++) {
 		try {
 			await remove(path);
-			return;
+			cleanupTrace(
+				`tmp-cleanup success attempt=${attempt + 1}/${attempts} elapsed=${Date.now() - cleanupStarted}ms path=${path}`
+			);
+			return true;
 		} catch (err: any) {
 			const retriable = err?.code === "EBUSY" || err?.code === "EPERM";
+			cleanupTrace(
+				`tmp-cleanup attempt=${attempt + 1}/${attempts} error=${err?.code ?? err?.message ?? err} retriable=${retriable} path=${path}`
+			);
 			if (!retriable || attempt === attempts - 1) {
 				console.warn(`[e2e] temporary repo cleanup deferred: ${path} (${err?.message ?? err})`);
-				if (/^(1|true|yes)$/i.test(process.env.VBA_SESSION_TRACE || "")) {
-					console.warn(`[e2e] cleanup elapsed ${Date.now() - cleanupStarted}ms: ${path}`);
-				}
-				return;
+				cleanupTrace(
+					`tmp-cleanup deferred retriable=${retriable} elapsed=${Date.now() - cleanupStarted}ms path=${path} (${err?.message ?? err})`
+				);
+				return false;
 			}
 			await wait(250);
 		}
 	}
+	cleanupTrace(`tmp-cleanup exhausted attempts=${attempts} path=${path}`);
+	return false;
 }
 /**
  * Sets up a temporary directory with the contents of `dir`, then runs `action` with the temporary directory as the current working directory. The temporary directory is removed after `action` completes, unless the environment variable `KEEP_E2E_TMP` is set to `1`, `true`, or `yes`.

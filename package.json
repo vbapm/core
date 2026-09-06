@@ -62,6 +62,8 @@
         "build:bootstrap": "cd scripts/bootstrap && node --no-warnings ../../lib/vbapm build",
         "build:all": "run-s build:js build:cli build:addins build:bootstrap",
         "clean": "rimraf lib && rimraf dist && rimraf addins/build",
+        "clean:excel": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ps/Close-AllInvisibleExcelInstances.ps1",
+        "clean:e2e": "node scripts/clean-e2e.js",
         "deploy:dev": "pnpm run build:dev && powershell -ExecutionPolicy Bypass -File ./installer/devinstall.ps1"
     },
     "dependencies": {
