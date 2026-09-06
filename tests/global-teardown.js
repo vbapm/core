@@ -14,7 +14,16 @@ const { spawnSync } = require("child_process");
 const fs = require("fs");
 const { join } = require("path");
 
+function teardownTrace(message) {
+	if (!/^(1|true|yes)$/i.test(process.env.VBA_SESSION_TRACE || "")) return;
+	try {
+		const path = join(process.env.TEMP, "Excel-Instances", "session-client-trace.log");
+		fs.appendFileSync(path, `${new Date().toISOString()} global-teardown ${message}\n`);
+	} catch {}
+}
+
 module.exports = async function globalTeardown() {
+	teardownTrace("start");
 	const script = join(__dirname, "..", "scripts", "ps", "Assess-ExcelInstances.ps1");
 
 	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
@@ -23,6 +32,7 @@ module.exports = async function globalTeardown() {
 	}
 
 	const result = spawnSync("powershell.exe", args, { stdio: "inherit" });
+	teardownTrace(`assessment-complete status=${result.status}`);
 
 	if (result.status !== 0) {
 		// The assessment script only exits non-zero when -FailOnZombie is set and
@@ -33,7 +43,9 @@ module.exports = async function globalTeardown() {
 	}
 
 	await cleanupTrackedE2EInstances();
+	teardownTrace("tracked-cleanup-complete");
 	await sweepTemporaryRepos();
+	teardownTrace("temporary-sweep-complete");
 };
 
 async function cleanupTrackedE2EInstances() {
@@ -72,8 +84,8 @@ async function sweepTemporaryRepos() {
 			await fs.promises.rm(path, {
 				recursive: true,
 				force: true,
-				maxRetries: 10,
-				retryDelay: 1000
+				maxRetries: 1,
+				retryDelay: 250
 			});
 		} catch (err) {
 			console.warn(`[e2e] final temporary repo sweep deferred: ${path} (${err.message})`);

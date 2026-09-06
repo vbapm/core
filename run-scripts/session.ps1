@@ -717,7 +717,6 @@ function Invoke-ScriptRequest {
 	if ($requestId -eq '__VBA_DETACH__') {
 		try {
 			Reset-ScriptWorkbooks
-			if ($Script:BackgroundBuild -and $env:E2E_BACKGROUND -match '^(1|true|yes)$') { Ensure-WarmAnchor }
 			& $Respond $requestId (@{ success = $true; result = 'detached' } | ConvertTo-Json -Compress)
 		} catch { & $Respond $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress) }
 		return 'detach'
@@ -730,6 +729,8 @@ function Invoke-ScriptRequest {
 	}
 	$resolveFile = [string]$RequestJson.file
 	$resolveMacro = [string]$RequestJson.macro
+	$previousTestName = $env:VBA_E2E_TEST_NAME
+	if ($RequestJson.testName) { $env:VBA_E2E_TEST_NAME = [string]$RequestJson.testName }
 	$resolveKeepOpen = [bool]$RequestJson.keepOpen
 	$resolveBackground = [bool]$RequestJson.background
 	$resolveArgs = @()
@@ -741,6 +742,9 @@ function Invoke-ScriptRequest {
 	} catch {
 		Refresh-ScriptInstanceLog -MacroName $resolveMacro -ArgValues $resolveArgs -ErrorMessage $_.Exception.Message
 		& $Respond $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress)
+	} finally {
+		if ($null -eq $previousTestName) { Remove-Item Env:VBA_E2E_TEST_NAME -ErrorAction SilentlyContinue }
+		else { $env:VBA_E2E_TEST_NAME = $previousTestName }
 	}
 	return 'continue'
 }

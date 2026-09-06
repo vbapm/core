@@ -1,4 +1,5 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { appendFileSync } from "fs";
 import { readFile, unlink } from "fs/promises";
 import { Socket, connect } from "net";
 import { join as pathJoin } from "path";
@@ -11,11 +12,26 @@ const debug = env.debug("vbapm:ps-session");
 const RECORD_SEP = "\u001e";
 const UNIT_SEP = "\u001f";
 
+function sessionTrace(message: string): void {
+	if (!/^(1|true|yes)$/i.test(process.env.VBA_SESSION_TRACE || "")) return;
+	try {
+		const directory = pathJoin(process.env.TEMP || process.env.TMP || ".", "Excel-Instances");
+		appendFileSync(
+			pathJoin(directory, "session-client-trace.log"),
+			`${new Date().toISOString()} worker=${process.env.JEST_WORKER_ID || "main"} ${message}\n`,
+			"utf8"
+		);
+	} catch {
+		// Diagnostic tracing must never affect test execution.
+	}
+}
+
 interface SessionRequest {
 	id: string;
 	appName: string;
 	file: string;
 	macro: string;
+	testName?: string;
 	keepOpen: boolean;
 	background: boolean;
 	args: string[];
@@ -63,6 +79,7 @@ export class PowerShellSession {
 
 	async start(): Promise<void> {
 		if (this.child || this.socket) return;
+		sessionTrace("start-enter");
 
 		if (!(await pathExists(this.sessionScript))) {
 			throw new CliError(
@@ -89,6 +106,7 @@ export class PowerShellSession {
 						candidate.once("error", reject);
 					});
 					this.attachSocket(warmSocket);
+					sessionTrace(`warm-connect port=${warmPort}`);
 					return;
 				}
 			} catch {
@@ -107,6 +125,7 @@ export class PowerShellSession {
 				stdio: ["pipe", "pipe", "pipe"]
 			}
 		);
+		sessionTrace(`spawn pid=${this.child.pid}`);
 
 		this.child.stdout.on("data", (data: Buffer) => this.onStdout(data.toString()));
 		this.child.stderr.on("data", (data: Buffer) => {
@@ -118,6 +137,7 @@ export class PowerShellSession {
 			this.child = null;
 		});
 		this.child.on("close", code => {
+			sessionTrace(`child-close code=${code}`);
 			debug("session exited:", code);
 			const detail = this.stderrBuffer.trim();
 			this.rejectAll(
@@ -157,6 +177,7 @@ export class PowerShellSession {
 			appName,
 			file,
 			macro,
+			testName: process.env.VBA_E2E_TEST_NAME || undefined,
 			keepOpen: !!options.keepOpen,
 			background: !!options.background,
 			args
@@ -164,6 +185,7 @@ export class PowerShellSession {
 
 		// Base64-encode the JSON so args with quotes/newlines need no escaping.
 		const encoded = Buffer.from(JSON.stringify(request), "utf8").toString("base64");
+		sessionTrace(`request-send id=${id} macro=${macro}`);
 
 		return new Promise<SessionRunResult>((resolve, reject) => {
 			this.pending.set(id, {
@@ -208,6 +230,7 @@ export class PowerShellSession {
 
 	async close(): Promise<void> {
 		if (this.socket) {
+			sessionTrace("detach-start socket");
 			const socket = this.socket;
 			const encoded = Buffer.from(JSON.stringify({ id: "__VBA_QUIT__" }), "utf8").toString(
 				"base64"
@@ -267,49 +290,41 @@ export class PowerShellSession {
 			const encoded = Buffer.from(JSON.stringify({ id: "__VBA_DETACH__" }), "utf8").toString(
 				"base64"
 			);
-			await new Promise<void>((resolve, reject) => {
-				this.pending.set("__VBA_DETACH__", {
-					resolve: () => {
-						socket.end();
-						resolve();
-					},
-					reject
-				});
-				this.writeLine(encoded);
-			});
+			socket.end(encoded + "\n");
+			socket.destroy();
+			sessionTrace("detach-finish socket");
 			this.socket = null;
 			return;
 		}
 		if (!this.child) return;
+		sessionTrace(`detach-start child=${this.child.pid}`);
 
 		const child = this.child;
 		const encoded = Buffer.from(JSON.stringify({ id: "__VBA_DETACH__" }), "utf8").toString(
 			"base64"
 		);
 		await new Promise<void>((resolve, reject) => {
-			this.pending.set("__VBA_DETACH__", {
-				resolve: (response: SessionResponse) => {
-					if (response.success) resolve();
-					else
-						reject(
-							new Error((response.errors ?? []).join("\n") || "PowerShell session detach failed")
-						);
-				},
-				reject
-			});
-			this.writeLine(encoded);
+			child.stdin.write(encoded + "\n", error => (error ? reject(error) : resolve()));
 		});
+		sessionTrace("detach-write-complete");
 
 		child.removeAllListeners("close");
 		child.removeAllListeners("error");
 		child.stdout.removeAllListeners("data");
 		child.stderr.removeAllListeners("data");
+		// The keeper has switched to its localhost TCP server. Close the original
+		// stdio pipes so Jest/Node can exit while the warm Excel owner survives.
+		child.stdin.end();
+		child.stdin.destroy();
+		child.stdout.destroy();
+		child.stderr.destroy();
 		child.unref();
 		(child.stdin as any).unref?.();
 		(child.stdout as any).unref?.();
 		(child.stderr as any).unref?.();
 		this.child = null;
 		session = null;
+		sessionTrace("detach-finish child");
 	}
 
 	private onStdout(chunk: string): void {
@@ -337,6 +352,7 @@ export class PowerShellSession {
 		const pending = this.pending.get(id);
 		if (!pending) return;
 		this.pending.delete(id);
+		sessionTrace(`response-received id=${id}`);
 
 		try {
 			pending.resolve(JSON.parse(json) as SessionResponse);

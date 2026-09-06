@@ -131,7 +131,8 @@ export async function tmp(id: string, action: (cwd: string) => void) {
  * makes `fs-extra.remove` fail with EBUSY/EPERM on Windows. Retry with a short
  * backoff so temp-directory cleanup isn't flaky on CI.
  */
-async function removeWithRetry(path: string, attempts = 5): Promise<void> {
+async function removeWithRetry(path: string, attempts = 2): Promise<void> {
+	const cleanupStarted = Date.now();
 	for (let attempt = 0; attempt < attempts; attempt++) {
 		try {
 			await remove(path);
@@ -140,9 +141,12 @@ async function removeWithRetry(path: string, attempts = 5): Promise<void> {
 			const retriable = err?.code === "EBUSY" || err?.code === "EPERM";
 			if (!retriable || attempt === attempts - 1) {
 				console.warn(`[e2e] temporary repo cleanup deferred: ${path} (${err?.message ?? err})`);
+				if (/^(1|true|yes)$/i.test(process.env.VBA_SESSION_TRACE || "")) {
+					console.warn(`[e2e] cleanup elapsed ${Date.now() - cleanupStarted}ms: ${path}`);
+				}
 				return;
 			}
-			await wait(1000);
+			await wait(250);
 		}
 	}
 }
