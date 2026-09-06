@@ -1,9 +1,10 @@
 # Ensure-ExcelInstancesClean.ps1
 #
-# Guard run immediately before the e2e integration suite. It terminates only
-# invisible rogue/untracked EXCEL.EXE processes. Visible rogue processes are
-# never killed because they may belong to the user; they are reported as
-# warnings while the suite continues.
+# Guard run immediately before the e2e integration suite. It terminates
+# invisible rogue/untracked EXCEL.EXE processes and stale hidden instances
+# owned by prior e2e sessions. Visible Excel processes are never killed,
+# regardless of their registry owner; they are reported as warnings while the
+# suite continues.
 #
 # The e2e suite itself creates *background* instances (VBA_BACKGROUND_BUILD=1)
 # and registers each one, so in the common case there is nothing running when
@@ -22,22 +23,26 @@ foreach ($entry in @(Read-ExcelInstances)) {
 	$activeByPid[[int]$entry.pid] = $entry
 }
 
-$visibleRogue = @()
-$invisibleRogue = @()
+$visibleProtected = @()
+$invisibleCleanup = @()
 foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
 	$entry = $activeByPid[[int]$process.Id]
 	$owner = if ($entry) { [string]$entry.owner } else { 'untracked' }
 	$isRogue = -not $entry -or $owner -match '^(rogue|unknown|unknown-owner|untracked)$'
-	if (-not $isRogue) { continue }
+	$isStaleE2E = $entry -and -not [bool]$entry.visible -and (
+		[string]$entry.owner -like 'session#*' -or [string]$entry.reason -eq 'e2e'
+	)
+	if (-not $isRogue -and -not $isStaleE2E) { continue }
 
 	if ([bool]($process.MainWindowHandle -ne 0)) {
-		$visibleRogue += $process
+		$visibleProtected += [pscustomobject]@{ Process = $process; StaleE2E = $isStaleE2E }
 	} else {
-		$invisibleRogue += $process
+		$invisibleCleanup += [pscustomobject]@{ Process = $process; Entry = $entry; StaleE2E = $isStaleE2E }
 	}
 }
 
-foreach ($process in $invisibleRogue) {
+foreach ($candidate in $invisibleCleanup) {
+	$process = $candidate.Process
 	try {
 		$processId = [int]$process.Id
 		Stop-Process -Id $processId -Force -ErrorAction Stop
@@ -51,7 +56,11 @@ foreach ($process in $invisibleRogue) {
 		}
 
 		if ($exited) {
-			Write-Output "Terminated invisible rogue Excel process PID=$processId."
+			$kind = if ($candidate.StaleE2E) { 'stale e2e' } else { 'rogue' }
+			Write-Output "Terminated invisible $kind Excel process PID=$processId."
+			if ($candidate.StaleE2E -and (Get-Command Remove-ExcelInstance -ErrorAction SilentlyContinue)) {
+				Remove-ExcelInstance -InstanceId $processId -DeactivateReason 'stale-e2e-preflight'
+			}
 		} else {
 			# A process can briefly survive Stop-Process while Windows tears down
 			# the Office COM server. Retry once, still only for an invisible PID.
@@ -59,28 +68,33 @@ foreach ($process in $invisibleRogue) {
 			if ($null -ne $current -and [bool]($current.MainWindowHandle -eq 0)) {
 				Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
 			}
-			Write-Output "Termination requested for invisible rogue Excel process PID=$processId."
+			Write-Output "Termination requested for invisible Excel process PID=$processId."
 		}
 	} catch {
 		Write-Warning "Could not terminate invisible rogue Excel process PID=$($process.Id): $($_.Exception.Message)"
 	}
 }
 
-if ($visibleRogue.Count -gt 0) {
-	foreach ($process in $visibleRogue) {
-		Write-Warning "Visible rogue Excel process left untouched: PID=$($process.Id), title='$($process.MainWindowTitle)'."
+if ($visibleProtected.Count -gt 0) {
+	foreach ($candidate in $visibleProtected) {
+		$process = $candidate.Process
+		$kind = if ($candidate.StaleE2E) { 'tracked e2e' } else { 'rogue' }
+		Write-Warning "Visible $kind Excel process left untouched: PID=$($process.Id), title='$($process.MainWindowTitle)'."
 	}
 }
 
 $remainingInvisible = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue | Where-Object {
 	$entry = $activeByPid[[int]$_.Id]
 	$isRogue = -not $entry -or ([string]$entry.owner -match '^(rogue|unknown|unknown-owner|untracked)$')
-	$isRogue -and [bool]($_.MainWindowHandle -eq 0)
+	$isStaleE2E = $entry -and -not [bool]$entry.visible -and (
+		[string]$entry.owner -like 'session#*' -or [string]$entry.reason -eq 'e2e'
+	)
+	($isRogue -or $isStaleE2E) -and [bool]($_.MainWindowHandle -eq 0)
 })
 
 if ($remainingInvisible.Count -gt 0) {
 	foreach ($process in $remainingInvisible) {
-		Write-Error "Invisible rogue Excel process remains alive: PID=$($process.Id)."
+		Write-Error "Invisible cleanup Excel process remains alive: PID=$($process.Id)."
 	}
 	exit 1
 }
