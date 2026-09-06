@@ -154,7 +154,7 @@ function workbookRows(instance) {
     return icon + " " + escapeHtml(value);
   });
 }
-function renderInstance(instance) {
+function renderInstance(instance, state = "Active") {
 	const analyzed = instance.comReachable === true;
   const workbooks = workbookRows(instance);
 	const addinItems = collection(instance.addins);
@@ -163,7 +163,7 @@ function renderInstance(instance) {
     .map(addin => "📚" + (addin.readOnly ? "🔭" : "✏️") + " " + escapeHtml(addin.fullPath || addin.name));
 	const logs = nonEmptyCollection(instance.logs);
   const ghostCount = Number(instance.ghostDetection?.ghostCount || 0);
-	return '<article class="instance"><h2>' + escapeHtml(instance.number) + ') PID ' + escapeHtml(instance.pid) + '</h2>' +
+	return '<article class="instance"><h2>' + escapeHtml(instance.number) + ') PID ' + escapeHtml(instance.pid) + ' · ' + escapeHtml(state) + '</h2>' +
 		'<div class="instance-meta">' + escapeHtml(instance.visible ? "Visible" : "Hidden") + ' · ' +
     escapeHtml(instance.comReachable ? "COM reachable" : "COM unavailable") + " · " +
 		escapeHtml(instance.owner || "unknown") + (analyzed ? ' · ghost projects: ' + ghostCount : '') + '</div>' +
@@ -184,7 +184,10 @@ function render() {
 	openSnapshot.title = "Open " + snapshot.name;
 	snapshotStats.textContent = " · " + active.length + " active · " + inactive.length + " inactive";
 	position.textContent = (current + 1) + " / " + snapshots.length;
-	content.innerHTML = active.length ? active.map(renderInstance).join("") : '<div class="error">No active Excel instances in this snapshot.</div>';
+	const inactiveInstances = Array.isArray(data.inactive) ? data.inactive : [];
+	const instances = active.map(instance => renderInstance(instance, "Active"))
+		.concat(inactiveInstances.map(instance => renderInstance(instance, "Inactive")));
+	content.innerHTML = instances.length ? instances.join("") : '<div class="error">No Excel instances in this snapshot.</div>';
   previous.disabled = current === 0;
   next.disabled = current === snapshots.length - 1;
 }

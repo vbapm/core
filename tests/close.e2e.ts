@@ -21,13 +21,13 @@ describe("close", () => {
 		});
 	});
 
-	test("close fails when built target does not exist", async () => {
+	test("close fails when built target (file) does not exist", async () => {
 		await setup(standard, "close-not-built", async cwd => {
 			await expect(execute(cwd, "close --force")).rejects.toThrow();
 		});
 	});
 
-	test("close with --force shows error for missing build", async () => {
+	test("close with --force shows error for missing build (file)", async () => {
 		await setup(standard, "close-missing-build", async cwd => {
 			try {
 				await execute(cwd, "close --force");
