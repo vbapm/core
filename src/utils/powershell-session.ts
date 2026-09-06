@@ -1,4 +1,7 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { readFile, unlink } from "fs/promises";
+import { Socket, connect } from "net";
+import { join as pathJoin } from "path";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
 import { pathExists } from "./fs";
@@ -44,12 +47,14 @@ export interface SessionRunResult {
  */
 export class PowerShellSession {
 	private child: ChildProcessWithoutNullStreams | null = null;
+	private socket: Socket | null = null;
 	private sessionScript: string;
 	private pending = new Map<
 		string,
 		{ resolve: (r: SessionResponse) => void; reject: (e: Error) => void }
 	>();
 	private buffer = "";
+	private stderrBuffer = "";
 	private requestSeq = 0;
 
 	constructor(sessionScript: string) {
@@ -57,13 +62,40 @@ export class PowerShellSession {
 	}
 
 	async start(): Promise<void> {
-		if (this.child) return;
+		if (this.child || this.socket) return;
 
 		if (!(await pathExists(this.sessionScript))) {
 			throw new CliError(
 				ErrorCode.RunScriptNotFound,
 				`Bridge session script not found at "${this.sessionScript}".`
 			);
+		}
+
+		const isPrimaryWorker = !process.env.JEST_WORKER_ID || process.env.JEST_WORKER_ID === "1";
+		const warmMetadataPath = pathJoin(
+			process.env.TEMP || process.env.TMP || ".",
+			"Excel-Instances",
+			"warm-session.json"
+		);
+		if (isPrimaryWorker) {
+			try {
+				const metadata = JSON.parse(await readFile(warmMetadataPath, "utf8")) as { port?: number };
+				const warmPort = metadata.port;
+				if (typeof warmPort === "number") {
+					const warmSocket = await new Promise<Socket>((resolve, reject) => {
+						const candidate = connect({ host: "127.0.0.1", port: warmPort }, () =>
+							resolve(candidate)
+						);
+						candidate.once("error", reject);
+					});
+					this.attachSocket(warmSocket);
+					return;
+				}
+			} catch {
+				try {
+					await unlink(warmMetadataPath);
+				} catch {}
+			}
 		}
 
 		this.child = spawn(
@@ -78,6 +110,7 @@ export class PowerShellSession {
 
 		this.child.stdout.on("data", (data: Buffer) => this.onStdout(data.toString()));
 		this.child.stderr.on("data", (data: Buffer) => {
+			this.stderrBuffer += data.toString();
 			debug("stderr:", data.toString());
 		});
 		this.child.on("error", err => {
@@ -86,8 +119,25 @@ export class PowerShellSession {
 		});
 		this.child.on("close", code => {
 			debug("session exited:", code);
-			this.rejectAll(new Error(`PowerShell session exited (code ${code})`));
+			const detail = this.stderrBuffer.trim();
+			this.rejectAll(
+				new Error(`PowerShell session exited (code ${code})${detail ? `: ${detail}` : ""}`)
+			);
+			this.stderrBuffer = "";
 			this.child = null;
+		});
+	}
+
+	private attachSocket(socket: Socket): void {
+		this.socket = socket;
+		socket.on("data", (data: Buffer) => this.onStdout(data.toString()));
+		socket.on("error", err => {
+			this.rejectAll(err);
+			this.socket = null;
+		});
+		socket.on("close", () => {
+			this.rejectAll(new Error("Warm PowerShell session socket closed"));
+			this.socket = null;
 		});
 	}
 
@@ -123,8 +173,13 @@ export class PowerShellSession {
 				reject
 			});
 
-			this.child!.stdin.write(encoded + "\n");
+			this.writeLine(encoded);
 		});
+	}
+
+	private writeLine(encoded: string): void {
+		if (this.socket) this.socket.write(encoded + "\n");
+		else this.child!.stdin.write(encoded + "\n");
 	}
 
 	async reset(): Promise<void> {
@@ -147,11 +202,29 @@ export class PowerShellSession {
 				reject
 			});
 
-			this.child!.stdin.write(encoded + "\n");
+			this.writeLine(encoded);
 		});
 	}
 
 	async close(): Promise<void> {
+		if (this.socket) {
+			const socket = this.socket;
+			const encoded = Buffer.from(JSON.stringify({ id: "__VBA_QUIT__" }), "utf8").toString(
+				"base64"
+			);
+			await new Promise<void>((resolve, reject) => {
+				this.pending.set("__VBA_QUIT__", {
+					resolve: () => {
+						socket.end();
+						resolve();
+					},
+					reject
+				});
+				this.writeLine(encoded);
+			});
+			this.socket = null;
+			return;
+		}
 		if (!this.child) return;
 
 		const child = this.child;
@@ -184,6 +257,57 @@ export class PowerShellSession {
 		if (timedOut) {
 			child.kill();
 		}
+		this.child = null;
+		session = null;
+	}
+
+	async detach(): Promise<void> {
+		if (this.socket) {
+			const socket = this.socket;
+			const encoded = Buffer.from(JSON.stringify({ id: "__VBA_DETACH__" }), "utf8").toString(
+				"base64"
+			);
+			await new Promise<void>((resolve, reject) => {
+				this.pending.set("__VBA_DETACH__", {
+					resolve: () => {
+						socket.end();
+						resolve();
+					},
+					reject
+				});
+				this.writeLine(encoded);
+			});
+			this.socket = null;
+			return;
+		}
+		if (!this.child) return;
+
+		const child = this.child;
+		const encoded = Buffer.from(JSON.stringify({ id: "__VBA_DETACH__" }), "utf8").toString(
+			"base64"
+		);
+		await new Promise<void>((resolve, reject) => {
+			this.pending.set("__VBA_DETACH__", {
+				resolve: (response: SessionResponse) => {
+					if (response.success) resolve();
+					else
+						reject(
+							new Error((response.errors ?? []).join("\n") || "PowerShell session detach failed")
+						);
+				},
+				reject
+			});
+			this.writeLine(encoded);
+		});
+
+		child.removeAllListeners("close");
+		child.removeAllListeners("error");
+		child.stdout.removeAllListeners("data");
+		child.stderr.removeAllListeners("data");
+		child.unref();
+		(child.stdin as any).unref?.();
+		(child.stdout as any).unref?.();
+		(child.stderr as any).unref?.();
 		this.child = null;
 		session = null;
 	}

@@ -38,9 +38,14 @@ module.exports = async function globalTeardown() {
 
 async function cleanupTrackedE2EInstances() {
 	const script = join(__dirname, "..", "scripts", "ps", "Close-TrackedE2EExcelInstances.ps1");
+	const keepOneWarm =
+		/^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "") &&
+		/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
+	if (keepOneWarm) args.push("-KeepOneWarm");
 	const result = spawnSync(
 		"powershell.exe",
-		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
+		args,
 		{
 			stdio: "inherit"
 		}

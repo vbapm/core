@@ -20,6 +20,7 @@ const fs = require("fs");
 module.exports = async function globalSetup() {
 	ensureExcelInstancesClean();
 	clearInactiveInstances();
+	clearActiveE2EInstanceLogs();
 	writeRunBanner();
 
 	const background = /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "");
@@ -48,9 +49,12 @@ function ensureExcelInstancesClean() {
 	if (process.platform !== "win32") return;
 
 	const script = join(__dirname, "..", "scripts", "ps", "Ensure-ExcelInstancesClean.ps1");
+	const clean = /^(1|true|yes)$/i.test(process.env.E2E_CLEAN || "");
+	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
+	if (clean) args.push("-Clean");
 	const result = spawnSync(
 		"powershell.exe",
-		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
+		args,
 		{ stdio: "inherit" }
 	);
 
@@ -76,6 +80,21 @@ function clearInactiveInstances() {
 		// Best-effort: don't fail the suite over registry housekeeping.
 		console.warn(
 			"[e2e globalSetup] Clear-InactiveExcelInstances.ps1 exited non-zero; continuing anyway."
+		);
+	}
+}
+
+function clearActiveE2EInstanceLogs() {
+	const script = join(__dirname, "..", "scripts", "ps", "Clear-ActiveE2EExcelInstanceLogs.ps1");
+	const result = spawnSync(
+		"powershell.exe",
+		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
+		{ stdio: "ignore" }
+	);
+
+	if (result.status !== 0) {
+		console.warn(
+			"[e2e globalSetup] Clear-ActiveE2EExcelInstanceLogs.ps1 exited non-zero; continuing anyway."
 		);
 	}
 }

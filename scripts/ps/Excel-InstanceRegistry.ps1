@@ -356,6 +356,63 @@ function Clear-InactiveExcelInstances {
     }
 }
 
+function Clear-ActiveE2EExcelInstanceLogs {
+    Get-ExcelInstancesLock | Out-Null
+    try {
+        $doc = Read-ExcelRegistryDocument
+        $changed = $false
+        foreach ($entry in @($doc.active)) {
+            $isHiddenE2E = -not [bool]$entry.visible -and (
+                [string]$entry.reason -eq 'e2e' -or
+                [string]$entry.owner -like 'session#*'
+            )
+            if ($isHiddenE2E -and @($entry.logs).Count -gt 0) {
+                $entry.logs = @()
+                $changed = $true
+            }
+        }
+        if ($changed) {
+            Write-ExcelRegistryDocument -Active $doc.active -Inactive $doc.inactive
+        }
+    } finally {
+        Release-ExcelInstancesLock
+    }
+}
+
+function ConvertTo-ExcelRegistryEventEntry {
+    param([object]$Entry)
+
+    return [ordered]@{
+        id               = [string]$Entry.id
+        pid              = [int]$Entry.pid
+        owner            = [string]$Entry.owner
+        reason           = [string]$Entry.reason
+        visible          = [bool]$Entry.visible
+        comReachable     = [bool]$Entry.comReachable
+        workbooks        = @($Entry.workbooks)
+        workbookReadOnly = $Entry.workbookReadOnly
+        addins           = @($Entry.addins)
+        logs             = @($Entry.logs)
+        ghostWorkbooks   = @($Entry.ghostWorkbooks)
+        ghostDetection   = $Entry.ghostDetection
+        deactivatedAt    = [string]$Entry.deactivatedAt
+        deactivateReason = [string]$Entry.deactivateReason
+    }
+}
+
+function Get-ExcelRegistryEventSignature {
+    param(
+        [object[]]$Active,
+        [object[]]$Inactive
+    )
+
+    $eventDocument = [ordered]@{
+        active   = @($Active | ForEach-Object { ConvertTo-ExcelRegistryEventEntry $_ })
+        inactive = @($Inactive | ForEach-Object { ConvertTo-ExcelRegistryEventEntry $_ })
+    }
+    return ($eventDocument | ConvertTo-Json -Depth 20 -Compress)
+}
+
 <#
 .SYNOPSIS
 Write the full registry document (active + inactive) as JSON. Callers should
@@ -364,7 +421,8 @@ hold the lock.
 function Write-ExcelRegistryDocument {
     param(
         [object[]]$Active,
-        [object[]]$Inactive = @()
+        [object[]]$Inactive = @(),
+        [switch]$ForceEvolutionSnapshot
     )
 
     $dir = Get-ExcelInstancesDir
@@ -426,9 +484,25 @@ function Write-ExcelRegistryDocument {
         try { $previousJson = [System.IO.File]::ReadAllText($jsonPath, [System.Text.UTF8Encoding]::new($false)) } catch {}
     }
 
+    $eventChanged = $true
+    if ($null -ne $previousJson) {
+        try {
+            $previousDocument = $previousJson | ConvertFrom-Json -ErrorAction Stop
+            $eventChanged = (Get-ExcelRegistryEventSignature `
+                -Active @($previousDocument.active) `
+                -Inactive @($previousDocument.inactive)) -ne (Get-ExcelRegistryEventSignature `
+                -Active $activeList `
+                -Inactive $inactiveList)
+        } catch {
+            $eventChanged = $true
+        }
+    }
+
     if ($previousJson -ne $json) {
         [System.IO.File]::WriteAllText($jsonPath, $json, [System.Text.UTF8Encoding]::new($false))
-        Save-ExcelRegistryEvolutionSnapshot -Json $json -JsonPath $jsonPath
+        if ($eventChanged -or $ForceEvolutionSnapshot) {
+            Save-ExcelRegistryEvolutionSnapshot -Json $json -JsonPath $jsonPath
+        }
     }
 }
 
@@ -694,6 +768,7 @@ function Update-ExcelInstance {
             $existingId = New-ExcelInstanceId
         }
 
+        $hasNewLog = $null -ne $Logs -and @($Logs | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0
         $existingEntry = @($instances | Where-Object { [int]$_.pid -eq $InstanceId })[0]
         if ($null -eq $Logs) {
             $Logs = if ($existingEntry -and $null -ne $existingEntry.logs) { @($existingEntry.logs) } else { @() }
@@ -740,7 +815,7 @@ function Update-ExcelInstance {
         # This PID is active again — drop any stale inactive entry for it.
         $inactive = @($doc.inactive | Where-Object { [int]$_.pid -ne $InstanceId })
 
-        Write-ExcelRegistryDocument -Active $instances -Inactive $inactive
+        Write-ExcelRegistryDocument -Active $instances -Inactive $inactive -ForceEvolutionSnapshot:$hasNewLog
     } finally {
         Release-ExcelInstancesLock
     }
@@ -1090,7 +1165,7 @@ function Refresh-ExcelInstance {
             }
 
             if ($found) {
-                Write-ExcelRegistryDocument -Active $active -Inactive $doc.inactive
+                Write-ExcelRegistryDocument -Active $active -Inactive $doc.inactive -ForceEvolutionSnapshot:([bool]$Log)
             }
         } finally {
             Release-ExcelInstancesLock

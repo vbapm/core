@@ -229,7 +229,13 @@ export function unescape(value: string): string {
 export async function closePowerShellSession(): Promise<void> {
 	const session = getPowerShellSession();
 	if (session) {
-		await session.close();
+		const keepWarm =
+			env.isWindows &&
+			(!process.env.JEST_WORKER_ID || process.env.JEST_WORKER_ID === "1") &&
+			/^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "") &&
+			/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+		if (keepWarm) await session.detach();
+		else await session.close();
 	}
 }
 

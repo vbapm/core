@@ -10,7 +10,7 @@
         },
         {
             "type": "npm",
-            "script": "test:e2e:updateSnapshots",
+            "script": "test:e2e:background:updateSnapshots",
             "problemMatcher": [],
             "label": "npm: test:e2e:background:updateSnapshots",
             "detail": "cross-env E2E_BACKGROUND=1 jest --config e2e.config.mjs --runInBand --updateSnapshot"

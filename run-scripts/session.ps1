@@ -53,6 +53,7 @@ $Script:WorkbookWasOpen = $false
 $Script:IsAddin = $false      # true when the current request targets an add-in
 $Script:LoadedAddins = @{}
 $Script:LastRequestIsAddin = $null
+$Script:WarmInstance = $false
 
 function Get-ScriptFileName {
 	param([string]$Path)
@@ -71,48 +72,30 @@ function Unescape-ScriptArgument {
 
 function Get-ScriptMacroTargetFile {
 	param([string[]]$ArgValues)
-
 	foreach ($arg in $ArgValues) {
 		if (-not $arg) { continue }
 		try {
 			$parsed = $arg | ConvertFrom-Json -ErrorAction Stop
-			if ($null -ne $parsed -and $parsed.PSObject.Properties.Name -contains 'file' -and $parsed.file) {
+			if ($parsed.PSObject.Properties.Name -contains 'file' -and $parsed.file) {
 				return ([string]$parsed.file) -replace '\\', '/'
 			}
-		} catch {
-			# Not JSON, or no file field.
-		}
+		} catch {}
 	}
-
 	return ''
 }
 
 function Get-ScriptMacroLogDescription {
-	param(
-		[string]$MacroName,
-		[string[]]$ArgValues
-	)
-
-	$testName = $env:VBA_E2E_TEST_NAME
+	param([string]$MacroName, [string[]]$ArgValues)
 	$target = Get-ScriptMacroTargetFile $ArgValues
 	$log = if ($target) { "$MacroName -> $target" } else { $MacroName }
-	if ($testName) { $log = "$testName :: $log" }
+	if ($env:VBA_E2E_TEST_NAME) { $log = "$env:VBA_E2E_TEST_NAME :: $log" }
 	return "$(Get-Date -Format o) :: $log"
 }
 
 function Get-ScriptMacroErrorLog {
-	param(
-		[string]$MacroName,
-		[string[]]$ArgValues,
-		[string]$Result,
-		[string]$ErrorMessage = ''
-	)
-
+	param([string]$MacroName, [string[]]$ArgValues, [object]$Result, [string]$ErrorMessage = '')
 	$log = Get-ScriptMacroLogDescription $MacroName $ArgValues
-	if ($ErrorMessage) {
-		return "$log :: ERROR: $ErrorMessage"
-	}
-
+	if ($ErrorMessage) { return "$log :: ERROR: $ErrorMessage" }
 	try {
 		$parsed = $Result | ConvertFrom-Json -ErrorAction Stop
 		$errors = @($parsed.errors | Where-Object { $_ })
@@ -120,24 +103,18 @@ function Get-ScriptMacroErrorLog {
 			$detail = if ($errors.Count -gt 0) { $errors -join ' | ' } else { 'unknown error' }
 			return "$log :: ERROR: $detail"
 		}
-	} catch {
-		# Non-JSON macro output is a successful result.
-	}
-
+	} catch {}
 	return $log
 }
 
 function Test-ScriptWorkbookOpen {
 	param([string]$WorkbookPath)
-
 	if (-not $WorkbookPath -or $null -eq $Script:App) { return $false }
 	try {
 		$normalizedPath = [System.IO.Path]::GetFullPath($WorkbookPath)
 		foreach ($workbook in @($Script:App.Workbooks)) {
 			try {
-				if ([string]::Equals([System.IO.Path]::GetFullPath([string]$workbook.FullName), $normalizedPath, [System.StringComparison]::OrdinalIgnoreCase)) {
-					return $true
-				}
+				if ([string]::Equals([System.IO.Path]::GetFullPath([string]$workbook.FullName), $normalizedPath, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
 			} catch {}
 		}
 	} catch {}
@@ -145,27 +122,12 @@ function Test-ScriptWorkbookOpen {
 }
 
 function Refresh-ScriptInstanceLog {
-	param(
-		[string]$MacroName,
-		[string[]]$ArgValues,
-		[object]$Result = '',
-		[string]$ErrorMessage = ''
-	)
-
-	if (-not $HasRegistry -or $Script:RegisteredPid -le 0 -or $null -eq $Script:App) {
-		return
-	}
-
+	param([string]$MacroName, [string[]]$ArgValues, [object]$Result = '', [string]$ErrorMessage = '')
+	if (-not $HasRegistry -or $Script:RegisteredPid -le 0 -or $null -eq $Script:App) { return }
 	try {
 		$log = Get-ScriptMacroErrorLog $MacroName $ArgValues $Result $ErrorMessage
-		Refresh-ExcelInstance `
-			-ExcelApp $Script:App `
-			-ProcessId $Script:RegisteredPid `
-			-TargetPath (Get-ScriptMacroTargetFile $ArgValues) `
-			-Log $log
-	} catch {
-		# Registry attribution is best-effort; never mask the macro result.
-	}
+		Refresh-ExcelInstance -ExcelApp $Script:App -ProcessId $Script:RegisteredPid -TargetPath (Get-ScriptMacroTargetFile $ArgValues) -Log $log
+	} catch {}
 }
 
 function Write-ScriptWorkbookCloseLog {
@@ -229,6 +191,25 @@ function Open-ScriptExcel {
 	)
 
 	$Script:BackgroundBuild = $BackgroundBuild
+	$Script:WarmInstance = $false
+
+	if ($Script:BackgroundBuild -and $HasRegistry) {
+		$reusable = Find-ReusableBackgroundExcel
+		if ($null -ne $reusable) {
+			$Script:App = $reusable.App
+			$Script:AppWasOpen = $false
+			$Script:RegisteredPid = [int]$reusable.ProcessId
+			$Script:WarmInstance = $true
+			try {
+				Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Visible $false -Reason 'e2e' | Out-Null
+			} catch {}
+			Close-ScriptWorkbooks
+			if ($reusable.PreviousSessionPid -gt 0 -and $reusable.PreviousSessionPid -ne $PID) {
+				try { Stop-Process -Id $reusable.PreviousSessionPid -Force -ErrorAction SilentlyContinue } catch {}
+			}
+			return
+		}
+	}
 
 	if (-not $Script:BackgroundBuild) {
 		try {
@@ -290,6 +271,40 @@ function Open-ScriptExcel {
 			if ($lockHeld) { Release-ExcelInstancesLock }
 		}
 	}
+}
+
+function Find-ReusableBackgroundExcel {
+	$entriesByPid = @{}
+	foreach ($entry in @(Read-ExcelInstances)) {
+		$entriesByPid[[int]$entry.pid] = $entry
+	}
+
+	foreach ($app in @(Get-ExcelApplications)) {
+		$keepApp = $false
+		try {
+			$processId = Get-ExcelProcessId -ExcelApp $app
+			$process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+			$entry = $entriesByPid[[int]$processId]
+			$owner = if ($entry) { [string]$entry.owner } else { '' }
+			$isTracked = $null -ne $entry -and $owner -notmatch '^(rogue|unknown|unknown-owner|untracked)$'
+			$isHidden = $null -ne $process -and [bool]($process.MainWindowHandle -eq 0)
+			if ($isTracked -and $isHidden) {
+				$previousSessionPid = 0
+				if ($owner -like 'session#*') {
+					try { $previousSessionPid = [int]($owner.Substring(8)) } catch {}
+				}
+				$keepApp = $true
+				return [pscustomobject]@{ App = $app; ProcessId = $processId; PreviousSessionPid = $previousSessionPid }
+			}
+		} catch {
+			# Try the next ROT-reachable instance.
+		}
+		if (-not $keepApp) {
+			try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
+		}
+	}
+
+	return $null
 }
 
 function Ensure-ScriptWorkbook {
@@ -470,6 +485,24 @@ function Reset-ScriptWorkbooks {
 	$Script:LastRequestIsAddin = $null
 }
 
+function Ensure-WarmAnchor {
+	if ($null -eq $Script:App) { return }
+
+	$anchorPath = Join-Path $env:TEMP 'Excel-Instances\warm-anchor.xlsx'
+	try {
+		if (Test-Path -LiteralPath $anchorPath) {
+			Remove-Item -LiteralPath $anchorPath -Force -ErrorAction SilentlyContinue
+		}
+		$anchor = $Script:App.Workbooks.Add()
+		$anchor.SaveAs($anchorPath, 51)
+		$anchor.Close($true)
+		$Script:App.Workbooks.Open($anchorPath, 0, $true) | Out-Null
+	} catch {
+		# A warm anchor is an optimization; the Excel instance remains usable
+		# without it when Excel cannot save the temporary workbook.
+	}
+}
+
 function Invoke-ScriptRun {
 	param(
 		[string]$FilePath,
@@ -578,6 +611,19 @@ function Wait-ScriptExcelExit {
 	return (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue))
 }
 
+function Test-KeepWarmExcel {
+	if (-not $Script:BackgroundBuild -or $env:E2E_BACKGROUND -notmatch '^(1|true|yes)$') {
+		return $false
+	}
+
+	try {
+		$invisible = @(Get-RunningExcelInstances | Where-Object { -not $_.visible })
+		return $invisible.Count -le 1
+	} catch {
+		return $false
+	}
+}
+
 function Close-ScriptSession {
 	$lockHeld = $false
 	try {
@@ -588,8 +634,12 @@ function Close-ScriptSession {
 		if ($null -ne $Script:App) {
 			Close-ScriptWorkbooks
 		}
+		$keepWarm = Test-KeepWarmExcel
 		# Quit Excel only if we launched it ourselves.
-		if (-not $Script:AppWasOpen -and $null -ne $Script:App) {
+		if ($keepWarm -and $null -ne $Script:App) {
+			Write-InstanceLog "detaching warm Excel instance excelPid=$($Script:RegisteredPid)"
+			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+		} elseif (-not $Script:AppWasOpen -and $null -ne $Script:App) {
 			$excelPid = 0
 			if (Get-Command Get-ExcelProcessId -ErrorAction SilentlyContinue) {
 				try { $excelPid = Get-ExcelProcessId -ExcelApp $Script:App } catch {}
@@ -629,6 +679,8 @@ function Close-ScriptSession {
 		if ($lockHeld) { Release-ExcelInstancesLock }
 	}
 	$Script:App = $null
+	$Script:RegisteredPid = 0
+	$Script:WarmInstance = $false
 }
 
 # -------
@@ -636,88 +688,109 @@ function Close-ScriptSession {
 # -------
 
 function Write-ScriptResponse {
-	param([string]$RequestId, [string]$Json)
+	param([string]$RequestId, [string]$Json, [object]$Writer = $null)
 
-	# Envelope: \u001E<id>\u001F<json>  (single line, record separator delimiters)
-	[Console]::Out.WriteLine([char]0x1E + $RequestId + [char]0x1F + $Json)
-	[Console]::Out.Flush()
+	$line = [char]0x1E + $RequestId + [char]0x1F + $Json
+	if ($null -eq $Writer) {
+		[Console]::Out.WriteLine($line)
+		[Console]::Out.Flush()
+	} else {
+		$Writer.WriteLine($line)
+		$Writer.Flush()
+	}
+}
+
+function Invoke-ScriptRequest {
+	param([object]$RequestJson, [scriptblock]$Respond)
+
+	$requestId = if ($RequestJson.id) { [string]$RequestJson.id } else { 'unknown' }
+	if ($requestId -eq '__VBA_QUIT__') {
+		Close-ScriptSession
+		& $Respond $requestId (@{ success = $true; result = 'quit' } | ConvertTo-Json -Compress)
+		return 'quit'
+	}
+	if ($requestId -eq '__VBA_RESET__') {
+		try { Reset-ScriptWorkbooks; & $Respond $requestId (@{ success = $true; result = 'reset' } | ConvertTo-Json -Compress) }
+		catch { & $Respond $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress) }
+		return 'continue'
+	}
+	if ($requestId -eq '__VBA_DETACH__') {
+		try {
+			Reset-ScriptWorkbooks
+			if ($Script:BackgroundBuild -and $env:E2E_BACKGROUND -match '^(1|true|yes)$') { Ensure-WarmAnchor }
+			& $Respond $requestId (@{ success = $true; result = 'detached' } | ConvertTo-Json -Compress)
+		} catch { & $Respond $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress) }
+		return 'detach'
+	}
+
+	$resolveAppName = if ($RequestJson.appName) { [string]$RequestJson.appName } else { 'excel' }
+	if ($resolveAppName -ne 'excel') {
+		& $Respond $requestId (@{ success = $false; errors = @('Unsupported app') } | ConvertTo-Json -Compress)
+		return 'continue'
+	}
+	$resolveFile = [string]$RequestJson.file
+	$resolveMacro = [string]$RequestJson.macro
+	$resolveKeepOpen = [bool]$RequestJson.keepOpen
+	$resolveBackground = [bool]$RequestJson.background
+	$resolveArgs = @()
+	if ($RequestJson.args) { foreach ($a in $RequestJson.args) { $resolveArgs += Unescape-ScriptArgument ([string]$a) } }
+	try {
+		$result = Invoke-ScriptRun $resolveFile $resolveMacro $resolveKeepOpen $resolveBackground $resolveArgs
+		Refresh-ScriptInstanceLog -MacroName $resolveMacro -ArgValues $resolveArgs -Result $result
+		& $Respond $requestId (@{ success = $true; result = $result } | ConvertTo-Json -Compress)
+	} catch {
+		Refresh-ScriptInstanceLog -MacroName $resolveMacro -ArgValues $resolveArgs -ErrorMessage $_.Exception.Message
+		& $Respond $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress)
+	}
+	return 'continue'
+}
+
+function Invoke-ScriptRequestLine {
+	param([string]$Line, [scriptblock]$Respond)
+	try {
+		$decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Line.Trim()))
+		$requestJson = $decoded | ConvertFrom-Json
+	} catch {
+		& $Respond 'error' (@{ success = $false; errors = @("Invalid request: $($_.Exception.Message)") } | ConvertTo-Json -Compress)
+		return 'continue'
+	}
+	return Invoke-ScriptRequest -RequestJson $requestJson -Respond $Respond
+}
+
+function Start-WarmSessionServer {
+	$metadataPath = Join-Path $env:TEMP 'Excel-Instances\warm-session.json'
+	$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 0)
+	$listener.Start()
+	$port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+	[System.IO.File]::WriteAllText($metadataPath, (@{ port = $port; pid = $PID } | ConvertTo-Json -Compress), [System.Text.UTF8Encoding]::new($false))
+	try {
+		while ($true) {
+			$client = $listener.AcceptTcpClient()
+			$reader = New-Object System.IO.StreamReader($client.GetStream())
+			$writer = New-Object System.IO.StreamWriter($client.GetStream())
+			$writer.AutoFlush = $true
+			$state = 'continue'
+			try {
+				while ($null -ne ($line = $reader.ReadLine())) {
+					$state = Invoke-ScriptRequestLine -Line $line -Respond { param($id, $json) Write-ScriptResponse $id $json $writer }
+					if ($state -eq 'quit' -or $state -eq 'detach') { break }
+				}
+			} finally { $reader.Dispose(); $writer.Dispose(); $client.Close() }
+			if ($state -eq 'quit') { break }
+		}
+	} finally {
+		$listener.Stop()
+		Remove-Item -LiteralPath $metadataPath -Force -ErrorAction SilentlyContinue
+	}
 }
 
 while ($true) {
 	$line = [Console]::In.ReadLine()
-	if ($null -eq $line) {
-		break
-	}
-	if ($line.Trim().Length -eq 0) {
-		continue
-	}
-
-	$requestJson = $null
-	try {
-		$decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($line.Trim()))
-		$requestJson = $decoded | ConvertFrom-Json
-	} catch {
-		Write-ScriptResponse 'error' (@{ success = $false; errors = @("Invalid request: $($_.Exception.Message)") } | ConvertTo-Json -Compress)
-		continue
-	}
-
-	$requestId = if ($requestJson.id) { [string]$requestJson.id } else { 'unknown' }
-
-	# Control: quit.
-	if ($requestId -eq '__VBA_QUIT__') {
-		Close-ScriptSession
-		break
-	}
-
-	# Control: clear session-owned workbook/add-in state while retaining Excel for
-	# the next test in the same Jest file.
-	if ($requestId -eq '__VBA_RESET__') {
-		try {
-			Reset-ScriptWorkbooks
-			Write-ScriptResponse $requestId (@{ success = $true; result = 'reset' } | ConvertTo-Json -Compress)
-		} catch {
-			Write-ScriptResponse $requestId (@{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress)
-		}
-		continue
-	}
-
-	$resolveAppName = if ($requestJson.appName) { [string]$requestJson.appName } else { 'excel' }
-	if ($resolveAppName -ne 'excel') {
-		Write-ScriptResponse $requestId (@{ success = $false; errors = @('Unsupported app') } | ConvertTo-Json -Compress)
-		continue
-	}
-
-	$resolveFile = [string]$requestJson.file
-	$resolveMacro = [string]$requestJson.macro
-	$resolveKeepOpen = [bool]$requestJson.keepOpen
-	$resolveBackground = [bool]$requestJson.background
-	$resolveArgs = @()
-	if ($requestJson.args) {
-		foreach ($a in $requestJson.args) {
-			$resolveArgs += Unescape-ScriptArgument ([string]$a)
-		}
-	}
-
-	try {
-		$result = Invoke-ScriptRun $resolveFile $resolveMacro $resolveKeepOpen $resolveBackground $resolveArgs
-		Refresh-ScriptInstanceLog `
-			-MacroName $resolveMacro `
-			-ArgValues $resolveArgs `
-			-Result $result
-		$payload = @{ success = $true; result = $result } | ConvertTo-Json -Compress
-		Write-ScriptResponse $requestId $payload
-	} catch {
-		Refresh-ScriptInstanceLog `
-			-MacroName $resolveMacro `
-			-ArgValues $resolveArgs `
-			-ErrorMessage $_.Exception.Message
-		$payload = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
-		Write-ScriptResponse $requestId $payload
-	}
+	if ($null -eq $line) { Write-InstanceLog 'persistent session stdin reached EOF'; break }
+	if ($line.Trim().Length -eq 0) { continue }
+	$state = Invoke-ScriptRequestLine -Line $line -Respond { param($id, $json) Write-ScriptResponse $id $json }
+	if ($state -eq 'quit') { break }
+	if ($state -eq 'detach') { Start-WarmSessionServer; break }
 }
 
-# Reaching here means either an explicit __VBA_QUIT__ (already cleaned up, and
-# Close-ScriptSession is a no-op the second time) or stdin hit EOF because the
-# parent Node process exited without sending one. Always quit the instance we
-# own, otherwise a killed/crashed caller strands a hidden EXCEL.EXE forever.
-Close-ScriptSession
+if ($state -ne 'quit') { Close-ScriptSession }

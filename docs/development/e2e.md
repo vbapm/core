@@ -13,8 +13,10 @@ From package.json:
 | `pnpm run test:e2e` | explicit foreground override, **spawns the real CLI** per command |
 | `pnpm run test:e2e:in-process` | visible Excel + `E2E_IN_PROCESS=1`, **dispatches CLI commands in-process** (see below) |
 | `pnpm run test:e2e:background` | explicit background override (hidden Excel) |
-| `pnpm run test:e2e:session` | background + `E2E_IN_PROCESS=1` + `VBA_PERSISTENT_SESSION=1`; reuses a PowerShell/Excel session per worker |
-| `pnpm run test:e2e:updateSnapshots` | same as background + `--updateSnapshot` |
+| `pnpm run test:e2e:background:clean` | background run after removing hidden tracked Excel instances |
+| `pnpm run test:e2e:background:updateSnapshots` | background + `--updateSnapshot` |
+| `pnpm run test:e2e:background:evolution` | background run with registry evolution snapshots |
+| `pnpm run evolution:html:serve` | serve the generated evolution report |
 | `pnpm run test:e2e:multilang` | separate multilang config |
 
 Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which refreshes `lib/` and checks the add-in. The add-in check watches only VBA and XML inputs under `addins/`, so TypeScript changes do not trigger an Office-backed rebuild unless `--force` is passed. The `[ensure-fresh-build]` output identifies each check.
@@ -24,7 +26,7 @@ Lifecycle records are written to `%TEMP%\Excel-Instances\instances.log` (or
 the path in `VBA_INSTANCE_LOG`) without being mixed into test stdout/stderr.
 For per-test and per-command timing in the export suites, set `E2E_TIMING=1`.
 
-The actual test runner is `jest --config e2e.config.mjs --runInBand` (serial, so no parallel Excel collisions).
+The standard background runner is serial (`--runInBand`) so one persistent Excel session can be reused safely. Experimental multi-worker persistent sessions are intentionally not exposed as a package script until their session ownership is isolated per worker.
 
 ### Two ways to drive the CLI: spawned vs in-process
 

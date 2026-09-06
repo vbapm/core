@@ -12,10 +12,20 @@
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File .\scripts\ps\Ensure-ExcelInstancesClean.ps1
+#   powershell -ExecutionPolicy Bypass -File .\scripts\ps\Ensure-ExcelInstancesClean.ps1 -Clean
+
+[CmdletBinding()]
+param(
+	[switch]$Clean
+)
 
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
+
+if ($Clean) {
+	Remove-Item -LiteralPath (Join-Path $env:TEMP 'Excel-Instances\warm-session.json') -Force -ErrorAction SilentlyContinue
+}
 
 Sync-ExcelInstanceSnapshot | Out-Null
 $activeByPid = @{}
@@ -29,15 +39,13 @@ foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
 	$entry = $activeByPid[[int]$process.Id]
 	$owner = if ($entry) { [string]$entry.owner } else { 'untracked' }
 	$isRogue = -not $entry -or $owner -match '^(rogue|unknown|unknown-owner|untracked)$'
-	$isStaleE2E = $entry -and -not [bool]$entry.visible -and (
-		[string]$entry.owner -like 'session#*' -or [string]$entry.reason -eq 'e2e'
-	)
-	if (-not $isRogue -and -not $isStaleE2E) { continue }
+	$isCleanTracked = $Clean -and $null -ne $entry
+	if (-not $isRogue -and -not $isCleanTracked) { continue }
 
 	if ([bool]($process.MainWindowHandle -ne 0)) {
-		$visibleProtected += [pscustomobject]@{ Process = $process; StaleE2E = $isStaleE2E }
+		$visibleProtected += [pscustomobject]@{ Process = $process; CleanTracked = $isCleanTracked }
 	} else {
-		$invisibleCleanup += [pscustomobject]@{ Process = $process; Entry = $entry; StaleE2E = $isStaleE2E }
+		$invisibleCleanup += [pscustomobject]@{ Process = $process; Entry = $entry; CleanTracked = $isCleanTracked }
 	}
 }
 
@@ -45,6 +53,13 @@ foreach ($candidate in $invisibleCleanup) {
 	$process = $candidate.Process
 	try {
 		$processId = [int]$process.Id
+		if ($candidate.CleanTracked -and $candidate.Entry -and [string]$candidate.Entry.owner -like 'session#*') {
+			$keeperPid = 0
+			try { $keeperPid = [int]([string]$candidate.Entry.owner).Substring(8) } catch {}
+			if ($keeperPid -gt 0) {
+				try { Stop-Process -Id $keeperPid -Force -ErrorAction SilentlyContinue } catch {}
+			}
+		}
 		Stop-Process -Id $processId -Force -ErrorAction Stop
 		$exited = $false
 		for ($attempt = 0; $attempt -lt 10; $attempt++) {
@@ -56,10 +71,10 @@ foreach ($candidate in $invisibleCleanup) {
 		}
 
 		if ($exited) {
-			$kind = if ($candidate.StaleE2E) { 'stale e2e' } else { 'rogue' }
+			$kind = if ($candidate.CleanTracked) { 'tracked clean' } else { 'rogue' }
 			Write-Output "Terminated invisible $kind Excel process PID=$processId."
-			if ($candidate.StaleE2E -and (Get-Command Remove-ExcelInstance -ErrorAction SilentlyContinue)) {
-				Remove-ExcelInstance -InstanceId $processId -DeactivateReason 'stale-e2e-preflight'
+			if ($candidate.CleanTracked -and (Get-Command Remove-ExcelInstance -ErrorAction SilentlyContinue)) {
+				Remove-ExcelInstance -InstanceId $processId -DeactivateReason 'clean-preflight'
 			}
 		} else {
 			# A process can briefly survive Stop-Process while Windows tears down
@@ -78,7 +93,7 @@ foreach ($candidate in $invisibleCleanup) {
 if ($visibleProtected.Count -gt 0) {
 	foreach ($candidate in $visibleProtected) {
 		$process = $candidate.Process
-		$kind = if ($candidate.StaleE2E) { 'tracked e2e' } else { 'rogue' }
+		$kind = if ($candidate.CleanTracked) { 'tracked clean' } else { 'rogue' }
 		Write-Warning "Visible $kind Excel process left untouched: PID=$($process.Id), title='$($process.MainWindowTitle)'."
 	}
 }
@@ -86,10 +101,8 @@ if ($visibleProtected.Count -gt 0) {
 $remainingInvisible = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue | Where-Object {
 	$entry = $activeByPid[[int]$_.Id]
 	$isRogue = -not $entry -or ([string]$entry.owner -match '^(rogue|unknown|unknown-owner|untracked)$')
-	$isStaleE2E = $entry -and -not [bool]$entry.visible -and (
-		[string]$entry.owner -like 'session#*' -or [string]$entry.reason -eq 'e2e'
-	)
-	($isRogue -or $isStaleE2E) -and [bool]($_.MainWindowHandle -eq 0)
+	$isCleanTracked = $Clean -and $null -ne $entry
+	($isRogue -or $isCleanTracked) -and [bool]($_.MainWindowHandle -eq 0)
 })
 
 if ($remainingInvisible.Count -gt 0) {
