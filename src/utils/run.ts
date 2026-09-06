@@ -80,7 +80,10 @@ export async function run(
 		return env.isWindows ? escape(arg) : arg;
 	});
 	const keepOpen = !!options.keepOpen;
-	const background = !!options.background;
+	const background =
+		typeof options.background === "boolean"
+			? options.background
+			: env.isWindows && /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "");
 
 	// Gate the Excel-touching portion through the shared instance pool so
 	// parallel callers (e.g. parallel Jest workers) never exceed the configured

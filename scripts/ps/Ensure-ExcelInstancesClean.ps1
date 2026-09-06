@@ -2,8 +2,8 @@
 #
 # Guard run immediately before the e2e integration suite. It terminates only
 # invisible rogue/untracked EXCEL.EXE processes. Visible rogue processes are
-# never killed because they may belong to the user; they cause the suite to
-# fail before any tests start.
+# never killed because they may belong to the user; they are reported as
+# warnings while the suite continues.
 #
 # The e2e suite itself creates *background* instances (VBA_BACKGROUND_BUILD=1)
 # and registers each one, so in the common case there is nothing running when
@@ -39,8 +39,28 @@ foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
 
 foreach ($process in $invisibleRogue) {
 	try {
-		Stop-Process -Id $process.Id -Force -ErrorAction Stop
-		Write-Output "Terminated invisible rogue Excel process PID=$($process.Id)."
+		$processId = [int]$process.Id
+		Stop-Process -Id $processId -Force -ErrorAction Stop
+		$exited = $false
+		for ($attempt = 0; $attempt -lt 10; $attempt++) {
+			Start-Sleep -Milliseconds 200
+			if ($null -eq (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
+				$exited = $true
+				break
+			}
+		}
+
+		if ($exited) {
+			Write-Output "Terminated invisible rogue Excel process PID=$processId."
+		} else {
+			# A process can briefly survive Stop-Process while Windows tears down
+			# the Office COM server. Retry once, still only for an invisible PID.
+			$current = Get-Process -Id $processId -ErrorAction SilentlyContinue
+			if ($null -ne $current -and [bool]($current.MainWindowHandle -eq 0)) {
+				Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+			}
+			Write-Output "Termination requested for invisible rogue Excel process PID=$processId."
+		}
 	} catch {
 		Write-Warning "Could not terminate invisible rogue Excel process PID=$($process.Id): $($_.Exception.Message)"
 	}
@@ -48,9 +68,8 @@ foreach ($process in $invisibleRogue) {
 
 if ($visibleRogue.Count -gt 0) {
 	foreach ($process in $visibleRogue) {
-		Write-Error "Visible rogue Excel process remains alive: PID=$($process.Id). It was not terminated."
+		Write-Warning "Visible rogue Excel process left untouched: PID=$($process.Id), title='$($process.MainWindowTitle)'."
 	}
-	exit 1
 }
 
 $remainingInvisible = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue | Where-Object {

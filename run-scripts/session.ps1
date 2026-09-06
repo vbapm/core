@@ -69,6 +69,89 @@ function Unescape-ScriptArgument {
 	return $Value -replace '\^q', '"'
 }
 
+function Get-ScriptMacroTargetFile {
+	param([string[]]$ArgValues)
+
+	foreach ($arg in $ArgValues) {
+		if (-not $arg) { continue }
+		try {
+			$parsed = $arg | ConvertFrom-Json -ErrorAction Stop
+			if ($null -ne $parsed -and $parsed.PSObject.Properties.Name -contains 'file' -and $parsed.file) {
+				return ([string]$parsed.file) -replace '\\', '/'
+			}
+		} catch {
+			# Not JSON, or no file field.
+		}
+	}
+
+	return ''
+}
+
+function Get-ScriptMacroLogDescription {
+	param(
+		[string]$MacroName,
+		[string[]]$ArgValues
+	)
+
+	$testName = $env:VBA_E2E_TEST_NAME
+	$target = Get-ScriptMacroTargetFile $ArgValues
+	$log = if ($target) { "$MacroName -> $target" } else { $MacroName }
+	if ($testName) { $log = "$testName :: $log" }
+	return "$(Get-Date -Format o) :: $log"
+}
+
+function Get-ScriptMacroErrorLog {
+	param(
+		[string]$MacroName,
+		[string[]]$ArgValues,
+		[string]$Result,
+		[string]$ErrorMessage = ''
+	)
+
+	$log = Get-ScriptMacroLogDescription $MacroName $ArgValues
+	if ($ErrorMessage) {
+		return "$log :: ERROR: $ErrorMessage"
+	}
+
+	try {
+		$parsed = $Result | ConvertFrom-Json -ErrorAction Stop
+		$errors = @($parsed.errors | Where-Object { $_ })
+		if ($parsed.success -eq $false -or $errors.Count -gt 0) {
+			$detail = if ($errors.Count -gt 0) { $errors -join ' | ' } else { 'unknown error' }
+			return "$log :: ERROR: $detail"
+		}
+	} catch {
+		# Non-JSON macro output is a successful result.
+	}
+
+	return $log
+}
+
+function Refresh-ScriptInstanceLog {
+	param(
+		[string]$MacroName,
+		[string[]]$ArgValues,
+		[string]$Result = '',
+		[string]$ErrorMessage = ''
+	)
+
+	if (-not $HasRegistry -or $Script:RegisteredPid -le 0 -or $null -eq $Script:App) {
+		return
+	}
+
+	try {
+		$log = Get-ScriptMacroErrorLog $MacroName $ArgValues $Result $ErrorMessage
+		Refresh-ExcelInstance `
+			-ExcelApp $Script:App `
+			-ProcessId $Script:RegisteredPid `
+			-TargetPath (Get-ScriptMacroTargetFile $ArgValues) `
+			-Log $log
+	} catch {
+		# Registry attribution is best-effort; never mask the macro result.
+	}
+}
+$Script:RegisteredPid = 0
+
 function Invoke-ScriptMacro {
 	param(
 		[object]$ExcelApp,
@@ -104,7 +187,11 @@ function Invoke-ScriptMacro {
 }
 
 function Open-ScriptExcel {
-	param([bool]$BackgroundBuild)
+	param(
+		[bool]$BackgroundBuild,
+		[string]$MacroName = '',
+		[string[]]$ArgValues = @()
+	)
 
 	$Script:BackgroundBuild = $BackgroundBuild
 
@@ -119,6 +206,10 @@ function Open-ScriptExcel {
 
 	if (-not $Script:AppWasOpen) {
 		$lockHeld = $false
+		$existingExcelPids = @{}
+		foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
+			$existingExcelPids[[int]$process.Id] = $true
+		}
 		try {
 			if ($HasRegistry) {
 				Get-ExcelInstancesLock | Out-Null
@@ -126,6 +217,15 @@ function Open-ScriptExcel {
 			}
 
 			$Script:App = New-Object -ComObject "Excel.Application"
+			$createdPid = 0
+			if ($HasRegistry) {
+				try { $createdPid = Get-ExcelProcessId -ExcelApp $Script:App } catch {}
+				if ($createdPid -le 0 -or $existingExcelPids.ContainsKey($createdPid)) {
+					try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+					$Script:App = $null
+					throw "Refusing to automate an existing Excel process; background instance PID could not be proven new."
+				}
+			}
 			$Script:App.Visible = if ($Script:BackgroundBuild) { $false } else { $true }
 			$Script:App.ScreenUpdating = $false
 			$Script:App.DisplayStatusBar = $false
@@ -141,7 +241,12 @@ function Open-ScriptExcel {
 			if ($HasRegistry) {
 				$reason = if ($Script:BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
 				try {
-					Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Reason $reason | Out-Null
+					$registeredPid = Register-ExcelInstance `
+						-ExcelApp $Script:App `
+						-Owner "session#$PID" `
+						-Reason $reason `
+						-Log (Get-ScriptMacroLogDescription $MacroName $ArgValues)
+					$Script:RegisteredPid = if ($null -ne $registeredPid) { [int]$registeredPid } else { 0 }
 				} catch {
 					# best-effort
 				}
@@ -341,7 +446,7 @@ function Invoke-ScriptRun {
 	}
 
 	if ($null -eq $Script:App) {
-		Open-ScriptExcel $Background
+		Open-ScriptExcel $Background $MacroName $ArgValues
 	}
 
 	# Per-request state. $Script:WorkbookWasOpen describes *this* request only;
@@ -371,7 +476,7 @@ function Invoke-ScriptRun {
 		# and closed workbooks internally. Recreate only the owned application and
 		# retry once; healthy request sequences still reuse the same process.
 		Reset-ScriptExcel
-		Open-ScriptExcel $Background
+		Open-ScriptExcel $Background $MacroName $ArgValues
 		$Script:WorkbookWasOpen = $false
 		if ($Script:IsAddin) {
 			$Script:OpenWorkbook = Ensure-ScriptAddin $FilePath
@@ -525,9 +630,17 @@ while ($true) {
 
 	try {
 		$result = Invoke-ScriptRun $resolveFile $resolveMacro $resolveKeepOpen $resolveBackground $resolveArgs
+		Refresh-ScriptInstanceLog `
+			-MacroName $resolveMacro `
+			-ArgValues $resolveArgs `
+			-Result ([string]$result)
 		$payload = @{ success = $true; result = $result } | ConvertTo-Json -Compress
 		Write-ScriptResponse $requestId $payload
 	} catch {
+		Refresh-ScriptInstanceLog `
+			-MacroName $resolveMacro `
+			-ArgValues $resolveArgs `
+			-ErrorMessage $_.Exception.Message
 		$payload = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
 		Write-ScriptResponse $requestId $payload
 	}

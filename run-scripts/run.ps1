@@ -297,8 +297,22 @@ class Excel {
 				}
 			}
 
+			$existingExcelPids = @{}
+			foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
+				$existingExcelPids[[int]$process.Id] = $true
+			}
+
 			try {
 				$this.App = New-Object -ComObject "Excel.Application"
+				if (Get-Command Get-ExcelProcessId -ErrorAction SilentlyContinue) {
+					$createdPid = 0
+					try { $createdPid = Get-ExcelProcessId -ExcelApp $this.App } catch {}
+					if ($createdPid -le 0 -or $existingExcelPids.ContainsKey($createdPid)) {
+						try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null } catch {}
+						$this.App = $null
+						throw "Refusing to automate an existing Excel process; new instance PID could not be proven."
+					}
+				}
 				$this.App.Visible = if ($this.BackgroundBuild) { $false } else { $true }
 				$this.App.ScreenUpdating = $false
 				$this.App.DisplayStatusBar = $false
