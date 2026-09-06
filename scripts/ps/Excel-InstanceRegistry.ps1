@@ -1227,19 +1227,19 @@ function Write-InstanceLog {
 
 <#
 .SYNOPSIS
-Reconcile the registry against the live EXCEL.EXE process list so that every
-running instance appears in the registry — not just the ones an agent explicitly
-registered. Already-tracked entries keep their metadata; any live process not in
-the registry is added as a minimal `rogue` entry (owner "rogue", comReachable
-unknown). Entries whose PID is no longer live are moved to `inactive` (rather
-than dropped) so a later assessment can detect a lingering process. Writes the
-stable snapshot shape { count, registered, invisible, active, inactive }.
+Reconcile the registry against the live EXCEL.EXE process list. Already-tracked
+entries keep their metadata; a live process not in the registry is added as a
+minimal `rogue` entry only when `-TrackRogue` is supplied. Entries whose PID is
+no longer live are moved to `inactive` (rather than dropped) so a later
+assessment can detect a lingering process. Writes the stable snapshot shape
+{ count, registered, invisible, active, inactive }.
 
-This is the "stable layer": the registry always mirrors what's actually open on
-the machine, even when automation didn't register (or failed to register) an
-instance.
+This is the "stable layer": tracked entries stay current, while newly
+discovered process-only rogues remain untracked unless explicitly persisted.
 #>
 function Sync-ExcelInstanceSnapshot {
+    param([switch]$TrackRogue)
+
     $doc = Read-ExcelRegistryDocument
     $registered = @($doc.active)
     $inactive = @($doc.inactive)
@@ -1265,9 +1265,10 @@ function Sync-ExcelInstanceSnapshot {
             $entry.visible = [bool]$p.visible
             if (-not $entry.windowTitle) { $entry.windowTitle = $p.mainWindowTitle }
             $snapshot += $entry
-        } else {
+        } elseif ($TrackRogue) {
             # Live but untracked: record a minimal rogue entry so it shows up in
-            # the registry (and the status report) as an unattributed instance.
+            # the registry when explicitly requested. Without -TrackRogue the
+            # process remains visible in status output but is not persisted.
             $snapshot += [pscustomobject]@{
                 id           = (New-ExcelInstanceId)
                 number       = $null

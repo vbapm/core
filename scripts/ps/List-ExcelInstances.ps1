@@ -10,7 +10,9 @@ param(
 
     [string]$RegistryPath,
 
-    [switch]$OutputJson
+    [switch]$OutputJson,
+
+    [switch]$TrackRogue
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,7 +34,9 @@ if ($RegistryPath) {
     $inactive = @($snapshot.inactive)
 } else {
     $syncScript = Join-Path $PSScriptRoot 'Sync-ExcelInstances.ps1'
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -PruneDead | Out-Null
+    $syncArgs = @('-PruneDead')
+    if ($TrackRogue) { $syncArgs += '-TrackRogue' }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript @syncArgs | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Could not sync the Excel instance registry. Exit code: $LASTEXITCODE"
     }

@@ -13,10 +13,12 @@
 # Usage:
 #   .\scripts\ps\Sync-ExcelInstances.ps1
 #   .\scripts\ps\Sync-ExcelInstances.ps1 -PruneDead    # also drop stale entries
+#   .\scripts\ps\Sync-ExcelInstances.ps1 -TrackRogue   # persist process-only rogues
 
 [CmdletBinding()]
 param(
-    [switch]$PruneDead
+    [switch]$PruneDead,
+    [switch]$TrackRogue
 )
 
 $ErrorActionPreference = 'Stop'
@@ -181,8 +183,12 @@ foreach ($p in $allExcel) {
         $openWorkbooks = @($previous.workbooks)
     }
 
-    Upsert-Instance $instancePid $isVisible $openWorkbooks $null $false
-    Write-Output "Synced (process) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count)"
+    if ($TrackRogue) {
+        Upsert-Instance $instancePid $isVisible $openWorkbooks $null $false
+        Write-Output "Synced (tracked process) pid=$instancePid visible=$isVisible workbooks=$($openWorkbooks.Count)"
+    } else {
+        Write-Output "Skipped untracked process pid=$instancePid visible=$isVisible"
+    }
 }
 
 if ($livePids.Count -eq 0) {

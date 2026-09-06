@@ -9,6 +9,7 @@
 #   .\scripts\ps\Get-ExcelInstancesStatus.ps1
 #   .\scripts\ps\Get-ExcelInstancesStatus.ps1 -Json            # machine-readable
 #   .\scripts\ps\Get-ExcelInstancesStatus.ps1 -FailOnRogue      # exit 1 if rogue
+#   .\scripts\ps\Get-ExcelInstancesStatus.ps1 -TrackRogue      # persist new rogue entries
 #
 # When -FailOnRogue is set, the script exits non-zero if any EXCEL.EXE process
 # exists that is not present in the registry. This is the guard recommended to
@@ -19,6 +20,7 @@
 param(
     [switch]$Json,
     [switch]$FailOnRogue,
+    [switch]$TrackRogue,
     [switch]$Quiet
 )
 
@@ -26,12 +28,11 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
 
-# Reconcile first so the report (and instances.json) reflect *all* live EXCEL
-# instances, not just the subset an agent explicitly registered. This is what
-# guarantees `instances.json` mirrors Task Manager: any running EXCEL.EXE that
-# isn't tracked gets added as a `rogue` entry.
+# Reconcile first so the report reflects *all* live EXCEL instances. New
+# process-only rogues are persisted only when -TrackRogue is requested; the
+# default keeps them untracked while still reporting them live.
 try {
-    Sync-ExcelInstanceSnapshot | Out-Null
+    Sync-ExcelInstanceSnapshot -TrackRogue:$TrackRogue | Out-Null
 } catch {
     # Report is best-effort; never fail the status command over a sync error.
 }
@@ -45,7 +46,12 @@ foreach ($r in $registered) {
     $registeredPids[[int]$r.pid] = $true
 }
 
-$rogue = @($running | Where-Object { -not $registeredPids.ContainsKey([int]$_.pid) })
+$rogue = @($running | Where-Object {
+    $process = $_
+    $entry = @($registered | Where-Object { [int]$_.pid -eq [int]$process.pid })[0]
+    -not $registeredPids.ContainsKey([int]$process.pid) -or
+        ($entry -and [string]$entry.owner -match '^(rogue|unknown|unknown-owner|untracked)$')
+})
 $orphaned = @($registered | Where-Object {
     $instancePid = [int]$_.pid
     -not ($running | Where-Object { [int]$_.pid -eq $instancePid })
