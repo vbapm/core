@@ -114,9 +114,16 @@ li { margin: 5px 0; overflow-wrap: anywhere; }
 .run-chip strong { color: #8fe3a0; }
 .run-command { flex-basis: 100%; font-size: 12px; color: #9fb3c2; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .run-meta .muted { color: #7b8994; font-size: 13px; }
-#run-summary { margin: 0 0 24px; padding: 18px; border: 1px solid #ccd6de; border-radius: 7px; background: #fff; }
-#run-summary h2 { margin: 0 0 6px; font-size: 20px; color: #17212b; }
-#run-summary .muted { margin: 8px 0; }
+.run-summary { margin: 0 0 24px; border: 1px solid #ccd6de; border-radius: 7px; background: #fff; overflow: hidden; }
+.run-summary > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f4f8fb; user-select: none; }
+.run-summary > summary::-webkit-details-marker { display: none; }
+.run-summary > summary::before { content: '\\25B8 '; color: #3a7ca5; font-size: 13px; }
+.run-summary[open] > summary::before { content: '\\25BE '; }
+.run-summary > summary h2 { margin: 0; font-size: 18px; color: #17212b; }
+.run-summary > summary .summary-hint { margin-left: auto; font-size: 12px; color: #7b8994; }
+.run-summary[open] > summary { border-bottom: 1px solid #e3eaf0; }
+.run-summary-body { padding: 18px; }
+.run-summary .muted { margin: 8px 0; }
 .run-summary-stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
 .run-summary-stats .metric strong { color: #17212b; }
 .run-summary-chart { width: 100%; height: auto; }
@@ -146,6 +153,7 @@ button:disabled { cursor: default; opacity: .38; }
 const runs = JSON.parse(document.getElementById("snapshot-data").textContent);
 let currentRun = runs.length - 1;
 let current = 0;
+const runSummaryState = {};
 const content = document.getElementById("content");
 const snapshotName = document.getElementById("snapshot-name");
 const openSnapshot = document.getElementById("open-snapshot");
@@ -338,7 +346,10 @@ function svgLifecycleChart(instances, start, end) {
 }
 function summaryHtml(run) {
 	const summary = buildRunSummary(run);
-	return '<section id="run-summary"><h2>Run summary</h2>' +
+	const open = runSummaryState[currentRun] !== false;
+	return '<details id="run-summary-details" class="run-summary"' + (open ? ' open' : '') + '>' +
+		'<summary><h2>Run summary</h2><span class="summary-hint">' + (open ? 'click to collapse' : 'click to expand') + '</span></summary>' +
+		'<div class="run-summary-body">' +
 		'<div class="run-summary-stats">' +
 		'<span class="metric">Evolution snapshots: <strong>' + run.snapshots.length + '</strong></span>' +
 		'<span class="metric">Excel instances: <strong>' + summary.instances.length + '</strong></span>' +
@@ -350,7 +361,7 @@ function summaryHtml(run) {
 		'<span class="legend-item"><span class="swatch" style="background:#3a7ca5"></span> one-shot automation</span>' +
 		'<span class="legend-item"><span class="swatch" style="background:#5f8fb5"></span> other / visible</span>' +
 		'<span class="legend-item"><span class="swatch-dot" style="border-color:#fff;background:#3a7ca5"></span> death point</span>' +
-		'</div></section>';
+		'</div></div></details>';
 }
 function render() {
 	const run = runs[currentRun];
@@ -379,6 +390,24 @@ runSelect.addEventListener("change", event => { currentRun = Number(event.target
 previous.addEventListener("click", () => { if (current > 0) { current--; render(); } });
 next.addEventListener("click", () => { if (current < runs[currentRun].snapshots.length - 1) { current++; render(); } });
 document.addEventListener("keydown", event => { if (event.key === "ArrowLeft") previous.click(); if (event.key === "ArrowRight") next.click(); });
+document.addEventListener("toggle", event => {
+	const target = event.target;
+	if (target && target.id === "run-summary-details") {
+		runSummaryState[currentRun] = target.open;
+	}
+});
+// Record the collapsed state synchronously on click (the native "toggle" event is
+// queued asynchronously and could race a re-render when navigating snapshots).
+document.addEventListener("click", event => {
+	const summary = event.target && event.target.closest ? event.target.closest("#run-summary-details summary") : null;
+	if (!summary) return;
+	const details = document.getElementById("run-summary-details");
+	if (!details) return;
+	const open = !details.open;
+	runSummaryState[currentRun] = open;
+	const hint = details.querySelector(".summary-hint");
+	if (hint) hint.textContent = open ? "click to collapse" : "click to expand";
+});
 render();
 </script>
 </body>
