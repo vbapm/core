@@ -23,9 +23,19 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
 
+function Write-PreflightLog {
+	param([string]$Message)
+
+	$stamp = [DateTime]::UtcNow.ToString('o')
+	Write-Output "[$stamp] $Message"
+}
+
+Write-PreflightLog "Starting Excel instance preflight (Clean=$Clean)."
+
 if ($Clean) {
-	Get-ChildItem -LiteralPath (Join-Path $env:TEMP 'Excel-Instances') -Filter 'warm-session*.json' -File -ErrorAction SilentlyContinue |
-		Remove-Item -Force -ErrorAction SilentlyContinue
+	$warmMetadata = @(Get-ChildItem -LiteralPath (Join-Path $env:TEMP 'Excel-Instances') -Filter 'warm-session*.json' -File -ErrorAction SilentlyContinue)
+	Write-PreflightLog "Removing $($warmMetadata.Count) warm-session metadata file(s)."
+	$warmMetadata | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 Sync-ExcelInstanceSnapshot | Out-Null
@@ -34,9 +44,12 @@ foreach ($entry in @(Read-ExcelInstances)) {
 	$activeByPid[[int]$entry.pid] = $entry
 }
 
+$excelProcesses = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)
+Write-PreflightLog "Found $($excelProcesses.Count) Excel process(es) and $($activeByPid.Count) tracked active instance(s)."
+
 $visibleProtected = @()
 $invisibleCleanup = @()
-foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
+foreach ($process in $excelProcesses) {
 	$entry = $activeByPid[[int]$process.Id]
 	$owner = if ($entry) { [string]$entry.owner } else { 'untracked' }
 	$isRogue = -not $entry -or $owner -match '^(rogue|unknown|unknown-owner|untracked)$'
@@ -50,10 +63,15 @@ foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
 	}
 }
 
+Write-PreflightLog "Identified $($invisibleCleanup.Count) invisible process(es) for cleanup and $($visibleProtected.Count) visible process(es) to leave untouched."
+
 foreach ($candidate in $invisibleCleanup) {
 	$process = $candidate.Process
 	try {
 		$processId = [int]$process.Id
+		$owner = if ($candidate.Entry) { [string]$candidate.Entry.owner } else { 'untracked' }
+		$kind = if ($candidate.CleanTracked) { 'tracked clean' } else { 'rogue/untracked' }
+		Write-PreflightLog "Terminating invisible $kind Excel process PID=$processId owner=$owner."
 		if ($candidate.CleanTracked -and $candidate.Entry -and [string]$candidate.Entry.owner -like 'session#*') {
 			$keeperPid = 0
 			try { $keeperPid = [int]([string]$candidate.Entry.owner).Substring(8) } catch {}
@@ -72,8 +90,7 @@ foreach ($candidate in $invisibleCleanup) {
 		}
 
 		if ($exited) {
-			$kind = if ($candidate.CleanTracked) { 'tracked clean' } else { 'rogue' }
-			Write-Output "Terminated invisible $kind Excel process PID=$processId."
+			Write-PreflightLog "Terminated invisible $kind Excel process PID=$processId."
 			if ($candidate.CleanTracked -and (Get-Command Remove-ExcelInstance -ErrorAction SilentlyContinue)) {
 				Remove-ExcelInstance -InstanceId $processId -DeactivateReason 'clean-preflight'
 			}
@@ -84,10 +101,10 @@ foreach ($candidate in $invisibleCleanup) {
 			if ($null -ne $current -and [bool]($current.MainWindowHandle -eq 0)) {
 				Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
 			}
-			Write-Output "Termination requested for invisible Excel process PID=$processId."
+			Write-PreflightLog "Termination requested for invisible Excel process PID=$processId; process did not exit during the initial wait."
 		}
 	} catch {
-		Write-Warning "Could not terminate invisible rogue Excel process PID=$($process.Id): $($_.Exception.Message)"
+		Write-PreflightLog "Could not terminate invisible Excel process PID=$($process.Id): $($_.Exception.Message)"
 	}
 }
 
@@ -95,7 +112,7 @@ if ($visibleProtected.Count -gt 0) {
 	foreach ($candidate in $visibleProtected) {
 		$process = $candidate.Process
 		$kind = if ($candidate.CleanTracked) { 'tracked clean' } else { 'rogue' }
-		Write-Warning "Visible $kind Excel process left untouched: PID=$($process.Id), title='$($process.MainWindowTitle)'."
+		Write-PreflightLog "Left visible $kind Excel process untouched: PID=$($process.Id), title='$($process.MainWindowTitle)'."
 	}
 }
 
@@ -107,11 +124,13 @@ $remainingInvisible = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue | 
 })
 
 if ($remainingInvisible.Count -gt 0) {
+	Write-PreflightLog "Preflight failed: $($remainingInvisible.Count) invisible cleanup process(es) remain."
 	foreach ($process in $remainingInvisible) {
-		Write-Error "Invisible cleanup Excel process remains alive: PID=$($process.Id)."
+		Write-PreflightLog "Invisible cleanup Excel process remains alive: PID=$($process.Id)."
 	}
 	exit 1
 }
 
-Write-Output 'Excel instance preflight clean.'
+Write-PreflightLog 'Excel instance preflight clean.'
+Write-PreflightLog 'Completed Excel instance preflight.'
 exit 0

@@ -24,7 +24,22 @@ $warmCount = [Math]::Max(0, $KeepWarmCount)
 if ($KeepOneWarm) {
     $warmCount = [Math]::Max($warmCount, 1)
 }
-$warmPids = @($tracked | Sort-Object createdAt | Select-Object -First $warmCount | ForEach-Object { [int]$_.pid })
+$warmExcelPids = @()
+$metadataRoot = Join-Path $env:TEMP 'Excel-Instances'
+foreach ($metadataFile in @(Get-ChildItem -LiteralPath $metadataRoot -Filter 'warm-session*.json' -File -ErrorAction SilentlyContinue)) {
+    try {
+        $metadata = Get-Content -LiteralPath $metadataFile.FullName -Raw | ConvertFrom-Json
+        $excelPid = [int]$metadata.excelPid
+        $anchor = [string]$metadata.anchor
+        if ($excelPid -gt 0 -and (Get-Process -Id $excelPid -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $anchor -PathType Leaf)) {
+            $warmExcelPids += $excelPid
+        }
+    } catch {}
+}
+$warmCandidates = @($tracked | Where-Object {
+    $warmExcelPids -contains ([int]$_.pid)
+})
+$warmPids = @($warmCandidates | Sort-Object createdAt | Select-Object -First $warmCount | ForEach-Object { [int]$_.pid })
 
 $closed = 0
 if ($warmPids.Count -gt 0) {

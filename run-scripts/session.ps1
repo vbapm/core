@@ -489,7 +489,9 @@ function Reset-ScriptWorkbooks {
 function Ensure-WarmAnchor {
 	if ($null -eq $Script:App) { return }
 
-	$anchorPath = Join-Path $env:TEMP 'Excel-Instances\warm-anchor.xlsx'
+	$workerId = [string]$env:JEST_WORKER_ID
+	$anchorName = if ($workerId) { "warm-anchor-$workerId.xlsx" } else { 'warm-anchor.xlsx' }
+	$anchorPath = Join-Path $env:TEMP "Excel-Instances\$anchorName"
 	try {
 		if (Test-Path -LiteralPath $anchorPath) {
 			Remove-Item -LiteralPath $anchorPath -Force -ErrorAction SilentlyContinue
@@ -763,13 +765,22 @@ function Invoke-ScriptRequestLine {
 }
 
 function Start-WarmSessionServer {
+	Ensure-WarmAnchor
 	$workerId = [string]$env:JEST_WORKER_ID
 	$metadataName = if ($workerId -and $workerId -ne '1') { "warm-session-$workerId.json" } else { 'warm-session.json' }
 	$metadataPath = Join-Path $env:TEMP "Excel-Instances\$metadataName"
+	$anchorName = if ($workerId) { "warm-anchor-$workerId.xlsx" } else { 'warm-anchor.xlsx' }
+	$anchorPath = Join-Path $env:TEMP "Excel-Instances\$anchorName"
 	$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 0)
 	$listener.Start()
 	$port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
-	[System.IO.File]::WriteAllText($metadataPath, (@{ port = $port; pid = $PID } | ConvertTo-Json -Compress), [System.Text.UTF8Encoding]::new($false))
+	$metadata = @{
+		port = $port
+		pid = $PID
+		excelPid = [int]$Script:RegisteredPid
+		anchor = $anchorPath
+	}
+	[System.IO.File]::WriteAllText($metadataPath, ($metadata | ConvertTo-Json -Compress), [System.Text.UTF8Encoding]::new($false))
 	try {
 		while ($true) {
 			$client = $listener.AcceptTcpClient()
