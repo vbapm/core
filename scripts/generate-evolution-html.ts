@@ -137,6 +137,11 @@ li { margin: 5px 0; overflow-wrap: anywhere; }
 .preflight-details[open] > summary { border-bottom: 1px solid #e3eaf0; }
 .preflight-meta { padding: 10px 12px 0; color: #536474; font-size: 12px; }
 .preflight-log { margin: 8px 12px 12px; padding: 10px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #304353; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.jest-details { margin-top: 16px; border: 1px solid #ccd6de; border-radius: 6px; background: #f8fafc; }
+.jest-details > summary { cursor: pointer; padding: 10px 12px; color: #304353; font-size: 13px; }
+.jest-details[open] > summary { border-bottom: 1px solid #e3eaf0; }
+.jest-meta { padding: 10px 12px 0; color: #536474; font-size: 12px; }
+.jest-output { margin: 8px 12px 12px; padding: 10px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #304353; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
 footer { position: fixed; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 12px 16px; border-top: 1px solid #ccd6de; background: #ffffffee; backdrop-filter: blur(8px); }
 button { width: 44px; height: 38px; border: 1px solid #9eabb5; border-radius: 6px; background: #fff; color: #17212b; font-size: 23px; line-height: 1; cursor: pointer; }
 button:hover:not(:disabled) { background: #e6f0f5; border-color: #31708f; }
@@ -299,6 +304,9 @@ function fmtTick(ms) {
 function preflightEvent(run) {
 	return run && run.meta && run.meta.ensureExcelInstancesClean;
 }
+function jestEvent(run) {
+	return run && run.meta && run.meta.jest;
+}
 function instanceColor(inst) {
 	const warm = inst.intent === 'keep-warm' || String(inst.owner || '').indexOf('session#') === 0;
 	if (warm) return '#e09a3c';
@@ -424,6 +432,23 @@ function summaryHtml(run) {
 		  '<div class="preflight-meta">' + preflightStatus + (preflight.completedAt ? ' · completed ' + escapeHtml(isoLocal(preflight.completedAt)) : '') + '</div>' +
 		  '<pre class="preflight-log">' + (preflightLogs || 'No output recorded.') + '</pre></details>'
 		: '';
+	const jest = jestEvent(run);
+	const jestFailures = jest ? collection(jest.failures) : [];
+	const jestLines = jest
+		? [
+				'Overall: ' + (jest.success ? 'passed' : 'failed'),
+				'Suites: ' + jest.numPassedTestSuites + ' passed, ' + jest.numFailedTestSuites + ' failed, ' + jest.numPendingTestSuites + ' pending, ' + jest.numTotalTestSuites + ' total',
+				'Tests: ' + jest.numPassedTests + ' passed, ' + jest.numFailedTests + ' failed, ' + jest.numPendingTests + ' pending, ' + jest.numTodoTests + ' todo, ' + jest.numTotalTests + ' total',
+				'Snapshots: ' + jest.numTotalSnapshots + ' total, ' + jest.numAddedSnapshots + ' added, ' + jest.numUpdatedSnapshots + ' updated, ' + jest.numUnmatchedSnapshots + ' unmatched'
+			].concat(jest.runExecError ? ['Run error: ' + jest.runExecError] : [])
+			.concat(jestFailures.map(failure => '\\n' + failure.testFilePath + '\\n' + failure.fullName + '\\n' + collection(failure.failureMessages).join('\\n')))
+			.join('\\n')
+		: '';
+	const jestSection = jest
+		? '<details class="jest-details"><summary>E2E Jest output</summary>' +
+		  '<div class="jest-meta">' + escapeHtml(jest.numFailedTests + ' failed · ' + jest.numPassedTests + ' passed · ' + jest.numTotalTests + ' total tests') + '</div>' +
+		  '<pre class="jest-output">' + escapeHtml(jestLines) + '</pre></details>'
+		: '';
 	return '<details id="run-summary-details" class="run-summary"' + (open ? ' open' : '') + '>' +
 		'<summary><h2>Run summary</h2><span class="summary-hint">' + (open ? 'click to collapse' : 'click to expand') + '</span></summary>' +
 		'<div class="run-summary-body">' +
@@ -439,7 +464,7 @@ function summaryHtml(run) {
 		'<span class="legend-item"><span class="swatch" style="background:#5f8fb5"></span> other / visible</span>' +
 		'<span class="legend-item"><span class="swatch-dot" style="border-color:#fff;background:#3a7ca5"></span> death point</span>' +
 		'<span class="legend-item"><span class="swatch" style="width:4px;height:18px;background:#c64b4b"></span> preflight complete</span>' +
-		'</div>' + preflightSection + '</div></details>';
+		'</div>' + preflightSection + jestSection + '</div></details>';
 }
 function render() {
 	const run = runs[currentRun];
