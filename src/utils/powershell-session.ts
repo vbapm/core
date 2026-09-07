@@ -26,6 +26,13 @@ function sessionTrace(message: string): void {
 	}
 }
 
+function warmSessionMetadataPath(): string {
+	const workerId = process.env.JEST_WORKER_ID;
+	const filename =
+		workerId && workerId !== "1" ? `warm-session-${workerId}.json` : "warm-session.json";
+	return pathJoin(process.env.TEMP || process.env.TMP || ".", "Excel-Instances", filename);
+}
+
 interface SessionRequest {
 	id: string;
 	appName: string;
@@ -88,32 +95,27 @@ export class PowerShellSession {
 			);
 		}
 
-		const isPrimaryWorker = !process.env.JEST_WORKER_ID || process.env.JEST_WORKER_ID === "1";
-		const warmMetadataPath = pathJoin(
-			process.env.TEMP || process.env.TMP || ".",
-			"Excel-Instances",
-			"warm-session.json"
-		);
-		if (isPrimaryWorker) {
-			try {
-				const metadata = JSON.parse(await readFile(warmMetadataPath, "utf8")) as { port?: number };
-				const warmPort = metadata.port;
-				if (typeof warmPort === "number") {
-					const warmSocket = await new Promise<Socket>((resolve, reject) => {
-						const candidate = connect({ host: "127.0.0.1", port: warmPort }, () =>
-							resolve(candidate)
-						);
-						candidate.once("error", reject);
-					});
-					this.attachSocket(warmSocket);
-					sessionTrace(`warm-connect port=${warmPort}`);
-					return;
-				}
-			} catch {
-				try {
-					await unlink(warmMetadataPath);
-				} catch {}
+		const warmMetadataPath = warmSessionMetadataPath();
+		try {
+			const metadata = JSON.parse(await readFile(warmMetadataPath, "utf8")) as { port?: number };
+			const warmPort = metadata.port;
+			if (typeof warmPort === "number") {
+				const warmSocket = await new Promise<Socket>((resolve, reject) => {
+					const candidate = connect({ host: "127.0.0.1", port: warmPort }, () =>
+						resolve(candidate)
+					);
+					candidate.once("error", reject);
+				});
+				this.attachSocket(warmSocket);
+				sessionTrace(
+					`warm-connect worker=${process.env.JEST_WORKER_ID || "main"} port=${warmPort}`
+				);
+				return;
 			}
+		} catch {
+			try {
+				await unlink(warmMetadataPath);
+			} catch {}
 		}
 
 		this.child = spawn(

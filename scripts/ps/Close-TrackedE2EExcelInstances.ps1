@@ -5,6 +5,7 @@
 
 [CmdletBinding()]
 param(
+    [int]$KeepWarmCount = 0,
     [switch]$KeepOneWarm
 )
 
@@ -19,19 +20,20 @@ $tracked = @(Read-ExcelInstances | Where-Object {
     )
 })
 
-$warmPid = 0
-if ($KeepOneWarm -and $tracked.Count -gt 0) {
-    $warmPid = [int](@($tracked | Sort-Object createdAt | Select-Object -First 1).pid)
+$warmCount = [Math]::Max(0, $KeepWarmCount)
+if ($KeepOneWarm) {
+    $warmCount = [Math]::Max($warmCount, 1)
 }
+$warmPids = @($tracked | Sort-Object createdAt | Select-Object -First $warmCount | ForEach-Object { [int]$_.pid })
 
 $closed = 0
-if ($warmPid -gt 0) {
-    Write-Output "Keeping tracked e2e Excel instance PID=$warmPid warm."
+if ($warmPids.Count -gt 0) {
+    Write-Output "Keeping tracked e2e Excel instance(s) warm: $($warmPids -join ', ')."
 }
 
 foreach ($entry in $tracked) {
     $instancePid = [int]$entry.pid
-    if ($instancePid -eq $warmPid) { continue }
+    if ($warmPids -contains $instancePid) { continue }
     try {
         Stop-Process -Id $instancePid -Force -ErrorAction SilentlyContinue
     } catch {}

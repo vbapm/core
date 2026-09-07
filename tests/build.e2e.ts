@@ -12,7 +12,7 @@ import { execute, closePersistentSession, run, RunResult, setup } from "./__help
 
 jest.setTimeout(180000);
 
-// When the persistent session is enabled (VBA_PERSISTENT_SESSION=1), the
+// When the persistent session is enabled for this worker, the
 // in-process `run()` helper keeps one hidden Excel instance alive for the whole
 // suite. Close it here so we don't leak it after the tests finish.
 afterAll(async () => {

@@ -24,7 +24,8 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Excel-InstanceRegistry.ps1')
 
 if ($Clean) {
-	Remove-Item -LiteralPath (Join-Path $env:TEMP 'Excel-Instances\warm-session.json') -Force -ErrorAction SilentlyContinue
+	Get-ChildItem -LiteralPath (Join-Path $env:TEMP 'Excel-Instances') -Filter 'warm-session*.json' -File -ErrorAction SilentlyContinue |
+		Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 Sync-ExcelInstanceSnapshot | Out-Null

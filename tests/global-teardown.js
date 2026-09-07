@@ -82,11 +82,16 @@ function finishEvolutionRun() {
 
 async function cleanupTrackedE2EInstances() {
 	const script = join(__dirname, "..", "scripts", "ps", "Close-TrackedE2EExcelInstances.ps1");
-	const keepOneWarm =
+	const persistentSessionValue = process.env.VBA_PERSISTENT_SESSION || "";
+	const persistentSessionLimit = /^(true|yes)$/i.test(persistentSessionValue)
+		? 1
+		: Number.parseInt(persistentSessionValue, 10);
+	const keepWarm =
 		/^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "") &&
-		/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+		Number.isInteger(persistentSessionLimit) &&
+		persistentSessionLimit > 0;
 	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
-	if (keepOneWarm) args.push("-KeepOneWarm");
+	if (keepWarm) args.push("-KeepWarmCount", String(persistentSessionLimit));
 	const result = spawnSync("powershell.exe", args, {
 		stdio: "inherit"
 	});

@@ -763,7 +763,9 @@ function Invoke-ScriptRequestLine {
 }
 
 function Start-WarmSessionServer {
-	$metadataPath = Join-Path $env:TEMP 'Excel-Instances\warm-session.json'
+	$workerId = [string]$env:JEST_WORKER_ID
+	$metadataName = if ($workerId -and $workerId -ne '1') { "warm-session-$workerId.json" } else { 'warm-session.json' }
+	$metadataPath = Join-Path $env:TEMP "Excel-Instances\$metadataName"
 	$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 0)
 	$listener.Start()
 	$port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port

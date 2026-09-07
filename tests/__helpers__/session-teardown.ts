@@ -5,7 +5,7 @@
  * therefore once per Jest worker process).
  *
  * Why not `globalTeardown`: that hook runs in Jest's main process, which never
- * owns a session. When `VBA_PERSISTENT_SESSION=1` + `E2E_IN_PROCESS=1` are set,
+ * owns a session. When `VBA_PERSISTENT_SESSION` is positive and `E2E_IN_PROCESS=1` is set,
  * the session (and the hidden Excel it owns) belongs to the *worker*, so it has
  * to be shut down from inside the worker or it leaks one EXCEL.EXE per file.
  *

@@ -10,6 +10,7 @@ import { basename, extname, join, resolve } from "../../src/utils/path";
 import { RunResult } from "../../src/utils/run";
 import {
 	closePowerShellSession as closeSourcePowerShellSession,
+	isPersistentSessionWorker,
 	resetPersistentPowerShellSession as resetSourcePowerShellSession,
 	run as sourceRun
 } from "../../src/utils/run";
@@ -98,8 +99,7 @@ function getCurrentTestName(): string {
 }
 
 const useSourcePersistentSession =
-	/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") &&
-	/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+	/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") && isPersistentSessionWorker();
 
 /**
  * Append a line to the shared session trace log (`%TEMP%\Excel-Instances\session-client-trace.log`),
@@ -575,7 +575,7 @@ function normalize(value: string): string {
  * Close the process-scoped persistent PowerShell session (and the Excel it
  * owns), if one was started during the run. Call this in a `globalSetup` /
  * `afterAll` so the in-process `run()` helper doesn't leak a hidden Excel
- * instance when `VBA_PERSISTENT_SESSION=1` is enabled.
+ * instance when `VBA_PERSISTENT_SESSION` enables the current worker.
  *
  * Note: this only affects the in-process library path (the Jest process's own
  * `PowerShellSession` singleton). It does not touch any Excel instances created

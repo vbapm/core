@@ -26,7 +26,7 @@ Lifecycle records are written to `%TEMP%\Excel-Instances\instances.log` (or
 the path in `VBA_INSTANCE_LOG`) without being mixed into test stdout/stderr.
 For per-test and per-command timing in the export suites, set `E2E_TIMING=1`.
 
-The standard background runner is serial (`--runInBand`) so one persistent Excel session can be reused safely. Experimental multi-worker persistent sessions are intentionally not exposed as a package script until their session ownership is isolated per worker.
+The standard background runner is serial (`--runInBand`). Set `VBA_PERSISTENT_SESSION` to a positive number to enable that many persistent PowerShell/Excel worker sessions, for example `VBA_PERSISTENT_SESSION=3` with `--maxWorkers 3`. `true` and `yes` remain equivalent to `1`.
 
 ### Two ways to drive the CLI: spawned vs in-process
 

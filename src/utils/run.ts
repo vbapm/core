@@ -20,12 +20,22 @@ const execFile = promisify(_execFile);
 const debug = env.debug("vbapm:run");
 const SPECIAL_FILE_STDOUT = env.isWindows ? "CON" : "/dev/stdout";
 
-// When set, route Windows runs through a persistent PowerShell session that
-// keeps the Excel.Application COM stub alive across invocations (avoids
-// re-launching Excel for every `vba run`). Defaults to off until stabilized.
-//
-const PERSISTENT_SESSION =
-	env.isWindows && /^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+// Positive values set the maximum number of persistent worker sessions.
+// Boolean values remain supported for compatibility: true/yes means one.
+export function getPersistentSessionLimit(value = process.env.VBA_PERSISTENT_SESSION): number {
+	if (/^(true|yes)$/i.test(value || "")) return 1;
+	const limit = Number.parseInt(value || "", 10);
+	return Number.isInteger(limit) && limit > 0 ? limit : 0;
+}
+
+export function isPersistentSessionWorker(): boolean {
+	const limit = getPersistentSessionLimit();
+	if (limit <= 0) return false;
+	const workerId = Number.parseInt(process.env.JEST_WORKER_ID || "", 10);
+	return !Number.isInteger(workerId) || workerId <= limit;
+}
+
+const PERSISTENT_SESSION = env.isWindows && isPersistentSessionWorker();
 
 export interface RunResult {
 	success: boolean;
@@ -231,9 +241,8 @@ export async function closePowerShellSession(): Promise<void> {
 	if (session) {
 		const keepWarm =
 			env.isWindows &&
-			(!process.env.JEST_WORKER_ID || process.env.JEST_WORKER_ID === "1") &&
 			/^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "") &&
-			/^(1|true|yes)$/i.test(process.env.VBA_PERSISTENT_SESSION || "");
+			isPersistentSessionWorker();
 		if (keepWarm) await session.detach();
 		else await session.close();
 	}

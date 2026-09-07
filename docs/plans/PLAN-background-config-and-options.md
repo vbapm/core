@@ -109,7 +109,7 @@ application environment variable. Keep these concerns separate:
 
 - `background`: visible versus hidden Excel.
 - `E2E_IN_PROCESS`: whether test commands run inside the Jest process.
-- `VBA_PERSISTENT_SESSION`: whether PowerShell and Excel are reused.
+- `VBA_PERSISTENT_SESSION`: positive worker-session limit for reusing PowerShell and Excel; `true`/`yes` mean `1`.
 - Jest worker count: test concurrency.
 
 The peer-reference test should use the same configuration mechanism as the
