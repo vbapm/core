@@ -19,9 +19,9 @@ const fs = require("fs");
 
 module.exports = async function globalSetup() {
 	recordEvolutionRunStart();
+	clearActiveE2EInstanceLogs();
 	ensureExcelInstancesClean();
 	clearInactiveInstances();
-	clearActiveE2EInstanceLogs();
 	writeRunBanner();
 
 	const background = /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "");
