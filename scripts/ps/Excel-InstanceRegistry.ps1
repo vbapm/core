@@ -63,7 +63,7 @@
 #     "workbooks":  ["<full path>", ...]  # open workbook full paths
 #     "logs":       ["<task or error log>", ...]  # instance activity log
 #     "workbookReadOnly": {"<normalized path>": <bool>, ...}
-#     "addins":     [{"name": "<addin name>", "fullPath": "<path>", "isOpen": <bool>, "readOnly": <bool>}, ...]
+#     "addins":     [{"name": "<addin name>", "fullPath": "<path>", "isInstalled": <bool|null>, "isOpen": <bool|null>, "readOnly": <bool>}, ...]
 #     "ghostWorkbooks": [{"name": "<VBE project>", "file": "<path>", ...}, ...]
 #     "ghostDetection": {"available": <bool>, "ghostCount": <int>, ...}
 #   }
@@ -587,11 +587,19 @@ function Get-ExcelWorkbookReadOnly {
 
 <#
 .SYNOPSIS
-Return the names (and installed/loaded status) of add-ins known to a COM
-Excel.Application [ref]. Add-ins that are currently loaded are flagged
-`isOpen = $true`. Names are unique per add-in and normalized to forward slashes
-for any path-like names. `fullPath` contains the add-in's COM `FullName` when
-Excel provides it. `readOnly` comes from the matching open workbook.
+Return the names (and load status) of add-ins known to a COM Excel.Application
+[ref]. Each add-in reports two independent flags:
+  `isInstalled` — whether it is registered/checked in the Add-Ins dialog
+                  (`AddIn.Installed`).
+  `isOpen`      — whether it is actually loaded into this Excel process
+                  (`AddIn.IsOpen`). An add-in can be `Installed=True` without
+                  being loaded (common on automation-created instances), so
+                  `isOpen` must NOT be derived from `Installed`. If a flag
+                  cannot be read it is reported as `null` ("unknown") rather
+                  than fabricating a state.
+Names are unique per add-in and normalized to forward slashes for any path-like
+names. `fullPath` contains the add-in's COM `FullName` when Excel provides it.
+`readOnly` comes from the matching open workbook.
 #>
 function Get-ExcelAddins {
     param([Parameter(Mandatory)][object]$ExcelApp)
@@ -612,34 +620,44 @@ function Get-ExcelAddins {
 
     try {
         foreach ($addin in $ExcelApp.AddIns) {
-            try {
-                $name = [string]$addin.Name
-                $isOpen = [bool]$addin.Installed
-                $fullPath = $null
-                try {
-                    if ($addin.FullName) {
-                        $fullPath = ([string]$addin.FullName -replace '\\', '/')
-                    }
-                } catch {}
-
-                $readOnly = $false
-                if ($fullPath) {
-                    $normalizedPath = $fullPath.ToLowerInvariant()
-                    if ($readOnlyByPath.ContainsKey($normalizedPath)) {
-                        $readOnly = [bool]$readOnlyByPath[$normalizedPath]
-                    }
-                }
-            } catch {
-                continue
-            }
-
+            $name = $null
+            try { $name = [string]$addin.Name } catch { $name = $null }
             if (-not $name) { continue }
 
+            # isInstalled = registered/checked in the Add-Ins dialog (Installed).
+            # isOpen = actually loaded into this Excel process (IsOpen). Read
+            # them independently; an add-in can be Installed=True yet not loaded
+            # (common on automation-created instances), so isOpen must not be
+            # derived from Installed. If a read fails, report $null ("unknown")
+            # rather than fabricating a state or throwing into a swallowing
+            # caller.
+            $isInstalled = $null
+            try { $isInstalled = [bool]$addin.Installed } catch { $isInstalled = $null }
+
+            $isOpen = $null
+            try { $isOpen = [bool]$addin.IsOpen } catch { $isOpen = $null }
+
+            $fullPath = $null
+            try {
+                if ($addin.FullName) {
+                    $fullPath = ([string]$addin.FullName -replace '\\', '/')
+                }
+            } catch {}
+
+            $readOnly = $false
+            if ($fullPath) {
+                $normalizedPath = $fullPath.ToLowerInvariant()
+                if ($readOnlyByPath.ContainsKey($normalizedPath)) {
+                    $readOnly = [bool]$readOnlyByPath[$normalizedPath]
+                }
+            }
+
             $addins += [pscustomobject]@{
-                name     = ($name -replace '\\', '/')
-                fullPath = $fullPath
-                isOpen   = $isOpen
-                readOnly = $readOnly
+                name         = ($name -replace '\\', '/')
+                fullPath     = $fullPath
+                isInstalled  = $isInstalled
+                isOpen       = $isOpen
+                readOnly     = $readOnly
             }
         }
     } catch {

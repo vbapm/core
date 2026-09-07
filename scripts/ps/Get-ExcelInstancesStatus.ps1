@@ -107,8 +107,9 @@ if ($Json) {
             $addins = @($r.addins)
             if ($addins.Count -gt 0 -and $null -ne $addins[0]) {
                 foreach ($a in $addins) {
-                    $openFlag = if ($a.isOpen) { 'open' } else { 'closed' }
-                    Write-Output ("          addin: {0} [{1}]" -f $a.name, $openFlag)
+                    $openFlag = if ($null -eq $a.isOpen) { 'unknown' } elseif ($a.isOpen) { 'open' } else { 'closed' }
+                    $installedFlag = if ($null -eq $a.isInstalled) { '?' } elseif ($a.isInstalled) { 'installed' } else { 'not-installed' }
+                    Write-Output ("          addin: {0} [isInstalled={1} {2}]" -f $a.name, $installedFlag, $openFlag)
                 }
             }
         }
