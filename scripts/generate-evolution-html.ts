@@ -273,6 +273,11 @@ function fmtUtc(ms) {
 	const p = value => String(value).padStart(2, '0');
 	return p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds()) + ' UTC';
 }
+function fmtTick(ms) {
+	const d = new Date(ms);
+	const p = value => String(value).padStart(2, '0');
+	return p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+}
 function instanceColor(inst) {
 	const warm = inst.intent === 'keep-warm' || String(inst.owner || '').indexOf('session#') === 0;
 	if (warm) return '#e09a3c';
@@ -349,6 +354,19 @@ function svgLifecycleChart(instances, start, end) {
 		const y = top + index * laneStep + laneStep / 2;
 		parts.push('<line x1="' + XL + '" y1="' + y + '" x2="' + (W - XR) + '" y2="' + y + '" stroke="#eef2f5" stroke-width="1"/>');
 	});
+	// Vertical gridline every 10 seconds (labels drawn where they do not collide
+	// with the start/end time labels or each other).
+	const tickMs = 10000;
+	let previousTickX = -1e9;
+	for (let tick = Math.ceil(start / tickMs) * tickMs; tick <= end; tick += tickMs) {
+		const x = X(tick);
+		if (x < XL || x > W - XR) continue;
+		parts.push('<line x1="' + x + '" y1="' + top + '" x2="' + x + '" y2="' + (H - bottom) + '" stroke="#d9e3ea" stroke-width="1"/>');
+		if (x - XL >= 108 && W - XR - x >= 86 && x - previousTickX >= 52) {
+			parts.push('<text x="' + x + '" y="' + (H - 12) + '" text-anchor="middle" class="lane-label">' + fmtTick(tick) + '</text>');
+			previousTickX = x;
+		}
+	}
 	parts.push('<text x="' + XL + '" y="' + (H - 12) + '" class="lane-label">' + fmtUtc(start) + '</text>');
 	parts.push('<text x="' + (W - XR) + '" y="' + (H - 12) + '" text-anchor="end" class="lane-label">' + fmtUtc(end) + '</text>');
 	instances.forEach((instance, index) => {
