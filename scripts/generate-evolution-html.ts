@@ -114,6 +114,17 @@ li { margin: 5px 0; overflow-wrap: anywhere; }
 .run-chip strong { color: #8fe3a0; }
 .run-command { flex-basis: 100%; font-size: 12px; color: #9fb3c2; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .run-meta .muted { color: #7b8994; font-size: 13px; }
+#run-summary { margin: 0 0 24px; padding: 18px; border: 1px solid #ccd6de; border-radius: 7px; background: #fff; }
+#run-summary h2 { margin: 0 0 6px; font-size: 20px; color: #17212b; }
+#run-summary .muted { margin: 8px 0; }
+.run-summary-stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
+.run-summary-stats .metric strong { color: #17212b; }
+.run-summary-chart { width: 100%; height: auto; }
+.lane-label { font-size: 11px; fill: #536474; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: #536474; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 18px; height: 4px; border-radius: 3px; display: inline-block; }
+.swatch-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 2px solid; }
 footer { position: fixed; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 12px 16px; border-top: 1px solid #ccd6de; background: #ffffffee; backdrop-filter: blur(8px); }
 button { width: 44px; height: 38px; border: 1px solid #9eabb5; border-radius: 6px; background: #fff; color: #17212b; font-size: 23px; line-height: 1; cursor: pointer; }
 button:hover:not(:disabled) { background: #e6f0f5; border-color: #31708f; }
@@ -223,6 +234,124 @@ function renderRunMeta() {
 	}
 	el.innerHTML = '<div class="run-meta-grid">' + chips.join('') + '</div>' + command;
 }
+function snapshotTime(name) {
+	const m = String(name).match(/^instances-(\\d{4})-(\\d{2})-(\\d{2})--(\\d{2})h(\\d{2})m(\\d{2})s(\\d{3})(?:-\\d+)?\\.json$/i);
+	if (!m) return 0;
+	return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], +m[7]);
+}
+function fmtUtc(ms) {
+	const d = new Date(ms);
+	const p = value => String(value).padStart(2, '0');
+	return p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds()) + ' UTC';
+}
+function instanceColor(inst) {
+	const warm = inst.intent === 'keep-warm' || String(inst.owner || '').indexOf('session#') === 0;
+	if (warm) return '#e09a3c';
+	return inst.visible ? '#3a7ca5' : '#5f8fb5';
+}
+function buildRunSummary(run) {
+	const snaps = run.snapshots
+		.map(snapshot => ({ time: snapshotTime(snapshot.name), data: snapshot.data || {} }))
+		.filter(snapshot => snapshot.time)
+		.sort((a, b) => a.time - b.time);
+	const byPid = {};
+	let peak = 0;
+	snaps.forEach(snapshot => {
+		const active = Array.isArray(snapshot.data.active) ? snapshot.data.active : [];
+		const inactive = Array.isArray(snapshot.data.inactive) ? snapshot.data.inactive : [];
+		let alive = 0;
+		active.forEach(instance => {
+			if (!instance || instance.pid == null) return;
+			alive++;
+			const key = String(instance.pid);
+			if (!byPid[key]) {
+				byPid[key] = {
+					pid: instance.pid,
+					owner: instance.owner,
+					intent: instance.intent,
+					visible: instance.visible,
+					birth: snapshot.time,
+					death: null,
+					lastActive: snapshot.time
+				};
+			} else {
+				byPid[key].lastActive = snapshot.time;
+			}
+		});
+		inactive.forEach(instance => {
+			if (!instance || instance.pid == null) return;
+			const key = String(instance.pid);
+			if (byPid[key] && byPid[key].death == null) byPid[key].death = snapshot.time;
+		});
+		peak = Math.max(peak, alive);
+	});
+	const instances = Object.keys(byPid)
+		.map(key => byPid[key])
+		.sort((a, b) => (a.birth - b.birth) || (a.pid - b.pid));
+	const lastSnap = snaps.length ? snaps[snaps.length - 1].time : 0;
+	const fallbackStart = instances.length ? instances[0].birth : 0;
+	const meta = (run && run.meta) || {};
+	const start = meta.startedAt ? new Date(meta.startedAt).getTime() : fallbackStart;
+	const end = meta.finishedAt ? new Date(meta.finishedAt).getTime() : (lastSnap || fallbackStart);
+	instances.forEach(instance => {
+		if (instance.death == null) {
+			instance.death = instance.lastActive >= lastSnap ? end : instance.lastActive;
+			if (instance.lastActive >= lastSnap) instance.stillAlive = true;
+		}
+		if (instance.death < instance.birth) instance.death = instance.birth;
+		if (instance.death > end) instance.death = end;
+	});
+	return { instances, peak, start: start || fallbackStart, end: end || start || fallbackStart };
+}
+function svgLifecycleChart(instances, start, end) {
+	if (!instances.length) return '<div class="muted">No Excel instances were observed in this run.</div>';
+	const span = (end - start) || 1;
+	const W = 1180;
+	const XL = 64;
+	const XR = 24;
+	const laneStep = 30;
+	const top = 16;
+	const bottom = 36;
+	const H = top + instances.length * laneStep + bottom;
+	const X = time => XL + ((W - XL - XR) * (time - start)) / span;
+	const parts = [];
+	parts.push('<svg class="run-summary-chart" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">');
+	instances.forEach((instance, index) => {
+		const y = top + index * laneStep + laneStep / 2;
+		parts.push('<line x1="' + XL + '" y1="' + y + '" x2="' + (W - XR) + '" y2="' + y + '" stroke="#eef2f5" stroke-width="1"/>');
+	});
+	parts.push('<text x="' + XL + '" y="' + (H - 12) + '" class="lane-label">' + fmtUtc(start) + '</text>');
+	parts.push('<text x="' + (W - XR) + '" y="' + (H - 12) + '" text-anchor="end" class="lane-label">' + fmtUtc(end) + '</text>');
+	instances.forEach((instance, index) => {
+		const color = instanceColor(instance);
+		const y = top + index * laneStep + laneStep / 2;
+		const x1 = Math.max(XL, X(instance.birth));
+		let x2 = Math.min(W - XR, X(instance.death));
+		if (x2 - x1 < 2) x2 = Math.min(W - XR, x1 + 2);
+		parts.push('<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="' + color + '" stroke-width="3" stroke-linecap="round"/>');
+		parts.push('<circle cx="' + x1 + '" cy="' + y + '" r="4" fill="#fff" stroke="' + color + '" stroke-width="2"/>');
+		parts.push('<circle cx="' + x2 + '" cy="' + y + '" r="4" fill="' + color + '" stroke="#fff" stroke-width="1.5"/>');
+		parts.push('<text x="' + (XL - 6) + '" y="' + (y + 3) + '" text-anchor="end" class="lane-label">PID ' + instance.pid + '</text>');
+	});
+	parts.push('</svg>');
+	return parts.join('');
+}
+function summaryHtml(run) {
+	const summary = buildRunSummary(run);
+	return '<section id="run-summary"><h2>Run summary</h2>' +
+		'<div class="run-summary-stats">' +
+		'<span class="metric">Evolution snapshots: <strong>' + run.snapshots.length + '</strong></span>' +
+		'<span class="metric">Excel instances: <strong>' + summary.instances.length + '</strong></span>' +
+		'<span class="metric">Peak concurrent instances: <strong>' + summary.peak + '</strong></span>' +
+		'</div>' +
+		svgLifecycleChart(summary.instances, summary.start, summary.end) +
+		'<div class="legend">' +
+		'<span class="legend-item"><span class="swatch" style="background:#e09a3c"></span> keep-warm (persistent session)</span>' +
+		'<span class="legend-item"><span class="swatch" style="background:#3a7ca5"></span> one-shot automation</span>' +
+		'<span class="legend-item"><span class="swatch" style="background:#5f8fb5"></span> other / visible</span>' +
+		'<span class="legend-item"><span class="swatch-dot" style="border-color:#fff;background:#3a7ca5"></span> death point</span>' +
+		'</div></section>';
+}
 function render() {
 	const run = runs[currentRun];
 	const snapshots = run.snapshots;
@@ -239,7 +368,7 @@ function render() {
 	const inactiveInstances = Array.isArray(data.inactive) ? data.inactive : [];
 	const instances = active.map(instance => renderInstance(instance, "Active"))
 		.concat(inactiveInstances.map(instance => renderInstance(instance, "Inactive")));
-	content.innerHTML = instances.length ? instances.join("") : '<div class="error">No Excel instances in this snapshot.</div>';
+	content.innerHTML = summaryHtml(run) + (instances.length ? instances.join('') : '<div class="error">No Excel instances in this snapshot.</div>');
   previous.disabled = current === 0;
   next.disabled = current === snapshots.length - 1;
   renderRunMeta();
