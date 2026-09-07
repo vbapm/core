@@ -809,6 +809,8 @@ function Update-ExcelInstance {
         if ([string]::IsNullOrWhiteSpace($Intent)) {
             $Intent = if ($existingEntry -and $existingEntry.intent) { [string]$existingEntry.intent } else { 'one-shot' }
         }
+		$warmOwner = if ($existingEntry -and $existingEntry.PSObject.Properties['warmOwner']) { [string]$existingEntry.warmOwner } else { '' }
+		$warmAvailable = if ($existingEntry -and $existingEntry.PSObject.Properties['warmAvailable']) { [bool]$existingEntry.warmAvailable } else { $false }
 
         $entry = @{
             id           = $existingId
@@ -818,6 +820,8 @@ function Update-ExcelInstance {
             visible      = $Visible
             reason       = $Reason
             intent       = $Intent
+			warmOwner    = $warmOwner
+			warmAvailable = $warmAvailable
             comReachable = [bool]$ComReachable
             windowTitle  = if ([string]::IsNullOrEmpty($WindowTitle)) { $null } else { $WindowTitle }
             createdAt    = (Get-Date).ToString('o')
@@ -845,6 +849,34 @@ function Update-ExcelInstance {
         $inactive = @($doc.inactive | Where-Object { [int]$_.pid -ne $InstanceId })
 
         Write-ExcelRegistryDocument -Active $instances -Inactive $inactive -ForceEvolutionSnapshot:$hasNewLog
+    } finally {
+        Release-ExcelInstancesLock
+    }
+}
+
+function Set-ExcelInstanceWarmState {
+    param(
+        [Parameter(Mandatory)][int]$ProcessId,
+        [string]$WarmOwner = '',
+        [bool]$WarmAvailable = $false
+    )
+
+    Get-ExcelInstancesLock | Out-Null
+    try {
+        $doc = Read-ExcelRegistryDocument
+        $active = @($doc.active)
+        foreach ($entry in $active) {
+            if ([int]$entry.pid -ne $ProcessId) { continue }
+            if ($null -eq $entry.PSObject.Properties['warmOwner']) {
+                $entry | Add-Member -MemberType NoteProperty -Name warmOwner -Value $WarmOwner
+            } else { $entry.warmOwner = $WarmOwner }
+            if ($null -eq $entry.PSObject.Properties['warmAvailable']) {
+                $entry | Add-Member -MemberType NoteProperty -Name warmAvailable -Value ([bool]$WarmAvailable)
+            } else { $entry.warmAvailable = [bool]$WarmAvailable }
+            Write-ExcelRegistryDocument -Active $active -Inactive $doc.inactive
+            return $true
+        }
+        return $false
     } finally {
         Release-ExcelInstancesLock
     }

@@ -194,15 +194,12 @@ function Open-ScriptExcel {
 	$Script:WarmInstance = $false
 
 	if ($Script:BackgroundBuild -and $HasRegistry) {
-		$reusable = Find-ReusableBackgroundExcel
+		$reusable = Claim-ReusableBackgroundExcel
 		if ($null -ne $reusable) {
 			$Script:App = $reusable.App
 			$Script:AppWasOpen = $false
 			$Script:RegisteredPid = [int]$reusable.ProcessId
 			$Script:WarmInstance = $true
-			try {
-				Register-ExcelInstance -ExcelApp $Script:App -Owner "session#$PID" -Visible $false -Reason 'e2e' -Intent 'keep-warm' | Out-Null
-			} catch {}
 			Close-ScriptWorkbooks
 			if ($reusable.PreviousSessionPid -gt 0 -and $reusable.PreviousSessionPid -ne $PID) {
 				try { Stop-Process -Id $reusable.PreviousSessionPid -Force -ErrorAction SilentlyContinue } catch {}
@@ -264,6 +261,10 @@ function Open-ScriptExcel {
 						-Intent 'keep-warm' `
 						-Log (Get-ScriptMacroLogDescription $MacroName $ArgValues)
 					$Script:RegisteredPid = if ($null -ne $registeredPid) { [int]$registeredPid } else { 0 }
+					if ($Script:RegisteredPid -gt 0) {
+						$Script:WarmInstance = $Script:BackgroundBuild -and ($env:E2E_BACKGROUND -match '^(1|true|yes)$') -and ([string]$env:VBA_PERSISTENT_SESSION -match '^(true|yes|[1-9]\d*)$')
+						try { Set-ExcelInstanceWarmState -ProcessId $Script:RegisteredPid -WarmOwner "session#$PID" -WarmAvailable $false | Out-Null } catch {}
+					}
 				} catch {
 					# best-effort
 				}
@@ -274,38 +275,78 @@ function Open-ScriptExcel {
 	}
 }
 
-function Find-ReusableBackgroundExcel {
-	$entriesByPid = @{}
-	foreach ($entry in @(Read-ExcelInstances)) {
-		$entriesByPid[[int]$entry.pid] = $entry
-	}
+function Claim-ReusableBackgroundExcel {
+	$lockHeld = $false
+	try {
+		Get-ExcelInstancesLock | Out-Null
+		$lockHeld = $true
+		$doc = Read-ExcelRegistryDocument
+		$limit = [int]$env:VBA_PERSISTENT_SESSION
+		if ($limit -lt 1) { $limit = 1 }
+		$rotPids = @()
+		foreach ($rotApp in @(Get-ExcelApplications)) {
+			try { $rotPids += [int](Get-ExcelProcessId -ExcelApp $rotApp) } catch {}
+			try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($rotApp) | Out-Null } catch {}
+		}
+		$warmEntries = @($doc.active | Where-Object { [string]$_.intent -eq 'keep-warm' })
+		$staleEntries = @($warmEntries | Where-Object {
+			$pidValue = [int]$_.pid
+			$rotPids -notcontains $pidValue -and $null -ne (Get-Process -Id $pidValue -ErrorAction SilentlyContinue)
+		} | Sort-Object createdAt)
+		while ($warmEntries.Count -ge $limit -and $staleEntries.Count -gt 0) {
+			$stale = $staleEntries[0]
+			$staleEntries = @($staleEntries | Select-Object -Skip 1)
+			try { Stop-Process -Id ([int]$stale.pid) -Force -ErrorAction SilentlyContinue } catch {}
+			try { Remove-ExcelInstance -InstanceId ([int]$stale.pid) -DeactivateReason 'stale-warm-not-in-rot' } catch {}
+			$warmEntries = @($warmEntries | Where-Object { [int]$_.pid -ne [int]$stale.pid })
+		}
+		$entriesByPid = @{}
+		foreach ($entry in @($doc.active)) { $entriesByPid[[int]$entry.pid] = $entry }
 
-	foreach ($app in @(Get-ExcelApplications)) {
-		$keepApp = $false
-		try {
-			$processId = Get-ExcelProcessId -ExcelApp $app
-			$process = Get-Process -Id $processId -ErrorAction SilentlyContinue
-			$entry = $entriesByPid[[int]$processId]
-			$owner = if ($entry) { [string]$entry.owner } else { '' }
-			$isTracked = $null -ne $entry -and $owner -notmatch '^(rogue|unknown|unknown-owner|untracked)$'
-			$isHidden = $null -ne $process -and [bool]($process.MainWindowHandle -eq 0)
-			if ($isTracked -and $isHidden) {
-				$previousSessionPid = 0
-				if ($owner -like 'session#*') {
-					try { $previousSessionPid = [int]($owner.Substring(8)) } catch {}
+		foreach ($app in @(Get-ExcelApplications)) {
+			$keepApp = $false
+			try {
+				$processId = Get-ExcelProcessId -ExcelApp $app
+				$process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+				$entry = $entriesByPid[[int]$processId]
+				$isHidden = $null -ne $process -and [bool]($process.MainWindowHandle -eq 0)
+				$isWarm = $null -ne $entry -and [string]$entry.intent -eq 'keep-warm'
+				$available = $false
+				if ($isWarm -and $entry.PSObject.Properties['warmAvailable']) {
+					$warmOwner = if ($entry.PSObject.Properties['warmOwner']) { [string]$entry.warmOwner } else { '' }
+					$ownerPid = 0
+					try { if ($warmOwner -like 'session#*') { $ownerPid = [int]$warmOwner.Substring(8) } } catch {}
+					$ownerAlive = $ownerPid -gt 0 -and $null -ne (Get-Process -Id $ownerPid -ErrorAction SilentlyContinue)
+					$available = [bool]$entry.warmAvailable -or [string]::IsNullOrWhiteSpace($warmOwner) -or -not $ownerAlive
+				} elseif ($isWarm) {
+					$owner = if ($entry.PSObject.Properties['warmOwner']) { [string]$entry.warmOwner } else { [string]$entry.owner }
+					$ownerPid = 0
+					try { $ownerPid = [int]$owner.Substring(8) } catch {}
+					$available = $ownerPid -le 0 -or $null -eq (Get-Process -Id $ownerPid -ErrorAction SilentlyContinue)
 				}
-				$keepApp = $true
-				return [pscustomobject]@{ App = $app; ProcessId = $processId; PreviousSessionPid = $previousSessionPid }
-			}
-		} catch {
-			# Try the next ROT-reachable instance.
+				if ($isHidden -and $isWarm -and $available) {
+					$previousSessionPid = 0
+					$previousOwner = if ($entry.PSObject.Properties['warmOwner']) { [string]$entry.warmOwner } else { [string]$entry.owner }
+					if ($previousOwner -like 'session#*') { try { $previousSessionPid = [int]$previousOwner.Substring(8) } catch {} }
+					$entry.owner = "session#$PID"
+					$entry.warmOwner = "session#$PID"
+					$entry.warmAvailable = $false
+					Write-ExcelRegistryDocument -Active @($doc.active) -Inactive $doc.inactive
+					$keepApp = $true
+					return [pscustomobject]@{ App = $app; ProcessId = $processId; PreviousSessionPid = $previousSessionPid }
+				}
+			} catch {}
+			if (-not $keepApp) { try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {} }
 		}
-		if (-not $keepApp) {
-			try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
-		}
+		return $null
+	} finally {
+		if ($lockHeld) { Release-ExcelInstancesLock }
 	}
+}
 
-	return $null
+function Find-ReusableBackgroundExcel {
+	# Kept as a compatibility wrapper for callers outside the session bridge.
+	return Claim-ReusableBackgroundExcel
 }
 
 function Ensure-ScriptWorkbook {
@@ -412,11 +453,17 @@ function Ensure-ScriptAddin {
 
 function Close-ScriptWorkbooks {
 	try {
+		$workerId = [string]$env:JEST_WORKER_ID
+		$anchorName = if ($workerId) { "warm-anchor-$workerId.xlsx" } else { 'warm-anchor.xlsx' }
+		$anchorPath = [System.IO.Path]::GetFullPath((Join-Path $env:TEMP "Excel-Instances\$anchorName")).ToLowerInvariant()
 		foreach ($workbook in @($Script:App.Workbooks)) {
 			$displayPath = ''
 			try { $displayPath = [string]$workbook.FullName } catch {}
 			$fullPath = ''
 			try { $fullPath = [System.IO.Path]::GetFullPath($displayPath).ToLowerInvariant() } catch {}
+			if ($fullPath -and $fullPath -eq $anchorPath) {
+				continue
+			}
 
 			$isLoadedAddin = $false
 			if ($fullPath) {
@@ -625,13 +672,7 @@ function Test-KeepWarmExcel {
 	if (-not $Script:BackgroundBuild -or $env:E2E_BACKGROUND -notmatch '^(1|true|yes)$') {
 		return $false
 	}
-
-	try {
-		$invisible = @(Get-RunningExcelInstances | Where-Object { -not $_.visible })
-		return $invisible.Count -le 1
-	} catch {
-		return $false
-	}
+	return [string]$env:VBA_PERSISTENT_SESSION -match '^(true|yes|[1-9]\d*)$'
 }
 
 function Close-ScriptSession {
@@ -647,6 +688,7 @@ function Close-ScriptSession {
 		$keepWarm = Test-KeepWarmExcel
 		# Quit Excel only if we launched it ourselves.
 		if ($keepWarm -and $null -ne $Script:App) {
+			try { Set-ExcelInstanceWarmState -ProcessId $Script:RegisteredPid -WarmOwner "session#$PID" -WarmAvailable $true | Out-Null } catch {}
 			Write-InstanceLog "detaching warm Excel instance excelPid=$($Script:RegisteredPid)"
 			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
 		} elseif (-not $Script:AppWasOpen -and $null -ne $Script:App) {
