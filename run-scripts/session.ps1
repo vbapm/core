@@ -502,7 +502,26 @@ function Close-ScriptWorkbooks {
 }
 
 function Reset-ScriptExcel {
+	param([switch]$DiscardApplication)
+
 	if ($Script:WarmInstance -and $null -ne $Script:App) {
+		if ($DiscardApplication) {
+			$excelPid = [int]$Script:RegisteredPid
+			try { $Script:App.Quit() } catch {}
+			try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Script:App) | Out-Null } catch {}
+			if ($excelPid -gt 0) {
+				try { Stop-Process -Id $excelPid -Force -ErrorAction SilentlyContinue } catch {}
+				try { Unregister-ExcelInstance -ProcessId $excelPid } catch {}
+			}
+			$Script:App = $null
+			$Script:AppWasOpen = $false
+			$Script:RegisteredPid = 0
+			$Script:WarmInstance = $false
+			$Script:LoadedAddins = @{}
+			$Script:OpenWorkbook = $null
+			$Script:LastRequestIsAddin = $null
+			return
+		}
 		Reset-ScriptWorkbooks
 		$Script:IsAddin = $false
 		$Script:LastRequestIsAddin = $null
@@ -577,7 +596,7 @@ function Invoke-ScriptRun {
 		try {
 			$null = $Script:App.Workbooks.Count
 		} catch {
-			Reset-ScriptExcel
+			Reset-ScriptExcel -DiscardApplication
 		}
 	}
 	if ($null -ne $Script:App -and $null -ne $Script:LastRequestIsAddin -and $Script:LastRequestIsAddin -ne $requestIsAddin) {
@@ -585,7 +604,7 @@ function Invoke-ScriptRun {
 		# request changes from an add-in to a macro-enabled workbook (or back).
 		# Reuse remains enabled for consecutive requests of the same kind, while
 		# context switches get a fresh owned Excel instance.
-		Reset-ScriptExcel
+		Reset-ScriptExcel -DiscardApplication
 	}
 
 	if ($null -eq $Script:App) {

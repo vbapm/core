@@ -137,6 +137,7 @@ li { margin: 5px 0; overflow-wrap: anywhere; }
 .preflight-details[open] > summary { border-bottom: 1px solid #e3eaf0; }
 .preflight-meta { padding: 10px 12px 0; color: #536474; font-size: 12px; }
 .preflight-log { margin: 8px 12px 12px; padding: 10px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #304353; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.log-error { color: #8f2117; background: #fff0ed; border-left: 3px solid #c64b4b; padding-left: 8px; }
 .jest-details { margin-top: 16px; border: 1px solid #ccd6de; border-radius: 6px; background: #f8fafc; }
 .jest-details > summary { cursor: pointer; padding: 10px 12px; color: #304353; font-size: 13px; }
 .jest-details[open] > summary { border-bottom: 1px solid #e3eaf0; }
@@ -193,6 +194,12 @@ function displayLog(value) {
 	const match = text.match(/^\\d{4}-\\d{2}-\\d{2}T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2}))(\\s+::\\s+.*)?$/);
 	return match ? match[1] + (match[2] || "") : text;
 }
+function logList(items) {
+	const values = nonEmptyCollection(items).map(displayLog);
+	return values.length
+		? '<ul>' + values.map(value => '<li class="' + (value.includes(':: ERROR:') ? 'log-error' : '') + '">' + escapeHtml(value) + '</li>').join('') + '</ul>'
+		: '<div class="muted">None recorded</div>';
+}
 function workbookRows(instance) {
   const readOnly = instance.workbookReadOnly || {};
 	const ghostItems = collection(instance.ghostWorkbooks);
@@ -212,7 +219,6 @@ function renderInstance(instance, state = "Active") {
 	const addins = addinItems
     .filter(addin => addin.isOpen)
     .map(addin => "📚" + (addin.readOnly ? "🔭" : "✏️") + " " + escapeHtml(addin.fullPath || addin.name));
-	const logs = nonEmptyCollection(instance.logs).map(displayLog);
   const ghostCount = Number(instance.ghostDetection?.ghostCount || 0);
 	return '<article class="instance"><h2>' + escapeHtml(instance.number) + ') PID ' + escapeHtml(instance.pid) + ' · ' + escapeHtml(state) + '</h2>' +
 		'<div class="instance-meta">' + escapeHtml(instance.visible ? "Visible" : "Hidden") + ' · ' +
@@ -220,7 +226,7 @@ function renderInstance(instance, state = "Active") {
 		escapeHtml(instance.owner || "unknown") + (analyzed ? ' · ghost projects: ' + ghostCount : '') + '</div>' +
 		(analyzed ? '<div class="columns"><section><h3>Workbooks</h3>' + list(workbooks, "None recorded") +
 		'</section><section><h3>Open add-ins</h3>' + list(addins, "None recorded") + '</section></div>' +
-		'<section><h3>Logs</h3>' + list(logs, "None recorded") + '</section>' : '') + '</article>';
+		'<section><h3>Logs</h3>' + logList(instance.logs) + '</section>' : '') + '</article>';
 }
 function isoLocal(value) {
 	if (!value) return '';
