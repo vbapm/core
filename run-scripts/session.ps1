@@ -89,7 +89,7 @@ function Get-ScriptMacroLogDescription {
 	$target = Get-ScriptMacroTargetFile $ArgValues
 	$log = if ($target) { "$MacroName -> $target" } else { $MacroName }
 	if ($env:VBA_E2E_TEST_NAME) { $log = "$env:VBA_E2E_TEST_NAME :: $log" }
-	return "$(Get-Date -Format o) :: $log"
+	return "$([DateTime]::UtcNow.ToString('o')) :: $log"
 }
 
 function Get-ScriptMacroErrorLog {
@@ -138,9 +138,9 @@ function Write-ScriptWorkbookCloseLog {
 	}
 
 	try {
-		$log = "$(Get-Date -Format o) :: Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
+		$log = "$([DateTime]::UtcNow.ToString('o')) :: Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
 		if ($env:VBA_E2E_TEST_NAME) {
-			$log = "$(Get-Date -Format o) :: $env:VBA_E2E_TEST_NAME :: Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
+			$log = "$([DateTime]::UtcNow.ToString('o')) :: $env:VBA_E2E_TEST_NAME :: Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
 		}
 		Refresh-ExcelInstance -ExcelApp $Script:App -ProcessId $Script:RegisteredPid -Log $log
 	} catch {

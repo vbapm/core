@@ -178,6 +178,11 @@ function collection(value) {
 function nonEmptyCollection(value) {
 	return collection(value).filter(item => String(item ?? "").trim().length > 0);
 }
+function displayLog(value) {
+	const text = String(value ?? "");
+	const match = text.match(/^\\d{4}-\\d{2}-\\d{2}T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2}))(\\s+::\\s+.*)?$/);
+	return match ? match[1] + (match[2] || "") : text;
+}
 function workbookRows(instance) {
   const readOnly = instance.workbookReadOnly || {};
 	const ghostItems = collection(instance.ghostWorkbooks);
@@ -197,7 +202,7 @@ function renderInstance(instance, state = "Active") {
 	const addins = addinItems
     .filter(addin => addin.isOpen)
     .map(addin => "📚" + (addin.readOnly ? "🔭" : "✏️") + " " + escapeHtml(addin.fullPath || addin.name));
-	const logs = nonEmptyCollection(instance.logs);
+	const logs = nonEmptyCollection(instance.logs).map(displayLog);
   const ghostCount = Number(instance.ghostDetection?.ghostCount || 0);
 	return '<article class="instance"><h2>' + escapeHtml(instance.number) + ') PID ' + escapeHtml(instance.pid) + ' · ' + escapeHtml(state) + '</h2>' +
 		'<div class="instance-meta">' + escapeHtml(instance.visible ? "Visible" : "Hidden") + ' · ' +
@@ -230,6 +235,12 @@ function runTimeRange(run) {
 	});
 	return { first, last };
 }
+function executionMode(command) {
+	if (!command) return '';
+	if (/(^|\\s)--runInBand(?:\\s|$)/.test(command)) return 'runInBand';
+	const maxWorkers = command.match(/(?:^|\\s)--maxWorkers(?:=|\\s+)([^\\s]+)/);
+	return maxWorkers ? 'maxWorkers ' + maxWorkers[1] : '';
+}
 function renderRunMeta() {
 	const el = document.getElementById('run-meta');
 	if (!el) return;
@@ -252,6 +263,8 @@ function renderRunMeta() {
 	if (startMs) chips.push('<span class="run-chip">started: <code>' + escapeHtml(isoLocal(new Date(startMs).toISOString())) + '</code></span>');
 	if (endMs) chips.push('<span class="run-chip">finished: <code>' + escapeHtml(isoLocal(new Date(endMs).toISOString())) + '</code></span>');
 	if (keys.length) chips.push('<span class="run-chip">flags: <code>' + keys.map(key => escapeHtml(key + '=' + String(flags[key]))).join(' &nbsp;·&nbsp; ') + '</code></span>');
+	const mode = executionMode(meta.command);
+	if (mode) chips.push('<span class="run-chip">execution: <strong>' + escapeHtml(mode) + '</strong></span>');
 	const command = meta.command ? '<div class="run-command">$ ' + escapeHtml(meta.command) + '</div>' : '';
 	if (chips.length) {
 		const derived = !meta.startedAt && !meta.finishedAt && !meta.script && !command;

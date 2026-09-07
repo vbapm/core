@@ -67,7 +67,7 @@ function Get-MacroLogDescription {
 	$target = Get-MacroTargetFile $MacroArgValues
 	$log = if ($target) { "$MacroName -> $target" } else { $MacroName }
 	if ($testName) { $log = "$testName :: $log" }
-	return "$(Get-Date -Format o) :: $log"
+	return "$([DateTime]::UtcNow.ToString('o')) :: $log"
 }
 
 function Get-MacroErrorLog {
@@ -104,7 +104,7 @@ function Write-WorkbookCloseLog {
 		$testName = $env:VBA_E2E_TEST_NAME
 		$log = "Workbook.Close -> $($WorkbookPath -replace '\\', '/')"
 		if ($testName) { $log = "$testName :: $log" }
-		$log = "$(Get-Date -Format o) :: $log"
+		$log = "$([DateTime]::UtcNow.ToString('o')) :: $log"
 		Refresh-ExcelInstance -ExcelApp $ExcelApp -ProcessId $ProcessId -Log $log
 	} catch {
 		# Registry attribution is best-effort; never mask workbook cleanup.

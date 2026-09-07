@@ -74,7 +74,7 @@ function recordEvolutionRunStart() {
 			runId: runDir.split(/[\\/]/).pop(),
 			startedAt: new Date().toISOString(),
 			script: process.env.npm_lifecycle_event || "",
-			command: process.env.npm_lifecycle_script || "",
+			command: process.env.npm_lifecycle_script || process.argv.slice(2).join(" "),
 			flags
 		};
 		fs.writeFileSync(join(runDir, "run-info.json"), JSON.stringify(info, null, 2), "utf8");
