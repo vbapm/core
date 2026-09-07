@@ -211,36 +211,57 @@ function isoLocal(value) {
 	if (!value) return '';
 	return String(value).replace('T', ' ').replace('Z', '').slice(0, 19) + ' UTC';
 }
-function durationText(meta) {
-	const ms = meta && typeof meta.elapsedMs === 'number' ? meta.elapsedMs : 0;
+function fmtDuration(ms) {
 	if (!ms) return '';
 	const total = Math.round(ms / 1000);
 	const m = Math.floor(total / 60);
 	const s = total % 60;
 	return m > 0 ? m + 'm ' + s + 's' : s + 's';
 }
+function runTimeRange(run) {
+	let first = 0;
+	let last = 0;
+	(run.snapshots || []).forEach(snapshot => {
+		const t = snapshotTime(snapshot.name);
+		if (t) {
+			if (!first || t < first) first = t;
+			if (t > last) last = t;
+		}
+	});
+	return { first, last };
+}
 function renderRunMeta() {
 	const el = document.getElementById('run-meta');
 	if (!el) return;
 	const run = runs[currentRun];
 	const meta = (run && run.meta) || {};
+	// When run-info.json is missing (runs captured before metadata was recorded),
+	// fall back to timing derived from the snapshots so the header still shows
+	// the run window and duration.
+	const range = runTimeRange(run);
+	const startMs = meta.startedAt ? new Date(meta.startedAt).getTime() : range.first;
+	const endMs = meta.finishedAt ? new Date(meta.finishedAt).getTime() : range.last;
+	let elapsedMs = typeof meta.elapsedMs === 'number' ? meta.elapsedMs : 0;
+	if (!elapsedMs && startMs && endMs && endMs > startMs) elapsedMs = endMs - startMs;
+
 	const flags = meta.flags && typeof meta.flags === 'object' ? meta.flags : {};
 	const keys = Object.keys(flags).sort();
 	const chips = [];
 	if (meta.script) chips.push('<span class="run-chip">script: <code>' + escapeHtml(meta.script) + '</code></span>');
-	const duration = durationText(meta);
-	if (duration) chips.push('<span class="run-chip">duration: <strong>' + escapeHtml(duration) + '</strong></span>');
-	const started = isoLocal(meta.startedAt);
-	const finished = isoLocal(meta.finishedAt);
-	if (started) chips.push('<span class="run-chip">started: <code>' + escapeHtml(started) + '</code></span>');
-	if (finished) chips.push('<span class="run-chip">finished: <code>' + escapeHtml(finished) + '</code></span>');
+	if (elapsedMs) chips.push('<span class="run-chip">duration: <strong>' + escapeHtml(fmtDuration(elapsedMs)) + '</strong></span>');
+	if (startMs) chips.push('<span class="run-chip">started: <code>' + escapeHtml(isoLocal(new Date(startMs).toISOString())) + '</code></span>');
+	if (endMs) chips.push('<span class="run-chip">finished: <code>' + escapeHtml(isoLocal(new Date(endMs).toISOString())) + '</code></span>');
 	if (keys.length) chips.push('<span class="run-chip">flags: <code>' + keys.map(key => escapeHtml(key + '=' + String(flags[key]))).join(' &nbsp;·&nbsp; ') + '</code></span>');
 	const command = meta.command ? '<div class="run-command">$ ' + escapeHtml(meta.command) + '</div>' : '';
-	if (!chips.length && !command) {
+	if (chips.length) {
+		const derived = !meta.startedAt && !meta.finishedAt && !meta.script && !command;
+		const note = derived
+			? '<div class="run-command">Timing derived from evolution snapshots — run configuration was not recorded for this run.</div>'
+			: '';
+		el.innerHTML = '<div class="run-meta-grid">' + chips.join('') + '</div>' + note + command;
+	} else {
 		el.innerHTML = '<div class="muted">No run metadata recorded for this evolution run.</div>';
-		return;
 	}
-	el.innerHTML = '<div class="run-meta-grid">' + chips.join('') + '</div>' + command;
 }
 function snapshotTime(name) {
 	const m = String(name).match(/^instances-(\\d{4})-(\\d{2})-(\\d{2})--(\\d{2})h(\\d{2})m(\\d{2})s(\\d{3})(?:-\\d+)?\\.json$/i);
