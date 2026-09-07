@@ -30,8 +30,18 @@ class EvolutionJestReporter {
 
 			const info = JSON.parse(readFileSync(infoPath, "utf8"));
 			const snapshot = results.snapshot || {};
+			// NOTE: results.success is still `false` when reporters' onRunComplete
+			// fires - Jest assigns the real value only *after* dispatching
+			// onRunComplete (TestScheduler in @jest/core). Derive success from the
+			// counters and snapshot.failure (which Jest sets before the dispatch)
+			// so it mirrors the actual exit status.
+			const success =
+				results.numFailedTests === 0 &&
+				results.numFailedTestSuites === 0 &&
+				!snapshot.failure &&
+				!results.runExecError;
 			info.jest = {
-				success: results.success,
+				success,
 				numTotalTestSuites: results.numTotalTestSuites,
 				numPassedTestSuites: results.numPassedTestSuites,
 				numFailedTestSuites: results.numFailedTestSuites,
