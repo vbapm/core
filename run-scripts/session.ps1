@@ -455,6 +455,13 @@ function Close-ScriptWorkbooks {
 }
 
 function Reset-ScriptExcel {
+	if ($Script:WarmInstance -and $null -ne $Script:App) {
+		Reset-ScriptWorkbooks
+		$Script:IsAddin = $false
+		$Script:LastRequestIsAddin = $null
+		return
+	}
+
 	$lockHeld = $false
 	try {
 		if ($HasRegistry) {
