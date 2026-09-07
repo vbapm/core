@@ -90,10 +90,42 @@ function ensureExcelInstancesClean() {
 	const clean = /^(1|true|yes)$/i.test(process.env.E2E_CLEAN || "");
 	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
 	if (clean) args.push("-Clean");
-	const result = spawnSync("powershell.exe", args, { stdio: "inherit" });
+	const startedAt = new Date().toISOString();
+	const result = spawnSync("powershell.exe", args, { encoding: "utf8" });
+	if (result.stdout) process.stdout.write(result.stdout);
+	if (result.stderr) process.stderr.write(result.stderr);
+	recordEnsureExcelInstancesClean({
+		startedAt,
+		completedAt: new Date().toISOString(),
+		status: result.status,
+		logs: [result.stdout, result.stderr, result.error?.message].filter(Boolean).flatMap(output =>
+			output
+				.split(/\r?\n/)
+				.map(line => line.trim())
+				.filter(Boolean)
+		)
+	});
 
 	if (result.status !== 0) {
 		throw new Error("Rogue Excel instances remain alive; refusing to start e2e tests.");
+	}
+}
+
+function recordEnsureExcelInstancesClean(event) {
+	if (!/^(1|true|yes)$/i.test(process.env.VBA_EVOLUTION || "")) return;
+	try {
+		const evolutionDir = join(process.env.TEMP, "Excel-Instances", "evolution");
+		const marker = join(evolutionDir, "current-run.txt");
+		if (!fs.existsSync(marker)) return;
+		const runDir = fs.readFileSync(marker, "utf8").trim();
+		if (!runDir) return;
+
+		const infoPath = join(runDir, "run-info.json");
+		const info = JSON.parse(fs.readFileSync(infoPath, "utf8"));
+		info.ensureExcelInstancesClean = event;
+		fs.writeFileSync(infoPath, JSON.stringify(info, null, 2), "utf8");
+	} catch (err) {
+		console.warn(`[e2e globalSetup] failed to record preflight details: ${err.message}`);
 	}
 }
 

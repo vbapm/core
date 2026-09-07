@@ -132,6 +132,11 @@ li { margin: 5px 0; overflow-wrap: anywhere; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 18px; height: 4px; border-radius: 3px; display: inline-block; }
 .swatch-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 2px solid; }
+.preflight-details { margin-top: 16px; border: 1px solid #ccd6de; border-radius: 6px; background: #f8fafc; }
+.preflight-details > summary { cursor: pointer; padding: 10px 12px; color: #304353; font-size: 13px; }
+.preflight-details[open] > summary { border-bottom: 1px solid #e3eaf0; }
+.preflight-meta { padding: 10px 12px 0; color: #536474; font-size: 12px; }
+.preflight-log { margin: 8px 12px 12px; padding: 10px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #304353; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
 footer { position: fixed; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 12px 16px; border-top: 1px solid #ccd6de; background: #ffffffee; backdrop-filter: blur(8px); }
 button { width: 44px; height: 38px; border: 1px solid #9eabb5; border-radius: 6px; background: #fff; color: #17212b; font-size: 23px; line-height: 1; cursor: pointer; }
 button:hover:not(:disabled) { background: #e6f0f5; border-color: #31708f; }
@@ -291,6 +296,9 @@ function fmtTick(ms) {
 	const p = value => String(value).padStart(2, '0');
 	return p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
 }
+function preflightEvent(run) {
+	return run && run.meta && run.meta.ensureExcelInstancesClean;
+}
 function instanceColor(inst) {
 	const warm = inst.intent === 'keep-warm' || String(inst.owner || '').indexOf('session#') === 0;
 	if (warm) return '#e09a3c';
@@ -340,6 +348,8 @@ function buildRunSummary(run) {
 	const meta = (run && run.meta) || {};
 	const start = meta.startedAt ? new Date(meta.startedAt).getTime() : fallbackStart;
 	const end = meta.finishedAt ? new Date(meta.finishedAt).getTime() : (lastSnap || fallbackStart);
+	const preflight = preflightEvent(run);
+	const ensureCompletedAt = preflight && preflight.completedAt ? new Date(preflight.completedAt).getTime() : 0;
 	instances.forEach(instance => {
 		if (instance.death == null) {
 			instance.death = instance.lastActive >= lastSnap ? end : instance.lastActive;
@@ -348,9 +358,9 @@ function buildRunSummary(run) {
 		if (instance.death < instance.birth) instance.death = instance.birth;
 		if (instance.death > end) instance.death = end;
 	});
-	return { instances, peak, start: start || fallbackStart, end: end || start || fallbackStart };
+	return { instances, peak, start: start || fallbackStart, end: end || start || fallbackStart, ensureCompletedAt };
 }
-function svgLifecycleChart(instances, start, end) {
+function svgLifecycleChart(instances, start, end, ensureCompletedAt) {
 	if (!instances.length) return '<div class="muted">No Excel instances were observed in this run.</div>';
 	const span = (end - start) || 1;
 	const W = 1180;
@@ -380,6 +390,13 @@ function svgLifecycleChart(instances, start, end) {
 			previousTickX = x;
 		}
 	}
+	if (ensureCompletedAt >= start && ensureCompletedAt <= end) {
+		const x = X(ensureCompletedAt);
+		const labelX = x < XL + 90 ? x + 6 : x - 6;
+		const anchor = x < XL + 90 ? 'start' : 'end';
+		parts.push('<line x1="' + x + '" y1="' + top + '" x2="' + x + '" y2="' + (H - bottom) + '" stroke="#c64b4b" stroke-width="2" stroke-dasharray="6 4"/>');
+		parts.push('<text x="' + labelX + '" y="' + (top - 4) + '" text-anchor="' + anchor + '" class="lane-label" fill="#c64b4b">preflight complete</text>');
+	}
 	parts.push('<text x="' + XL + '" y="' + (H - 12) + '" class="lane-label">' + fmtUtc(start) + '</text>');
 	parts.push('<text x="' + (W - XR) + '" y="' + (H - 12) + '" text-anchor="end" class="lane-label">' + fmtUtc(end) + '</text>');
 	instances.forEach((instance, index) => {
@@ -399,6 +416,14 @@ function svgLifecycleChart(instances, start, end) {
 function summaryHtml(run) {
 	const summary = buildRunSummary(run);
 	const open = runSummaryState[currentRun] !== false;
+	const preflight = preflightEvent(run);
+	const preflightLogs = preflight ? collection(preflight.logs).map(escapeHtml).join('\\n') : '';
+	const preflightStatus = preflight && preflight.status === 0 ? 'completed successfully' : 'exited with status ' + escapeHtml(preflight?.status ?? 'unknown');
+	const preflightSection = preflight
+		? '<details class="preflight-details"><summary>Ensure-ExcelInstancesClean.ps1 logs</summary>' +
+		  '<div class="preflight-meta">' + preflightStatus + (preflight.completedAt ? ' · completed ' + escapeHtml(isoLocal(preflight.completedAt)) : '') + '</div>' +
+		  '<pre class="preflight-log">' + (preflightLogs || 'No output recorded.') + '</pre></details>'
+		: '';
 	return '<details id="run-summary-details" class="run-summary"' + (open ? ' open' : '') + '>' +
 		'<summary><h2>Run summary</h2><span class="summary-hint">' + (open ? 'click to collapse' : 'click to expand') + '</span></summary>' +
 		'<div class="run-summary-body">' +
@@ -407,13 +432,14 @@ function summaryHtml(run) {
 		'<span class="metric">Excel instances: <strong>' + summary.instances.length + '</strong></span>' +
 		'<span class="metric">Peak concurrent instances: <strong>' + summary.peak + '</strong></span>' +
 		'</div>' +
-		svgLifecycleChart(summary.instances, summary.start, summary.end) +
+		svgLifecycleChart(summary.instances, summary.start, summary.end, summary.ensureCompletedAt) +
 		'<div class="legend">' +
 		'<span class="legend-item"><span class="swatch" style="background:#e09a3c"></span> keep-warm (persistent session)</span>' +
 		'<span class="legend-item"><span class="swatch" style="background:#3a7ca5"></span> one-shot automation</span>' +
 		'<span class="legend-item"><span class="swatch" style="background:#5f8fb5"></span> other / visible</span>' +
 		'<span class="legend-item"><span class="swatch-dot" style="border-color:#fff;background:#3a7ca5"></span> death point</span>' +
-		'</div></div></details>';
+		'<span class="legend-item"><span class="swatch" style="width:4px;height:18px;background:#c64b4b"></span> preflight complete</span>' +
+		'</div>' + preflightSection + '</div></details>';
 }
 function render() {
 	const run = runs[currentRun];
