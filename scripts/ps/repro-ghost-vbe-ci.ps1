@@ -5,11 +5,11 @@
 .DESCRIPTION
     Creates everything from scratch:
       1. Close all Excel instances
-      2. Open a fresh visible Excel instance
-      3. Open the VBE window
-      4. Create a new vbapm project via vba init --target xlsm
-      5. Add a source module and build
-      6. Open the built file via vba open
+      2. Create a new vbapm project via vba init --target xlsm
+      3. Add a source module and build
+      4. Open a fresh visible Excel instance
+      5. Open the VBE window
+      6. Open the built file via COM
       7. Close the workbook via COM
       8. Check for ghost VBE projects
 
@@ -86,15 +86,7 @@ try {
     Start-Sleep -Seconds 2
     Write-Host "All Excel instances closed." -ForegroundColor Green
 
-    Step "2. Open new visible Excel instance"
-    & (Join-Path $scripts "open-new-excel.ps1")
-    Start-Sleep -Seconds 3
-    Write-Host "Excel ready." -ForegroundColor Green
-
-    Step "3. Open VBE window"
-    $vbeOpen = Open-VBE
-
-    Step "4. Create fresh vbapm project"
+    Step "2. Create fresh vbapm project"
     $projectDir = Join-Path $repoRoot $WorkDir
     if (Test-Path $projectDir) { Remove-Item -Recurse -Force $projectDir }
     New-Item -ItemType Directory -Path $projectDir -Force | Out-Null
@@ -116,14 +108,35 @@ Module1 = "src/Module1.bas"
 "@ | Set-Content (Join-Path $projectDir "vbaproject.toml")
     Write-Host "Project initialized." -ForegroundColor Green
 
-    Step "5. Build the project"
+    Step "3. Build the project"
     Run-Cmd "vba build" $projectDir
     Write-Host "Project built." -ForegroundColor Green
 
+    Step "4. Open new visible Excel instance"
+    & (Join-Path $scripts "open-new-excel.ps1")
+    # Wait until Excel registers in the ROT
+    $excel = $null
+    for ($i = 0; $i -lt 10 -and -not $excel; $i++) {
+        try { $excel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application") }
+        catch { Start-Sleep -Seconds 1 }
+    }
+    if (-not $excel) { throw "Excel never became COM-reachable after open." }
+    Start-Sleep -Seconds 3
+    Write-Host "Excel ready." -ForegroundColor Green
+
+    Step "5. Open VBE window"
+    $vbeOpen = Open-VBE
+
     Step "6. Open the built file"
-    Run-Cmd "vba open" $projectDir
+    # Open via COM (Workbooks.Open) instead of `vba open`.
+    # `vba open` shells out to `Start -Wait` which hangs in headless CI.
+    $projLeaf = Split-Path $WorkDir -Leaf
+    $builtFile = Join-Path $projectDir "build/$projLeaf.xlsm"
+    $microsoftExcel = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+    $microsoftExcel.Workbooks.Open($builtFile) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($microsoftExcel) | Out-Null
     Start-Sleep -Seconds 2
-    Write-Host "Workbook opened via vba open." -ForegroundColor Green
+    Write-Host "Workbook opened via COM (Workbooks.Open)." -ForegroundColor Green
     if ($vbeOpen) {
         $vh = Find-VBEWindow
         if ($vh) { Write-Host "VBE still open: HWND 0x$($vh.ToString('X8'))" -ForegroundColor Green }
