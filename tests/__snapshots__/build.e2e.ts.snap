@@ -1,0 +1,37 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`build build project with no target 1`] = `
+Object {
+  "errors": Array [],
+  "messages": Array [],
+  "stderr": "",
+  "stdout": "{\\"success\\":true,\\"errors\\":[]}
+",
+  "success": true,
+  "warnings": Array [],
+}
+`;
+
+exports[`build build project with single target 1`] = `
+Object {
+  "errors": Array [],
+  "messages": Array [],
+  "stderr": "",
+  "stdout": "{\\"success\\":true,\\"errors\\":[]}
+",
+  "success": true,
+  "warnings": Array [],
+}
+`;
+
+exports[`build build standard project 1`] = `
+Object {
+  "errors": Array [],
+  "messages": Array [],
+  "stderr": "",
+  "stdout": "{\\"success\\":true,\\"errors\\":[]}
+",
+  "success": true,
+  "warnings": Array [],
+}
+`;

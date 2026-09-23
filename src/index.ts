@@ -15,4 +15,4 @@ export { fetchDependencies, loadProject } from "./project";
 export { default as resolveDependencies } from "./resolve";
 export { fetch as fetchDependency, resolve as resolveDependency } from "./sources";
 export { checksum } from "./utils/fs";
-export { run } from "./utils/run";
+export { run, closePowerShellSession } from "./utils/run";

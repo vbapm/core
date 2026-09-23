@@ -8,7 +8,7 @@ import { env } from "../env";
 import { cleanError, CliError, ErrorCode, isCliError } from "../errors";
 import { checkForUpdate, checkDualInstall, updateAvailable, updateVersion } from "../installer";
 import { Message } from "../messages";
-import { isRunError } from "../utils/run";
+import { isRunError, closePowerShellSession } from "../utils/run";
 import { joinCommas } from "../utils/text";
 
 Error.stackTraceLimit = Infinity;
@@ -21,6 +21,7 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	init: async () => (await import("./vbapm-init")).default,
 	add: async () => (await import("./vbapm-add")).default,
 	build: async () => (await import("./vbapm-build")).default,
+	config: async () => (await import("./vbapm-config")).default,
 	test: async () => (await import("./vbapm-test")).default,
 	extract: async () => (await import("./vbapm-extract")).default,
 	export: async () => (await import("./vbapm-export")).default,
@@ -60,6 +61,7 @@ const help = dedent`
     - init          Initialize a new project / package in the current directory
     - add           Create and register a new source file in vbaproject.toml
     - build         Build project from manifest
+    - config        Get and set repository/global configuration
     - test          Run tests for built target
     - extract       Extract src from built target
     - export        (deprecated) Extract src from built target
@@ -97,7 +99,15 @@ process.on("unhandledRejection", handleError);
 process.on("uncaughtException", handleError);
 
 main()
-	.then(command => {
+	.then(async command => {
+		// Shut down any persistent PowerShell/Excel session we may own before
+		// exiting, so we don't leak a background Excel instance.
+		try {
+			await closePowerShellSession();
+		} catch {
+			// best-effort
+		}
+
 		// Work around Node.js v23+ libuv assertion crash on Windows
 		// (nodejs/node#56645). The export command, especially to an
 		// empty project, can complete before V8's wasm task runner

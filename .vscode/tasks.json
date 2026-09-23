@@ -6,14 +6,14 @@
             "script": "test:e2e:background",
             "problemMatcher": [],
             "label": "npm: test:e2e:background",
-            "detail": "cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand"
+            "detail": "cross-env E2E_BACKGROUND=1 jest --config e2e.config.mjs --runInBand"
         },
         {
             "type": "npm",
             "script": "test:e2e:updateSnapshots",
             "problemMatcher": [],
             "label": "npm: test:e2e:background:updateSnapshots",
-            "detail": "cross-env VBA_BACKGROUND_BUILD=1 jest --config e2e.config.mjs --runInBand --updateSnapshot"
+            "detail": "cross-env E2E_BACKGROUND=1 jest --config e2e.config.mjs --runInBand --updateSnapshot"
         },
         {
             "type": "npm",

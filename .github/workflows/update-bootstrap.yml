@@ -39,11 +39,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build toolchain, add-in, and bootstrap
-        run: |
-          pnpm run build
-          pnpm run build:addins
-          pnpm run build:bootstrap
+      - name: Ensure toolchain, add-in, and bootstrap are fresh
+        run: pnpm run build:check -- --force
 
       - name: Commit updated bootstrap artifacts
         shell: pwsh
@@ -53,7 +50,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add scripts/bootstrap/build/bootstrap.xlsm scripts/bootstrap/vbaproject.lock
+          git add scripts/bootstrap/build/bootstrap.xlsm scripts/bootstrap/build/bootstrap.xlsm.fresh.json scripts/bootstrap/vbaproject.lock
 
           if (git diff --staged --quiet) {
             Write-Output "No bootstrap changes detected."

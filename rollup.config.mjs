@@ -11,57 +11,6 @@ import path from "path";
 
 const mode = process.env.NODE_ENV || "production";
 const builtins = new Set(builtin);
-
-// Add shebang to CLI entry point and make it executable.
-// Needed for npm's "bin" field to work. The standalone build
-// ignores the shebang because it invokes lib/vbapm.js explicitly
-// via the vendored node binary.
-function shebang() {
-	return {
-		name: "shebang",
-		renderChunk(code, chunk) {
-			if (chunk.facadeModuleId && chunk.facadeModuleId.includes("vbapm.ts")) {
-				return { code: "#!/usr/bin/env node\n" + code, map: null };
-			}
-			return null;
-		},
-		writeBundle(options, bundle) {
-			for (const [fileName] of Object.entries(bundle)) {
-				if (fileName === "vbapm.js") {
-					const filePath = path.resolve(options.dir, fileName);
-					try {
-						fs.chmodSync(filePath, 0o755);
-					} catch {
-						// Ignore chmod errors on Windows
-					}
-				}
-			}
-
-			const templates = [
-				"template.editorconfig",
-				"template.gitattributes",
-				"template.gitignore"
-			];
-			const templatesSourceDir = path.resolve("src", "actions", "templates");
-			const templatesTargetDir = path.resolve(options.dir, "templates");
-			fs.mkdirSync(templatesTargetDir, { recursive: true });
-			for (const templateFile of templates) {
-				fs.copyFileSync(path.join(templatesSourceDir, templateFile), path.join(templatesTargetDir, templateFile));
-			}
-
-			// editorconfig's one-ini parser may load this wasm file at runtime.
-			// Uses require.resolve to find it even in pnpm's .pnpm/ directory layout.
-			const localRequire = createRequire(import.meta.url);
-			const wasmPkg = localRequire.resolve("@one-ini/wasm/package.json");
-			const wasmSource = path.resolve(path.dirname(wasmPkg), "one_ini_bg.wasm");
-			if (fs.existsSync(wasmSource)) {
-				const wasmTarget = path.resolve(options.dir, "one_ini_bg.wasm");
-				fs.copyFileSync(wasmSource, wasmTarget);
-			}
-		}
-	};
-}
-
 export default [
 	{
 		input: ["src/index.ts", "src/bin/vbapm.ts", "src/debug.ts"],
@@ -137,6 +86,56 @@ function workerThreads() {
 				return {
 					code: `export const threadId = 0;`
 				};
+			}
+		}
+	};
+}
+
+// Add shebang to CLI entry point and make it executable.
+// Needed for npm's "bin" field to work. The standalone build
+// ignores the shebang because it invokes lib/vbapm.js explicitly
+// via the vendored node binary.
+function shebang() {
+	return {
+		name: "shebang",
+		renderChunk(code, chunk) {
+			if (chunk.facadeModuleId && chunk.facadeModuleId.includes("vbapm.ts")) {
+				return { code: "#!/usr/bin/env node\n" + code, map: null };
+			}
+			return null;
+		},
+		writeBundle(options, bundle) {
+			for (const [fileName] of Object.entries(bundle)) {
+				if (fileName === "vbapm.js") {
+					const filePath = path.resolve(options.dir, fileName);
+					try {
+						fs.chmodSync(filePath, 0o755);
+					} catch {
+						// Ignore chmod errors on Windows
+					}
+				}
+			}
+
+			const templates = [
+				"template.editorconfig",
+				"template.gitattributes",
+				"template.gitignore"
+			];
+			const templatesSourceDir = path.resolve("src", "actions", "templates");
+			const templatesTargetDir = path.resolve(options.dir, "templates");
+			fs.mkdirSync(templatesTargetDir, { recursive: true });
+			for (const templateFile of templates) {
+				fs.copyFileSync(path.join(templatesSourceDir, templateFile), path.join(templatesTargetDir, templateFile));
+			}
+
+			// editorconfig's one-ini parser may load this wasm file at runtime.
+			// Uses require.resolve to find it even in pnpm's .pnpm/ directory layout.
+			const localRequire = createRequire(import.meta.url);
+			const wasmPkg = localRequire.resolve("@one-ini/wasm/package.json");
+			const wasmSource = path.resolve(path.dirname(wasmPkg), "one_ini_bg.wasm");
+			if (fs.existsSync(wasmSource)) {
+				const wasmTarget = path.resolve(options.dir, "one_ini_bg.wasm");
+				fs.copyFileSync(wasmSource, wasmTarget);
 			}
 		}
 	};

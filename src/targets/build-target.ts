@@ -12,10 +12,27 @@ import { zip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 
 export interface BuildOptions {
+	/**
+	 * If true, devDependencies will be excluded from the build.
+	 * This is useful for creating a "release" build.
+	 */
 	release?: boolean;
+	/**
+	 * The target type to build. If not specified, the default target will be used.
+	 */
 	target?: string;
+	/**
+	 * The add-in to build. If not specified, the default add-in will be used.
+	 */
 	addin?: string;
+	/**
+	 * If true, the built target will be kept open or opened after the build/operation.
+	 */
 	open?: boolean;
+	/**
+	 * If true, the build runs in background mode using a hidden Excel instance.
+	 */
+	background?: boolean;
 }
 
 const isCreateDocumentError = (message: string) => /1004/.test(message);
@@ -42,7 +59,10 @@ export async function buildTarget(target: Target, info: ProjectInfo, options: Bu
 	try {
 		staged = !info.blankTarget
 			? await createTarget(project, target)
-			: await createDocument(project, target, { staging: true });
+			: await createDocument(project, target, {
+					staging: true,
+					background: options.background
+				});
 	} catch (error: any) {
 		// Error "1004: Method 'CreateDocument' of object 'OfficeApplication' failed"
 		// occurs when trying to create a document with the same name on Mac

@@ -18,6 +18,7 @@ export interface ExportOptions {
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
 	skipSheetNameNormalization?: boolean;
+	background?: boolean;
 }
 
 export async function exportProject(options: ExportOptions = {}) {

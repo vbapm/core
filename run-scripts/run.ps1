@@ -10,6 +10,8 @@ param(
 
 	[switch]$KeepOpen,
 
+	[switch]$Background,
+
 	[Parameter(Position=3, ValueFromRemainingArguments=$true)]
 	[string[]]$MacroArgs
 )
@@ -33,8 +35,42 @@ function GetFileName {
 	return [System.IO.Path]::GetFileNameWithoutExtension($Path)
 }
 
+# Extract the target `file` path from a macro's JSON argument (if present).
+# build/export/extract open that file *inside* the VBA macro (run.ps1 itself only
+# opens the vbapm.xlam add-in), so this lets the registry attribute an instance
+# to the file a command actually operated on.
+function Get-MacroTargetFile {
+	param([string[]]$MacroArgValues)
+
+	foreach ($arg in $MacroArgValues) {
+		if (-not $arg) { continue }
+		try {
+			$parsed = $arg | ConvertFrom-Json -ErrorAction Stop
+			if ($null -ne $parsed -and $parsed.PSObject.Properties.Name -contains 'file' -and $parsed.file) {
+				return ([string]$parsed.file) -replace '\\', '/'
+			}
+		} catch {
+			# Not JSON, or no `file` field — skip.
+		}
+	}
+
+	return ''
+}
+
 function Fail {
 	param([string]$Message)
+
+	# On failure, reveal any background Excel instance we own so a stuck/hung
+	# run can be inspected in the UI instead of lingering as a hidden zombie.
+	try {
+		if ($null -ne $script:ActiveApp -and $script:ActiveIsBackground) {
+			$script:ActiveApp.Visible = $true
+			PrintErr "ERROR: run failed; making background Excel instance visible for debugging.`n"
+		}
+	} catch {
+		# best-effort; never obscure the original failure
+	}
+
 	PrintLn "{`"success`":false,`"errors`":[`"$Message`"]}"
 	exit 1
 }
@@ -52,6 +88,37 @@ function PrintLn {
 function PrintErr {
 	param([string]$Message)
 	[Console]::Error.Write($Message)
+}
+
+function Write-BridgeLog {
+	param([string]$Message)
+
+	if (Get-Command Write-InstanceLog -ErrorAction SilentlyContinue) {
+		Write-InstanceLog "bridge=run.ps1 $Message"
+	}
+}
+
+# Instance-lifecycle debug logging (`Get-InstanceLogPath` / `Write-InstanceLog`,
+# gated on VBA_DEBUG_INSTANCES) lives in scripts/ps/Excel-InstanceRegistry.ps1
+# alongside the rest of the instance-coordination machinery it reports on.
+#
+# A "run banner" (clear separator marking the start of a new e2e run) is written
+# by the test-side globalSetup before tests start, since `run.ps1` is a
+# short-lived process per macro call and can't detect run boundaries.
+
+# Track the currently-active Excel.Application (script scope) so Fail can reveal
+# it if the run aborts. Implemented as a helper function because PowerShell 5.1
+# class methods cannot write script-scope variables directly.
+function Set-ActiveExcelInstance {
+	param([object]$App, [bool]$IsBackground)
+
+	$script:ActiveApp = $App
+	$script:ActiveIsBackground = $IsBackground
+}
+
+function Clear-ActiveExcelInstance {
+	$script:ActiveApp = $null
+	$script:ActiveIsBackground = $false
 }
 
 # -------
@@ -87,8 +154,27 @@ function RunMacro {
 }
 
 # -------
+# Excel instance coordination registry
+# -------
+
+# Track our created Excel instance in %TEMP%\Excel-Instances so concurrent
+# agents can coordinate. Dot-source the shared registry module; if it isn't
+# present (e.g. installed CLI without scripts/), coordination is a no-op.
+$RegistryModule = Join-Path $PSScriptRoot '..\scripts\ps\Excel-InstanceRegistry.ps1'
+$HasRegistry = Test-Path -LiteralPath $RegistryModule
+if ($HasRegistry) {
+	. $RegistryModule
+}
+
+# -------
 # Excel
 # -------
+
+# The EXCEL.EXE instance-count safeguard (`Assert-ExcelInstanceLimit`) lives in
+# scripts/ps/Excel-InstanceRegistry.ps1 next to `Get-RunningExcelInstances`,
+# which it depends on. The call site below no-ops when the function isn't
+# defined (e.g. an installed CLI without scripts/, so $RegistryModule was
+# never dot-sourced).
 
 class Excel {
 	hidden [object]$App
@@ -96,34 +182,88 @@ class Excel {
 	hidden [bool]$ExcelWasOpen = $false
 	hidden [object]$Workbook
 	hidden [bool]$WorkbookWasOpen = $false
+	hidden [bool]$IsAddin = $false
+	hidden [int]$Pid = 0
 
 	Excel() {
-		$this.OpenExcel()
+		$this.OpenExcel($false)
+	}
+
+	Excel([bool]$BackgroundBuild) {
+		$this.OpenExcel($BackgroundBuild)
+	}
+
+	Excel([object]$App, [object]$Workbook) {
+		$this.App = $App
+		$this.ExcelWasOpen = $true
+		$this.Workbook = $Workbook
+		$this.WorkbookWasOpen = $true
+		Write-BridgeLog "attach=target-workbook appWasOpen=true"
+	}
+
+	Excel([object]$App) {
+		$this.App = $App
+		$this.ExcelWasOpen = $true
+		Write-BridgeLog "attach=target-application appWasOpen=true"
 	}
 
 	[string] Run([string]$FilePath, [string]$MacroName, [string[]]$MacroArgValues) {
 		$this.OpenWorkbook($FilePath)
+
+		# Record the just-opened workbook/addin in the coordination registry NOW,
+		# while the COM object is still in memory and the workbook is open, and
+		# also record the file the macro will operate on (build/export/extract
+		# open it inside the macro). Capturing at open time (rather than only at
+		# teardown) keeps the workbook list accurate even when the macro closes
+		# the workbook before the run returns — which is what lets us attribute a
+		# lingering instance to the exact test that opened the workbook.
+		if (Get-Command Refresh-ExcelInstance -ErrorAction SilentlyContinue) {
+			try {
+				Refresh-ExcelInstance -ExcelApp $this.App -ProcessId $this.Pid -TargetPath (Get-MacroTargetFile $MacroArgValues)
+			} catch {
+				# best-effort; never break a run over coordination bookkeeping
+			}
+		}
+
 		$result = RunMacro $this.App $MacroName $MacroArgValues
 
 		return $result
 	}
 
-	hidden [void] OpenExcel() {
-		# When VBA_BACKGROUND_BUILD is set, always create a new hidden instance
+	hidden [void] OpenExcel([bool]$BackgroundBuild) {
+		# Background mode always creates a new hidden instance
 		# instead of attaching to an already-running (visible) Excel process.
 		# This prevents the application window from flashing during automated runs.
-		$this.BackgroundBuild = $env:VBA_BACKGROUND_BUILD -match '^(1|true|yes)$'
+		$this.BackgroundBuild = $BackgroundBuild
+		Write-BridgeLog "open-request background=$BackgroundBuild"
 
 		if (-not $this.BackgroundBuild) {
 			try {
 				$this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
 				$this.ExcelWasOpen = $true
+				Write-BridgeLog "attach=get-active-object appWasOpen=true"
 			} catch {
+				Write-BridgeLog "attach=get-active-object failed error=$($_.Exception.Message)"
 				# Excel not running; fall through to create a new instance
 			}
 		}
 
 		if (-not $this.ExcelWasOpen) {
+			Write-BridgeLog "create-start background=$($this.BackgroundBuild)"
+			# Safeguard: never spawn a new Excel instance once the machine is
+			# already running too many EXCEL.EXE processes. This catches leaked
+			# instances from aborted/crashed automated runs before they pile up
+			# into the dozens, and aborts (with a clear error) instead of adding
+			# one more invisible instance to the pile. No-op when the registry
+			# module isn't dot-sourced (e.g. an installed CLI without scripts/).
+			if (Get-Command Assert-ExcelInstanceLimit -ErrorAction SilentlyContinue) {
+				try {
+					Assert-ExcelInstanceLimit -Background $this.BackgroundBuild
+				} catch {
+					Fail "ERROR #5d: $($_.Exception.Message)"
+				}
+			}
+
 			try {
 				$this.App = New-Object -ComObject "Excel.Application"
 				$this.App.Visible = if ($this.BackgroundBuild) { $false } else { $true }
@@ -136,9 +276,17 @@ class Excel {
 				# via References.AddFromFile) so Close()/Quit() don't block and
 				# leave a lingering Excel process holding file locks.
 				$this.App.DisplayAlerts = $false
+				Write-BridgeLog "create-complete visible=$($this.App.Visible)"
 			} catch {
 				Fail "ERROR #5: Failed to open Excel - $($_.Exception.Message)"
 			}
+
+			$excelPid = 0
+			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
+			$this.Pid = $excelPid
+			$mode = if ($this.BackgroundBuild) { 'background' } else { 'foreground' }
+			Write-InstanceLog "created Excel instance excelPid=$excelPid mode=$mode"
+			Set-ActiveExcelInstance -App $this.App -IsBackground $this.BackgroundBuild
 		}
 	}
 
@@ -146,6 +294,16 @@ class Excel {
 		$fileName = GetFileName $Path
 		$fileBase = GetFileBase $Path
 		$fullPath = [System.IO.Path]::GetFullPath($Path)
+
+		# Only the vbapm add-in is left open across runs (avoids close/reopen
+		# churn). Any other add-in or workbook closes normally after the run.
+		$this.IsAddin = $fileBase -eq 'vbapm.xlam'
+
+		# If we already attached to a workbook (found open in another instance),
+		# skip the open logic entirely.
+		if ($this.WorkbookWasOpen -and $null -ne $this.Workbook) {
+			return
+		}
 
 		# Check add-ins first
 		try {
@@ -190,6 +348,18 @@ class Excel {
 	}
 
 	[void] Dispose([bool]$KeepOpen) {
+		Write-BridgeLog "dispose-enter appWasOpen=$($this.ExcelWasOpen) background=$($this.BackgroundBuild) isAddin=$($this.IsAddin) workbookWasOpen=$($this.WorkbookWasOpen) keepOpen=$KeepOpen"
+
+		# An add-in we opened is left open for reuse across runs — but only in
+		# FOREGROUND mode, where we're reusing the user's already-running Excel.
+		# In BACKGROUND mode each run owns a dedicated hidden instance that is
+		# torn down after the run; skipping quit here would leak one EXCEL.EXE
+		# per run.
+		if ($this.IsAddin -and -not $this.BackgroundBuild) {
+			Write-BridgeLog "dispose-skip addin-foreground"
+			return
+		}
+
 		# A file that was open before we started is never closed by us
 		$closeWorkbook = -not $this.WorkbookWasOpen -and -not $KeepOpen
 
@@ -200,18 +370,24 @@ class Excel {
 		}
 		# Quit Excel only if we launched it AND we are not keeping the file open
 		if (-not $this.ExcelWasOpen -and -not $KeepOpen -and $null -ne $this.App) {
+			$excelPid = 0
+			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
+			Write-InstanceLog "quitting Excel instance excelPid=$excelPid"
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null
+			Clear-ActiveExcelInstance
 
 			# Force release of any remaining COM references so Excel actually
 			# exits before this process returns. Without this, Excel lingers and
-			# a later command can attach to the dying instance (VBA_BACKGROUND_BUILD=0),
+			# a later command can attach to the dying instance in foreground mode,
 			# leaving file locks behind (e.g. `~$` owner files for addin references).
 			[System.GC]::Collect()
 			[System.GC]::WaitForPendingFinalizers()
 			[System.GC]::Collect()
 			[System.GC]::WaitForPendingFinalizers()
+		} else {
+			Write-BridgeLog "quit-skip appWasOpen=$($this.ExcelWasOpen) keepOpen=$KeepOpen appPresent=$($null -ne $this.App)"
 		}
 	}
 }
@@ -225,19 +401,83 @@ function Run {
 		[string]$AppName,
 		[string]$FilePath,
 		[string]$MacroName,
+		[bool]$Background,
 		[bool]$KeepOpen,
 		[string[]]$MacroArgValues
 	)
 
 	switch ($AppName) {
 		"excel" {
-			$excel = [Excel]::new()
+			$found = $null
+			$backgroundBuild = $Background
+			$targetPath = Get-MacroTargetFile $MacroArgValues
+			$lookupPath = if ($FilePath -match '\.(xlam|xla)$' -and $targetPath) {
+				$targetPath
+			} else {
+				$FilePath
+			}
+			if ($HasRegistry -and -not $backgroundBuild) {
+				try {
+					$found = Find-OpenWorkbook -Path $lookupPath
+				} catch {
+					# best-effort; fall back to the normal Excel selection path
+				}
+			}
+			Write-BridgeLog "run-start background=$backgroundBuild keepOpen=$KeepOpen file=$FilePath macro=$MacroName lookup=$lookupPath found=$($null -ne $found)"
+
+			$excel = if ($null -ne $found) {
+				[Excel]::new($found.App, $found.Workbook)
+			} else {
+				[Excel]::new($backgroundBuild)
+			}
+			$registeredPid = 0
 			try {
+				# If we created a fresh Excel instance (not attaching to an
+				# already-running one), record it in the coordination registry
+				# so concurrent agents can distinguish it from a user/rogue
+				# session. Best-effort: never break the run over coordination.
+				if ($HasRegistry -and -not $excel.ExcelWasOpen) {
+					$reason = if ($excel.BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
+					try {
+						$registeredPid = Register-ExcelInstance `
+							-ExcelApp $excel.App `
+							-Owner "terminal-$PID" `
+							-Visible (-not $excel.BackgroundBuild) `
+							-Reason $reason
+					} catch {
+						$registeredPid = 0
+					}
+				}
+
 				$result = $excel.Run($FilePath, $MacroName, $MacroArgValues)
 			} catch {
 				$result = @{ success = $false; errors = @($_.Exception.Message) } | ConvertTo-Json -Compress
 			} finally {
+				# Refresh the registry entry's workbook/addin list from the live
+				# COM app before teardown, so the deactivated ("inactive") record
+				# carries the exact set of workbooks this instance held — letting
+				# the end-of-suite assessment trace a lingering instance back to
+				# the e2e test that opened them.
+				if ($HasRegistry -and $registeredPid -gt 0 -and $null -ne $excel.App) {
+					try {
+						Refresh-ExcelInstance -ExcelApp $excel.App -ProcessId $registeredPid -TargetPath (Get-MacroTargetFile $MacroArgValues)
+					} catch {
+						# best-effort
+					}
+				}
+
+				Write-BridgeLog "dispose-start appWasOpen=$($excel.ExcelWasOpen) background=$($excel.BackgroundBuild) isAddin=$($excel.IsAddin) keepOpen=$KeepOpen registeredPid=$registeredPid"
 				$excel.Dispose($KeepOpen)
+				Write-BridgeLog "dispose-complete appWasOpen=$($excel.ExcelWasOpen) appPresent=$($null -ne $excel.App)"
+
+				# Untrack our instance now that it is torn down.
+				if ($HasRegistry -and $registeredPid -gt 0) {
+					try {
+						Unregister-ExcelInstance -ProcessId $registeredPid
+					} catch {
+						# best-effort
+					}
+				}
 			}
 		}
 		default {
@@ -268,5 +508,5 @@ foreach ($arg in $MacroArgs) {
 	$UnescapedArgs += Unescape $arg
 }
 
-Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
+Run $AppName $File $Command $Background.IsPresent $KeepOpen.IsPresent $UnescapedArgs
 exit 0

@@ -1,6 +1,7 @@
 import dedent from "@timhall/dedent";
 import { Args } from "mri";
 import { runMacro } from "../actions/run-macro";
+import { resolveBackgroundMode } from "../config";
 
 const help = dedent`
   Run macro in given workbook or add-in.
@@ -11,7 +12,8 @@ const help = dedent`
     <macro>         Public macro to run in given file (e.g. Tests.RunTests)
     <arg>           Arguments to pass to macro (optional)
     --target=TYPE   Run in pre-built target of type TYPE
-    --file=PATH     Full path to workbook or name of add-in`;
+	--file=PATH     Full path to workbook or name of add-in
+	--background    Use a hidden Excel instance`;
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -22,6 +24,8 @@ export default async function (args: Args) {
 	const [macro, ...macro_args] = args._;
 	const target = args.target as string | undefined;
 	let file = args.file as string | undefined;
+	const background =
+		typeof args.background === "boolean" ? args.background : await resolveBackgroundMode();
 
-	await runMacro({ target, file, macro, args: macro_args });
+	await runMacro({ target, file, macro, args: macro_args, background });
 }
