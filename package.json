@@ -62,7 +62,7 @@
         "@timhall/ansi-colors": "^5.0.0",
         "@timhall/dedent": "^0.10.0",
         "archiver": "^7.0.1",
-        "conf": "^3",
+        "conf": "^15.0.0",
         "date-fns": "^4.0.0",
         "debug": "^4",
         "decompress": "^4",
