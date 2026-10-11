@@ -230,12 +230,6 @@ if ($HasRegistry) {
 # Excel
 # -------
 
-# The EXCEL.EXE instance-count safeguard (`Assert-ExcelInstanceLimit`) lives in
-# scripts/ps/Excel-InstanceRegistry.ps1 next to `Get-RunningExcelInstances`,
-# which it depends on. The call site below no-ops when the function isn't
-# defined (e.g. an installed CLI without scripts/, so $RegistryModule was
-# never dot-sourced).
-
 class Excel {
 	hidden [object]$App
 	hidden [bool]$ExcelWasOpen = $false
