@@ -1,3 +1,17 @@
+# run.ps1
+#
+# One-shot PowerShell bridge for Excel COM automation in FOREGROUND mode.
+#
+# This is the Windows counterpart of run.applescript (see the feature-parity
+# notes in that file). It attaches to an already-running (visible) Excel
+# instance when one exists, otherwise creates a new visible one, runs the macro,
+# and closes/quits only what it opened. Background (hidden-instance) automation
+# lives in run-background.ps1 so this file stays a tight mirror of its macOS
+# counterpart.
+#
+# Invoked as (AppName, File, Command, ...MacroArgs) plus an optional -KeepOpen
+# switch. There is no -Background switch — this script is foreground-only.
+
 param(
 	[Parameter(Position=0)]
 	[string]$AppName,
@@ -9,8 +23,6 @@ param(
 	[string]$Command,
 
 	[switch]$KeepOpen,
-
-	[switch]$Background,
 
 	[Parameter(Position=3, ValueFromRemainingArguments=$true)]
 	[string[]]$MacroArgs
@@ -134,17 +146,6 @@ function Test-WorkbookOpen {
 function Fail {
 	param([string]$Message)
 
-	# On failure, reveal any background Excel instance we own so a stuck/hung
-	# run can be inspected in the UI instead of lingering as a hidden zombie.
-	try {
-		if ($null -ne $script:ActiveApp -and $script:ActiveIsBackground) {
-			$script:ActiveApp.Visible = $true
-			PrintErr "ERROR: run failed; making background Excel instance visible for debugging.`n"
-		}
-	} catch {
-		# best-effort; never obscure the original failure
-	}
-
 	PrintLn "{`"success`":false,`"errors`":[`"$Message`"]}"
 	exit 1
 }
@@ -179,21 +180,6 @@ function Write-BridgeLog {
 # A "run banner" (clear separator marking the start of a new e2e run) is written
 # by the test-side globalSetup before tests start, since `run.ps1` is a
 # short-lived process per macro call and can't detect run boundaries.
-
-# Track the currently-active Excel.Application (script scope) so Fail can reveal
-# it if the run aborts. Implemented as a helper function because PowerShell 5.1
-# class methods cannot write script-scope variables directly.
-function Set-ActiveExcelInstance {
-	param([object]$App, [bool]$IsBackground)
-
-	$script:ActiveApp = $App
-	$script:ActiveIsBackground = $IsBackground
-}
-
-function Clear-ActiveExcelInstance {
-	$script:ActiveApp = $null
-	$script:ActiveIsBackground = $false
-}
 
 # -------
 # Run Macro
@@ -252,7 +238,6 @@ if ($HasRegistry) {
 
 class Excel {
 	hidden [object]$App
-	hidden [bool]$BackgroundBuild = $false
 	hidden [bool]$ExcelWasOpen = $false
 	hidden [object]$Workbook
 	hidden [bool]$WorkbookWasOpen = $false
@@ -260,11 +245,7 @@ class Excel {
 	hidden [int]$Pid = 0
 
 	Excel() {
-		$this.OpenExcel($false)
-	}
-
-	Excel([bool]$BackgroundBuild) {
-		$this.OpenExcel($BackgroundBuild)
+		$this.OpenExcel()
 	}
 
 	Excel([object]$App, [object]$Workbook) {
@@ -310,40 +291,22 @@ class Excel {
 		return $result
 	}
 
-	hidden [void] OpenExcel([bool]$BackgroundBuild) {
-		# Background mode always creates a new hidden instance
-		# instead of attaching to an already-running (visible) Excel process.
-		# This prevents the application window from flashing during automated runs.
-		$this.BackgroundBuild = $BackgroundBuild
-		Write-BridgeLog "open-request background=$BackgroundBuild"
+	hidden [void] OpenExcel() {
+		# Foreground mode: attach to an already-running (visible) Excel if there
+		# is one, otherwise create a new visible instance.
+		Write-BridgeLog "open-request background=false"
 
-		if (-not $this.BackgroundBuild) {
-			try {
-				$this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
-				$this.ExcelWasOpen = $true
-				Write-BridgeLog "attach=get-active-object appWasOpen=true"
-			} catch {
-				Write-BridgeLog "attach=get-active-object failed error=$($_.Exception.Message)"
-				# Excel not running; fall through to create a new instance
-			}
+		try {
+			$this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
+			$this.ExcelWasOpen = $true
+			Write-BridgeLog "attach=get-active-object appWasOpen=true"
+		} catch {
+			Write-BridgeLog "attach=get-active-object failed error=$($_.Exception.Message)"
+			# Excel not running; fall through to create a new instance
 		}
 
 		if (-not $this.ExcelWasOpen) {
-			Write-BridgeLog "create-start background=$($this.BackgroundBuild)"
-			# Safeguard: never spawn a new Excel instance once the machine is
-			# already running too many EXCEL.EXE processes. This catches leaked
-			# instances from aborted/crashed automated runs before they pile up
-			# into the dozens, and aborts (with a clear error) instead of adding
-			# one more invisible instance to the pile. No-op when the registry
-			# module isn't dot-sourced (e.g. an installed CLI without scripts/).
-			if (Get-Command Assert-ExcelInstanceLimit -ErrorAction SilentlyContinue) {
-				try {
-					Assert-ExcelInstanceLimit -Background $this.BackgroundBuild
-				} catch {
-					Fail "ERROR #5d: $($_.Exception.Message)"
-				}
-			}
-
+			Write-BridgeLog "create-start background=false"
 			$existingExcelPids = @{}
 			foreach ($process in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
 				$existingExcelPids[[int]$process.Id] = $true
@@ -360,7 +323,7 @@ class Excel {
 						throw "Refusing to automate an existing Excel process; new instance PID could not be proven."
 					}
 				}
-				$this.App.Visible = if ($this.BackgroundBuild) { $false } else { $true }
+				$this.App.Visible = $true
 				$this.App.ScreenUpdating = $false
 				$this.App.DisplayStatusBar = $false
 				$this.App.PrintCommunication = $false
@@ -378,9 +341,7 @@ class Excel {
 			$excelPid = 0
 			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
 			$this.Pid = $excelPid
-			$mode = if ($this.BackgroundBuild) { 'background' } else { 'foreground' }
-			Write-InstanceLog "created Excel instance excelPid=$excelPid mode=$mode"
-			Set-ActiveExcelInstance -App $this.App -IsBackground $this.BackgroundBuild
+			Write-InstanceLog "created Excel instance excelPid=$excelPid mode=foreground"
 		}
 	}
 
@@ -428,28 +389,17 @@ class Excel {
 		# Open the workbook
 		try {
 			$this.Workbook = $this.App.Workbooks.Open($fullPath)
-			# Workbooks.Open() can flip Excel back to visible; re-enforce
-			# invisible mode if we created this instance for automation.
-			# Also apply workbook-level performance flags now that a workbook is open.
-			if ($this.BackgroundBuild) {
-				$this.App.Visible = $false
-				try { $this.App.Calculation = -4135 } catch {}  # xlCalculationManual — requires an open workbook
-
-			}
 		} catch {
 			Fail "ERROR #6: Failed to open workbook - $($_.Exception.Message)"
 		}
 	}
 
 	[void] Dispose([bool]$KeepOpen) {
-		Write-BridgeLog "dispose-enter appWasOpen=$($this.ExcelWasOpen) background=$($this.BackgroundBuild) isAddin=$($this.IsAddin) workbookWasOpen=$($this.WorkbookWasOpen) keepOpen=$KeepOpen"
+		Write-BridgeLog "dispose-enter appWasOpen=$($this.ExcelWasOpen) isAddin=$($this.IsAddin) workbookWasOpen=$($this.WorkbookWasOpen) keepOpen=$KeepOpen"
 
-		# An add-in we opened is left open for reuse across runs — but only in
-		# FOREGROUND mode, where we're reusing the user's already-running Excel.
-		# In BACKGROUND mode each run owns a dedicated hidden instance that is
-		# torn down after the run; skipping quit here would leak one EXCEL.EXE
-		# per run.
-		if ($this.IsAddin -and -not $this.BackgroundBuild) {
+		# An add-in we opened is left open for reuse across runs (we're reusing
+		# the user's already-running Excel).
+		if ($this.IsAddin) {
 			Write-BridgeLog "dispose-skip addin-foreground"
 			return
 		}
@@ -473,7 +423,6 @@ class Excel {
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null
-			Clear-ActiveExcelInstance
 
 			# Force release of any remaining COM references so Excel actually
 			# exits before this process returns. Without this, Excel lingers and
@@ -498,7 +447,6 @@ function Run {
 		[string]$AppName,
 		[string]$FilePath,
 		[string]$MacroName,
-		[bool]$Background,
 		[bool]$KeepOpen,
 		[string[]]$MacroArgValues
 	)
@@ -506,26 +454,25 @@ function Run {
 	switch ($AppName) {
 		"excel" {
 			$found = $null
-			$backgroundBuild = $Background
 			$targetPath = Get-MacroTargetFile $MacroArgValues
 			$lookupPath = if ($FilePath -match '\.(xlam|xla)$' -and $targetPath) {
 				$targetPath
 			} else {
 				$FilePath
 			}
-			if ($HasRegistry -and -not $backgroundBuild) {
+			if ($HasRegistry) {
 				try {
 					$found = Find-OpenWorkbook -Path $lookupPath
 				} catch {
 					# best-effort; fall back to the normal Excel selection path
 				}
 			}
-			Write-BridgeLog "run-start background=$backgroundBuild keepOpen=$KeepOpen file=$FilePath macro=$MacroName lookup=$lookupPath found=$($null -ne $found)"
+			Write-BridgeLog "run-start background=false keepOpen=$KeepOpen file=$FilePath macro=$MacroName lookup=$lookupPath found=$($null -ne $found)"
 
 			$excel = if ($null -ne $found) {
 				[Excel]::new($found.App, $found.Workbook)
 			} else {
-				[Excel]::new($backgroundBuild)
+				[Excel]::new()
 			}
 			$registeredPid = 0
 			try {
@@ -534,12 +481,12 @@ function Run {
 				# so concurrent agents can distinguish it from a user/rogue
 				# session. Best-effort: never break the run over coordination.
 				if ($HasRegistry -and -not $excel.ExcelWasOpen) {
-					$reason = if ($excel.BackgroundBuild) { 'e2e' } else { 'vbapm-run' }
+					$reason = 'vbapm-run'
 					try {
 						$registeredPid = Register-ExcelInstance `
 							-ExcelApp $excel.App `
 							-Owner "terminal-$PID" `
-							-Visible (-not $excel.BackgroundBuild) `
+							-Visible $true `
 							-Reason $reason `
 							-Log (Get-MacroLogDescription $MacroName $MacroArgValues)
 					} catch {
@@ -565,7 +512,7 @@ function Run {
 					}
 				}
 
-				Write-BridgeLog "dispose-start appWasOpen=$($excel.ExcelWasOpen) background=$($excel.BackgroundBuild) isAddin=$($excel.IsAddin) keepOpen=$KeepOpen registeredPid=$registeredPid"
+				Write-BridgeLog "dispose-start appWasOpen=$($excel.ExcelWasOpen) isAddin=$($excel.IsAddin) keepOpen=$KeepOpen registeredPid=$registeredPid"
 				$excel.Dispose($KeepOpen)
 				Write-BridgeLog "dispose-complete appWasOpen=$($excel.ExcelWasOpen) appPresent=$($null -ne $excel.App)"
 
@@ -607,5 +554,5 @@ foreach ($arg in $MacroArgs) {
 	$UnescapedArgs += Unescape $arg
 }
 
-Run $AppName $File $Command $Background.IsPresent $KeepOpen.IsPresent $UnescapedArgs
+Run $AppName $File $Command $KeepOpen.IsPresent $UnescapedArgs
 exit 0

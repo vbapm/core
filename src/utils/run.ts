@@ -73,7 +73,22 @@ export async function run(
 	args: string[],
 	options: RunOptions = {}
 ): Promise<RunResult> {
-	const script = join(env.scripts, env.isWindows ? "run.ps1" : "run.applescript");
+	// Resolve the background flag once so the Windows one-shot path can select
+	// the dedicated background bridge (run-background.ps1) before building args.
+	const keepOpen = !!options.keepOpen;
+	const background =
+		typeof options.background === "boolean"
+			? options.background
+			: env.isWindows && /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "");
+
+	// Windows: foreground and background one-shot runs use separate scripts so
+	// run.ps1 can stay a tight mirror of run.applescript (foreground-only).
+	const scriptName = env.isWindows
+		? background
+			? "run-background.ps1"
+			: "run.ps1"
+		: "run.applescript";
+	const script = join(env.scripts, scriptName);
 
 	if (!(await pathExists(script))) {
 		throw new CliError(
@@ -93,11 +108,6 @@ export async function run(
 
 		return env.isWindows ? escape(arg) : arg;
 	});
-	const keepOpen = !!options.keepOpen;
-	const background =
-		typeof options.background === "boolean"
-			? options.background
-			: env.isWindows && /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "");
 
 	// Gate the Excel-touching portion through the shared instance pool so
 	// parallel callers (e.g. parallel Jest workers) never exceed the configured
@@ -145,7 +155,7 @@ export async function run(
 			// TODO: Replace execPowershell with execFile on Windows once upstream Node.js fix lands.
 			//       https://github.com/nodejs/node/issues/56645
 			const { stdout, stderr } = env.isWindows
-				? await execPowershell(script, keepOpen, background, parts, { env: process.env })
+				? await execPowershell(script, keepOpen, parts, { env: process.env })
 				: await execFile(command, commandArgs, { env: process.env });
 			result = toResult(stdout, stderr);
 		} catch (err: any) {
@@ -176,7 +186,6 @@ export async function run(
 function execPowershell(
 	script: string,
 	keepOpen: boolean,
-	background: boolean,
 	parts: string[],
 	options: { env: typeof process.env }
 ): Promise<{ stdout: string; stderr: string }> {
@@ -188,7 +197,6 @@ function execPowershell(
 			"-File",
 			script,
 			...(keepOpen ? ["-KeepOpen"] : []),
-			...(background ? ["-Background"] : []),
 			...parts
 		];
 

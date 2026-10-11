@@ -154,8 +154,10 @@ There is a well-known COM limitation that affects everything in this suite:
 
 Consequences and how the scripts handle them:
 
-1. `run-scripts/run.ps1` only ever attaches via `GetActiveObject` for the non-background
-   path, and otherwise creates its own instance.
+1. `run-scripts/run.ps1` (foreground) only ever attaches via `GetActiveObject`, and
+   otherwise creates its own visible instance. Background automation lives in
+   `run-scripts/run-background.ps1`, which always creates a new hidden instance and
+   never attaches via `GetActiveObject`.
 2. `Sync-ExcelInstances.ps1` enumerates the ROT **by CLSID** for COM-reachable instances,
    then falls back to **process + window-title** enumeration for instances that aren't
    ROT-registered (e.g. a visible user session). For the latter, the workbook list is

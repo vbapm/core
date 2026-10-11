@@ -26,11 +26,12 @@
 --     single instance (launching it if needed). There is nothing to register,
 --     count, or attach to; the "attach to an already-open workbook" case in
 --     run.ps1 (Find-OpenWorkbook / Attach) is simply always true here.
---   * Background mode is configured by the CLI/config on Windows. NOT PORTABLE
---     as a separate *instance*: Excel for Mac has no equivalent to a second,
---     invisible COM process. `visible` could be toggled on the single shared
---     app, but that would affect any Excel window the user has open too, so
---     it is deliberately left alone.
+--   * Background mode (hidden Excel instance) is a separate Windows-only
+--     script, run-background.ps1. NOT PORTABLE as a separate *instance*: Excel
+--     for Mac has no equivalent to a second, invisible COM process. `visible`
+--     could be toggled on the single shared app, but that would affect any
+--     Excel window the user has open too, so it is deliberately left alone.
+--     run.ps1 itself is thus foreground-only, mirroring this file 1:1.
 --   * Argument unescaping (PS `Unescape`, the `^q` -> `"` workaround). NOT
 --     NEEDED here: src/utils/run.ts only shell-escapes args on Windows
 --     (`env.isWindows ? escape(arg) : arg`); macOS args are passed to
