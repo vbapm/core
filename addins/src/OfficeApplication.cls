@@ -171,8 +171,10 @@ Private Function OpenWorkbook(Path As String, ByRef WB As Object) As Boolean
     End If
 End Function
 
-Private Sub CloseWorkbook(Workbook As Object)
-    Workbook.Close False
+Private Sub CloseWorkbook(ByVal WorkbookObject As Object)
+    If Not WorkbookObject Is Nothing Then
+        WorkbookObject.Close False
+    End If
 End Sub
 
 Private Function CreateWorkbook(Path As String) As Object
