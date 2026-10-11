@@ -18,8 +18,8 @@ describe("tool config", () => {
 		const projectDir = join(root, "project");
 		const globalDir = join(root, "global");
 		const manifestFile = join(projectDir, "vbaproject.toml");
-		const projectFile = join(projectDir, "vba.toml");
-		const globalFile = join(globalDir, "vba.toml");
+		const projectFile = join(projectDir, "vbapm.toml");
+		const globalFile = join(globalDir, "vbapm.toml");
 
 		try {
 			await mkdir(projectDir, { recursive: true });

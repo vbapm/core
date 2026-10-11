@@ -3,7 +3,7 @@
 ## Goal
 
 Remove the application-level dependency on `VBA_BACKGROUND_BUILD`. Background
-mode should be determined by global or project-local `vba.toml` configuration,
+mode should be determined by global or project-local `vbapm.toml` configuration,
 with a command-line override for individual commands.
 
 ## Precedence: Flag > Local > Global
@@ -11,14 +11,14 @@ with a command-line override for individual commands.
 Resolve background mode in this order:
 
 1. Explicit CLI flag (`--background` or `--background=false`).
-2. Project-local `vba.toml`.
-3. Global `vba.toml`.
+2. Project-local `vbapm.toml`.
+3. Global `vbapm.toml`.
 4. Foreground mode by default.
 
 The required priority is:
 
 ```text
-CLI flag > local vba.toml > global vba.toml > foreground default
+CLI flag > local vbapm.toml > global vbapm.toml > foreground default
 ```
 
 Expected examples:
@@ -41,10 +41,10 @@ it consistently.
 Global settings live next to the installed CLI:
 
 ```text
-%APPDATA%\vbapm\bin\vba.toml
+%APPDATA%\vbapm\bin\vbapm.toml
 ```
 
-Project settings live in `vba.toml` next to `vbaproject.toml`. Local settings
+Project settings live in `vbapm.toml` next to `vbaproject.toml`. Local settings
 override global settings, and either setting is overridden by an explicit CLI
 flag. The initial supported setting is:
 
@@ -104,7 +104,7 @@ single source of truth for resolving these values.
 
 ## E2E Configuration
 
-Use a temporary project or global `vba.toml` for e2e runs instead of setting the
+Use a temporary project or global `vbapm.toml` for e2e runs instead of setting the
 application environment variable. Keep these concerns separate:
 
 - `background`: visible versus hidden Excel.
@@ -145,7 +145,7 @@ that snapshots do not change solely because the mode is now config-driven.
 
 ## Acceptance Criteria
 
-- `vba.toml` global and local settings control default background mode.
+- `vbapm.toml` global and local settings control default background mode.
 - Local configuration overrides global configuration.
 - An explicit CLI value overrides both configuration levels.
 - No normal application execution path requires `VBA_BACKGROUND_BUILD`.

@@ -39,7 +39,7 @@ export function normalizeBackground(value: unknown): boolean {
 }
 
 export function getGlobalConfigFile(): string {
-	return join(env.bin, "vba.toml");
+	return join(env.bin, "vbapm.toml");
 }
 
 export async function getLocalConfigFile(dir = env.cwd): Promise<string | undefined> {
@@ -47,7 +47,7 @@ export async function getLocalConfigFile(dir = env.cwd): Promise<string | undefi
 
 	while (true) {
 		const candidate = join(current, "vbaproject.toml");
-		if (await pathExists(candidate)) return join(current, "vba.toml");
+		if (await pathExists(candidate)) return join(current, "vbapm.toml");
 
 		const parent = dirname(current);
 		if (parent === current) return undefined;
@@ -79,7 +79,7 @@ export async function saveToolSettings(
 		options.file ??
 		(options.global
 			? getGlobalConfigFile()
-			: ((await getLocalConfigFile()) ?? join(env.cwd, "vba.toml")));
+			: ((await getLocalConfigFile()) ?? join(env.cwd, "vbapm.toml")));
 
 	await ensureDir(dirname(file));
 	const existing = await loadToolSettings({ file });
