@@ -9,6 +9,20 @@ This document explains how the build pipeline works in this repository, from Typ
 - `npm run build:addins` builds the production add-ins in `addins/build/` using the bootstrap workbook as the automation host.
 - `npm version` chains `build` + `build:addins` + package creation.
 
+The e2e scripts run `pnpm run build:check` first. By default it checks `lib/`
+and the add-in. The add-in fingerprint covers only VBA and XML files under
+`addins/`, so TypeScript changes do not start Excel or rebuild the add-in.
+Pass `--force` to force the add-in check and include
+`scripts/bootstrap/build/bootstrap.xlsm` in the freshness pass:
+
+```powershell
+pnpm run build:check -- --force
+```
+
+The add-in and bootstrap checks keep SHA-256 freshness records beside their
+outputs. VBA or XML changes make the add-in stale and trigger its rebuild.
+`pnpm run build:addins` remains available as the explicit add-in build command.
+
 ## Bootstraping
 
 The approach used in this project to build VBA documents is to have a VBA addin that lives within the VBA environment and acts as the relay between the package manager CLI and the VBA host.

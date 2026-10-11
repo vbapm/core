@@ -46,7 +46,9 @@ export async function loadFromProject(
 			// Expand wildcards against the project directory
 			if (source.path.includes("*")) {
 				const baseDir = project.paths.dir;
-				const pattern = source.path.startsWith(baseDir)
+				const normalizedSourcePath = source.path.replace(/\\/g, "/");
+				const normalizedBaseDir = baseDir.replace(/\\/g, "/");
+				const pattern = normalizedSourcePath.startsWith(normalizedBaseDir)
 					? relative(baseDir, source.path)
 					: source.path;
 				const matched = walk(baseDir, { globs: [pattern], directories: false });
@@ -91,7 +93,9 @@ export async function loadFromProject(
 		for (const source of project.manifest.devSrc) {
 			if (source.path.includes("*")) {
 				const baseDir = project.paths.dir;
-				const pattern = source.path.startsWith(baseDir)
+				const normalizedSourcePath = source.path.replace(/\\/g, "/");
+				const normalizedBaseDir = baseDir.replace(/\\/g, "/");
+				const pattern = normalizedSourcePath.startsWith(normalizedBaseDir)
 					? relative(baseDir, source.path)
 					: source.path;
 				const matched = walk(baseDir, { globs: [pattern], directories: false });

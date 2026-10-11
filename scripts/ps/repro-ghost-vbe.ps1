@@ -167,7 +167,7 @@ try {
     # ---------------------------------------------------------------
     Step "2. Open new visible Excel instance (blank workbook)"
     # ---------------------------------------------------------------
-    Run-Script "open-new-excel.ps1"
+    Run-Script "Create-NewExcel.ps1"
     Start-Sleep -Seconds 3
     Write-Host "Excel ready." -ForegroundColor Green
 

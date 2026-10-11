@@ -6,7 +6,7 @@
 .\scripts\ps\close-hidden-excel-instances.ps1 -Force
 
 # ==== Step 2: Open new visible Excel (creates blank workbook) ====
-.\scripts\ps\open-new-excel.ps1
+.\scripts\ps\Create-NewExcel.ps1
 
 # ==== Step 3: Open VBE window ====
 # Manually press Alt+F11 in Excel, then continue

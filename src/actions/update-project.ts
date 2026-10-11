@@ -13,6 +13,7 @@ export interface UpdateOptions {
 	addin?: string;
 	release?: boolean;
 	open?: boolean;
+	background?: boolean;
 }
 
 export async function updateProject(options: UpdateOptions = {}): Promise<string> {
@@ -40,7 +41,8 @@ export async function updateProject(options: UpdateOptions = {}): Promise<string
 	await importTarget(target, { project, dependencies }, builtFile, {
 		addin: options.addin,
 		release: options.release,
-		open: options.open
+		open: options.open,
+		background: options.background
 	});
 
 	return builtFile;

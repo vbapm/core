@@ -61,13 +61,17 @@ jobs:
             throw "Could not locate function/class definitions in run.ps1"
           }
 
-          # Find the "# Main" section marker to stop before the main body
-          $mainStart = [regex]::Match($scriptContent, '(?m)^# -{3,}\r?\n# Main\r?\n# -{3,}')
-          if (!$mainStart.Success) {
-            throw "Could not locate '# Main' section marker in run.ps1"
+          # Stop before script-level coordination code is executed.
+          # The "Excel instance coordination registry" section contains
+          # top-level statements (Join-Path/Test-Path/. dot-source) that rely
+          # on script file scope such as $PSScriptRoot. Under Invoke-Expression
+          # in CI, that scope is not set as expected and can throw.
+          $registryStart = [regex]::Match($scriptContent, '(?m)^# -{3,}\r?\n# Excel instance coordination registry\r?\n# -{3,}')
+          if (!$registryStart.Success) {
+            throw "Could not locate 'Excel instance coordination registry' section marker in run.ps1"
           }
 
-          $definitions = $scriptContent.Substring($defStart.Index, $mainStart.Index - $defStart.Index)
+          $definitions = $scriptContent.Substring($defStart.Index, $registryStart.Index - $defStart.Index)
 
           # Evaluate the definitions in the current scope
           Invoke-Expression $definitions

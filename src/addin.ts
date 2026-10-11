@@ -16,6 +16,7 @@ export interface AddinOptions {
 	addin?: string;
 	open?: boolean;
 	staging?: boolean;
+	background?: boolean;
 }
 
 export const extensions: { [application: string]: string[] } = {
@@ -74,7 +75,7 @@ export async function importGraph(
 				references: resolvedReferences
 			})
 		],
-		{ keepOpen: options.open }
+		{ keepOpen: options.open, background: options.background }
 	);
 }
 
@@ -101,14 +102,20 @@ export async function exportTo(
 		file = staged;
 	}
 
-	await run(application, options.addin || addin, "Build.ExportTo", [
-		JSON.stringify({
-			file,
-			staging,
-			// Respect [source] "include-empty-objects" flag (default: true)
-			includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
-		})
-	]);
+	await run(
+		application,
+		options.addin || addin,
+		"Build.ExportTo",
+		[
+			JSON.stringify({
+				file,
+				staging,
+				// Respect [source] "include-empty-objects" flag (default: true)
+				includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
+			})
+		],
+		{ background: options.background }
+	);
 }
 
 export async function validateExportTarget(
@@ -172,11 +179,17 @@ export async function createDocument(
 	let path = !useStaging ? file : join(project.paths.staging, target.filename);
 
 	await ensureDir(dirname(path));
-	await run(application, options.addin || addin, "Build.CreateDocument", [
-		JSON.stringify({
-			path
-		})
-	]);
+	await run(
+		application,
+		options.addin || addin,
+		"Build.CreateDocument",
+		[
+			JSON.stringify({
+				path
+			})
+		],
+		{ background: options.background }
+	);
 
 	// For Mac, then copy staged to build directory
 	if (useStaging) {

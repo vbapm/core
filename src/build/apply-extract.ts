@@ -242,7 +242,8 @@ export async function applyExtract(project: Project, classified: ClassifiedExtra
 		classified.orphaned.length > 0 ||
 		classified.renamed.length > 0 ||
 		classified.references.added.length > 0 ||
-		classified.references.removed.length > 0;
+		classified.references.removed.length > 0 ||
+		project.manifest.srcDeprecated;
 
 	if (hasChanges) {
 		updateManifestForExtract(

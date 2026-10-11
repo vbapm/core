@@ -2,6 +2,7 @@ import { extensionToApplication } from "../addin";
 import { CliError, ErrorCode } from "../errors";
 import { loadProject } from "../project";
 import { getTarget } from "../targets";
+import { resolveBackgroundMode } from "../config";
 import { extname, join, resolve } from "../utils/path";
 import { run, RunResult } from "../utils/run";
 
@@ -10,10 +11,13 @@ export interface RunOptions {
 	file?: string;
 	macro: string;
 	args: string[];
+	keepOpen?: boolean;
+	background?: boolean;
 }
 
 export async function runMacro(options: RunOptions): Promise<RunResult> {
-	let { target: targetType, file, macro, args = [""] } = options;
+	let { target: targetType, file, macro, args = [""], keepOpen, background } = options;
+	background ??= await resolveBackgroundMode();
 
 	if (!file) {
 		const project = await loadProject();
@@ -36,7 +40,7 @@ export async function runMacro(options: RunOptions): Promise<RunResult> {
 	}
 
 	const application = extensionToApplication(extname(file));
-	const result = await run(application, resolve(file), macro, args);
+	const result = await run(application, resolve(file), macro, args, { keepOpen, background });
 	const { stdout } = result;
 
 	if (stdout && stdout.trim().length) console.log(stdout);

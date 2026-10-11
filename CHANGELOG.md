@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The top-level `[src]` section in `vbaproject.toml` is deprecated in favor of `[source.files]`. Legacy manifests remain valid: `[src]` entries are treated as `[source.files]`, but a deprecation warning is printed until the manifest is updated.
 
 ### Added
+- `--vba-only` option for `vba build`, equivalent to `vba update`, to update VBA in an existing built target without rebuilding the workbook.
 - `vba extract` command as the new canonical name for extracting source from a built target (replaces `vba export`).
 - `include-empty-objects` option under `[source]` (default: `true`). When `false`, blank document objects (`ThisWorkbook`, sheet modules) are skipped during export, matching the pre-0.10 behavior. When `true`, all document objects are exported regardless of content.
 - `[source]` table in `vbaproject.toml` for optional enforcement of source file ordering. Keys: `sort.by-types`, `sort.alphabetical`, `subfolders`. When absent, the tool detects and respects the existing convention without enforcement via `detectSrcStructure()`.
@@ -22,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vba init --from workbook.xlsm` automatically sets `build-dir = "."` when the workbook is at the project root.
 - `vbaproject.toml` now validates section keys and suggests corrections for snake_case misspellings (e.g. `build_dir` → `build-dir`, `src_encoding` → `src-encoding`).
 - Peer references in `[references]` for referencing another VBA project (addin or workbook). A peer reference has no GUID or version and is declared as `AddinToolbox = { peer = true, path = "..." }`. `vba extract` detects peer references (empty GUID) and stores them with a path — relative when the peer lives inside the project folder or a sibling folder, absolute otherwise. `vba build` resolves the path and adds the reference via `References.AddFromFile`. Peer paths are written with forward slashes even on Windows (e.g. `path = "C:/Users/me/Toolbox/Toolbox.xlam"`).
+- Global and project-local `vbapm.toml` settings for background Excel execution, with explicit CLI flags taking precedence over local and global configuration. Background mode is propagated explicitly through build, update, extract/export, and macro execution instead of relying on `VBA_BACKGROUND_BUILD`.
+- `--background` flag on `vba build`, `vba update`, `vba extract`/`vba export`, and `vba run` to use a hidden Excel instance for that single invocation, overriding the configured default.
+- `vba config` command to get and set configuration values (`vbapm config background true`, `--global`/`--local`, `--list`, `--unset`). Settings live in a `vbapm.toml` file, either project-local or global (next to the executable).
 
 ### Changed
 - New projects (`vba init`, `vba new`) now default to wildcard entries (e.g. `Modules = "src/**/*.bas"`) instead of listing every source file individually.
@@ -30,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src-encoding` has moved from `[project]`/`[package]` to `[source]` as `encoding`. Existing `vbaproject.toml` files with `src-encoding` under `[project]` or `[package]` will now receive a clear error message suggesting the migration. Per-source `encoding` on `[src]` entries is unchanged.
 
 ### Fixed
+- Worksheet XML export now preserves the previous `activeCell` and `sqref` values when they are the only changes in a worksheet.
 - Missing target files now report whether the target directory is missing and suggest `target.name` when matching workbook files are found.
 - Name conflict resolution on extract: when a `[src]` entry (e.g. `Module1`) points to a different component name (`Validation.bas`) but the workbook also contains a real `Module1`, both entries are preserved with a warning about the rename.
 - VBA addin errors now surface to the CLI via structured JSON output instead of being silently swallowed by `Err.Raise`.
