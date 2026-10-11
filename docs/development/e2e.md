@@ -10,13 +10,15 @@ From package.json:
 
 | Script | What it does |
 |---|---|
-| `pnpm run test:e2e` | explicit foreground override, **spawns the real CLI** per command |
-| `pnpm run test:e2e:in-process` | visible Excel + `E2E_IN_PROCESS=1`, **dispatches CLI commands in-process** (see below) |
-| `pnpm run test:e2e:background` | explicit background override (hidden Excel) |
-| `pnpm run test:e2e:background:clean` | background run after removing hidden tracked Excel instances |
+| `pnpm run test:e2e` | **default**: hidden Excel (`E2E_BACKGROUND=1`) + in-process COM + single persistent session (`VBA_PERSISTENT_SESSION=1`) |
+| `pnpm run test:e2e:visible` | visible Excel (`E2E_BACKGROUND=0`), **spawns the real CLI** per command (out-of-process, no persistent session) — the isolated baseline |
+| `pnpm run test:e2e:in-process` | visible Excel + `E2E_IN_PROCESS=1`, **dispatches CLI commands in-process**, no persistent session — diagnostic niche for isolating in-process-COM failures from session/hidden-mode causes |
+| `pnpm run test:e2e:background` | alias of `test:e2e` (hidden Excel, in-process, single persistent session) |
+| `pnpm run test:e2e:background:clean` | background run after removing hidden tracked Excel instances (`E2E_CLEAN=1`) |
 | `pnpm run test:e2e:background:updateSnapshots` | background + `--updateSnapshot` |
-| `pnpm run test:e2e:background:evolution` | background run with registry evolution snapshots |
-| `pnpm run evolution:html:serve` | serve the generated evolution report |
+| `pnpm run test:e2e:background:evolution` | background + in-process run with 6 parallel persistent sessions that capture registry evolution snapshots |
+| `pnpm run evolution:html` | generate the evolution HTML report from captured snapshots |
+| `pnpm run evolution:html:serve` | generate and serve the evolution report locally |
 | `pnpm run test:e2e:multilang` | separate multilang config |
 
 Each script is prefixed with `pnpm run build:check` → `node scripts/ensure-fresh-build.ts`, which refreshes `lib/` and checks the add-in. The add-in check watches only VBA and XML inputs under `addins/`, so TypeScript changes do not trigger an Office-backed rebuild unless `--force` is passed. The `[ensure-fresh-build]` output identifies each check.
@@ -27,6 +29,20 @@ the path in `VBA_INSTANCE_LOG`) without being mixed into test stdout/stderr.
 For per-test and per-command timing in the export suites, set `E2E_TIMING=1`.
 
 The standard background runner is serial (`--runInBand`). Set `VBA_PERSISTENT_SESSION` to a positive number to enable that many persistent PowerShell/Excel worker sessions, for example `VBA_PERSISTENT_SESSION=3` with `--maxWorkers 3`. `true` and `yes` remain equivalent to `1`.
+
+## Evolution HTML report
+
+The `test:e2e:background:evolution` script records how Excel instances are created, reused, and torn down **over time** across the whole run, then renders that lifecycle into a single self-contained HTML viewer.
+
+How it works:
+
+1. **Collect snapshots.** With `VBA_EVOLUTION=1`, the Excel instance registry (`scripts/ps/Excel-InstanceRegistry.ps1`) writes timestamped `instances-*.json` snapshots into `%TEMP%\Excel-Instances\evolution\<run-id>/` every time the registry document changes. `scripts/ps/Clear-ExcelRegistryEvolution.ps1` (run first by the npm script) creates a fresh run directory without deleting prior runs. Jest's global setup/teardown stamp the run's start/finish times and total duration.
+2. **Generate the report.** `pnpm run evolution:html` runs `scripts/generate-evolution-html.ts`, which reads all snapshots from the evolution directory and embeds them into a single HTML file (`instances-evolution.html`). The report shows, per run: the run metadata (flags, start/finish, duration), metrics (instance count, snapshot count), a per-instance lifecycle view, and a timeline/lane chart of instance activity ordered by snapshot.
+3. **Serve it locally.** `pnpm run evolution:html:serve` generates the report and starts an HTTP server (default `http://127.0.0.1:<port>/`) so the report can be opened in a browser and stepped through snapshot-by-snapshot, or open a specific snapshot's raw JSON.
+
+Both commands accept `--input <dir>` and `--output <file>` to override the defaults (`%TEMP%\Excel-Instances\evolution` and `<dir>/instances-evolution.html` respectively).
+
+Use this to diagnose Excel instance leaks, verify that persistent sessions are actually being reused instead of spawning new instances, and compare instance lifecycle across different builds or parallel worker counts.
 
 ### Two ways to drive the CLI: spawned vs in-process
 
