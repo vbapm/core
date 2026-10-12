@@ -1,17 +1,24 @@
 <#
 .SYNOPSIS
-    CI-friendly ghost VBE bug repro — creates a fresh project on the fly.
+        Demonstrates that opening the VBE before a workbook and then closing that
+        workbook through COM can leave its VBA project as a ghost in the VBE.
 
 .DESCRIPTION
-    Creates everything from scratch:
+        This reproduces an Excel/VBE lifecycle bug, not a vbapm build failure.
+        The VBE is opened first, a workbook with the explicit VBA project codename
+        "GhostDemoProject" is created and opened, and the workbook is then closed
+        through COM while Excel remains running. The final detector verifies that
+        GhostDemoProject remains in the VBE even though its workbook is closed.
+
+        Creates everything from scratch:
       1. Close all Excel instances
       2. Create a new vbapm project via vba init --target xlsm
       3. Add a source module and build
       4. Open a fresh visible Excel instance
       5. Open the VBE window
-      6. Open the built file via COM
+            6. Open the built file via COM after the VBE is loaded
       7. Close the workbook via COM
-      8. Check for ghost VBE projects
+            8. Check for the GhostDemoProject ghost
 
 .PARAMETER WorkDir
     Directory where the temp project will be created.
