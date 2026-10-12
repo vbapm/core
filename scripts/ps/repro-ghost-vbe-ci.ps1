@@ -102,6 +102,7 @@ version = "0.0.0"
 authors = []
 license = "UNLICENSED"
 target = "xlsm"
+codename = "GhostDemoProject"
 
 [source.files]
 Module1 = "src/Module1.bas"
