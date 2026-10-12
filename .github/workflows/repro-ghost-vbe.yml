@@ -70,6 +70,48 @@ jobs:
             Write-Output "::notice::No ghost VBE projects detected."
           }
 
+      - name: Run 10-run Alt+F4 evidence test
+        id: altf4-evidence
+        shell: powershell
+        timeout-minutes: 45
+        run: |
+          $results = @()
+          for ($run = 1; $run -le 10; $run++) {
+            $workDir = "ghost-evidence-altf4-$run"
+            Write-Output "===== Alt+F4 run $run/10 ====="
+            $result = & .\scripts\ps\repro-ghost-vbe-ci.ps1 `
+              -WorkDir $workDir `
+              -CloseVBEBeforeClose 2>&1
+            $exitCode = $LASTEXITCODE
+            $output = $result | Out-String
+            Write-Output $output
+
+            $markerMatch = [regex]::Match($output, 'GHOST_COUNT=(\d+)')
+            if ($exitCode -ne 0 -or -not $markerMatch.Success) {
+              throw "Alt+F4 evidence run $run failed or did not emit GHOST_COUNT. Exit code: $exitCode"
+            }
+
+            $ghostCount = [int]$markerMatch.Groups[1].Value
+            $results += [pscustomobject]@{
+              Run = $run
+              GhostCount = $ghostCount
+            }
+            Write-Output "altf4-run=$run ghost-count=$ghostCount"
+          }
+
+          $ghostRuns = @($results | Where-Object GhostCount -gt 0).Count
+          $cleanRuns = @($results | Where-Object GhostCount -eq 0).Count
+          Write-Output "ghost-runs=$ghostRuns" >> $env:GITHUB_OUTPUT
+          Write-Output "clean-runs=$cleanRuns" >> $env:GITHUB_OUTPUT
+
+          Write-Output "### Alt+F4 evidence test" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "| Runs | Ghost runs | Clean runs |" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "| ---: | ---: | ---: |" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "| 10 | $ghostRuns | $cleanRuns |" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "The VBE was hidden with verified Alt+F4 before each direct COM workbook close." >> $env:GITHUB_STEP_SUMMARY
+
       - name: Summary
         if: always()
         run: |
