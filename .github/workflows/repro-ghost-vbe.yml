@@ -51,13 +51,19 @@ jobs:
         timeout-minutes: 15
         run: |
           $result = & .\scripts\ps\repro-ghost-vbe-ci.ps1 2>&1
-          $result | Out-String -Stream | ForEach-Object { Write-Output $_ }
-          $ghosts = ($result | Select-String "Ghosts\s*:\s*(\d+)" | ForEach-Object { $_.Matches.Groups[1].Value })
-          if ($LASTEXITCODE -ne 0) {
-            Write-Output "::error::Repro script failed with exit code $LASTEXITCODE"
+          $reproExitCode = $LASTEXITCODE
+          $output = $result | Out-String
+          Write-Output $output
+          if ($reproExitCode -ne 0) {
+            Write-Output "::error::Repro script failed with exit code $reproExitCode"
             exit 1
           }
-          $ghostCount = if ($ghosts) { [int]$ghosts } else { 0 }
+          $summaryMatch = [regex]::Match($output, 'Ghosts\s*:\s*(\d+)')
+          if ($summaryMatch.Success) {
+            $ghostCount = [int]$summaryMatch.Groups[1].Value
+          } else {
+            $ghostCount = ([regex]::Matches($output, '(?m)^\s*GHOST\s')).Count
+          }
           Write-Output "ghost-count=$ghostCount" >> $env:GITHUB_OUTPUT
           if ($ghostCount -gt 0) {
             Write-Output "::warning::Ghost VBE projects detected: $ghostCount"
