@@ -151,5 +151,8 @@ Module1 = "src/Module1.bas"
     Step "8. Check for ghost VBE projects"
     Write-Host ""
     & (Join-Path $scripts "detect-ghost-vbe.ps1")
+    $detectionJson = & (Join-Path $scripts "detect-ghost-vbe.ps1") -Quiet | Out-String
+    $detectionSummary = $detectionJson.Trim() | ConvertFrom-Json
+    Write-Output "GHOST_COUNT=$([int]$detectionSummary.Ghosts)"
     Write-Host ""; Write-Host "===== Repro complete =====" -ForegroundColor Cyan
 } finally { Pop-Location }

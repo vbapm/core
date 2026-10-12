@@ -58,12 +58,11 @@ jobs:
             Write-Output "::error::Repro script failed with exit code $reproExitCode"
             exit 1
           }
-          $summaryMatch = [regex]::Match($output, 'Ghosts\s*:\s*(\d+)')
-          if ($summaryMatch.Success) {
-            $ghostCount = [int]$summaryMatch.Groups[1].Value
-          } else {
-            $ghostCount = ([regex]::Matches($output, '(?m)^\s*GHOST\s')).Count
+          $markerMatch = [regex]::Match($output, 'GHOST_COUNT=(\d+)')
+          if (-not $markerMatch.Success) {
+            throw 'Repro output did not contain the GHOST_COUNT marker.'
           }
+          $ghostCount = [int]$markerMatch.Groups[1].Value
           Write-Output "ghost-count=$ghostCount" >> $env:GITHUB_OUTPUT
           if ($ghostCount -gt 0) {
             Write-Output "::warning::Ghost VBE projects detected: $ghostCount"
