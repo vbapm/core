@@ -88,20 +88,37 @@ if (-not $Name -and -not $Path) {
 }
 
 $target = $null
-foreach ($wb in $excel.Workbooks) {
-    if ($Name -and $wb.Name -eq $Name) {
-        $target = $wb
-        break
-    }
-    if ($Path) {
+$workbooks = $null
+try {
+    $workbooks = $excel.Workbooks
+    $normalizedTarget = if ($Path) { [System.IO.Path]::GetFullPath($Path) } else { $null }
+    for ($index = 1; $index -le $workbooks.Count; $index++) {
+        $wb = $workbooks.Item($index)
         try {
-            $normalizedTarget = [System.IO.Path]::GetFullPath($Path)
-            $normalizedWb     = [System.IO.Path]::GetFullPath($wb.FullName)
-            if ($normalizedWb -eq $normalizedTarget) {
+            if ($Name -and $wb.Name -eq $Name) {
                 $target = $wb
+                $wb = $null
                 break
             }
-        } catch { }
+            if ($normalizedTarget) {
+                try {
+                    $normalizedWb = [System.IO.Path]::GetFullPath($wb.FullName)
+                    if ($normalizedWb -eq $normalizedTarget) {
+                        $target = $wb
+                        $wb = $null
+                        break
+                    }
+                } catch { }
+            }
+        } finally {
+            if ($null -ne $wb) {
+                [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($wb) | Out-Null
+            }
+        }
+    }
+} finally {
+    if ($null -ne $workbooks) {
+        [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbooks) | Out-Null
     }
 }
 
@@ -133,7 +150,10 @@ if (-not $Force) {
 }
 
 $saveChanges = [bool]$Save
-$target.Close($saveChanges)
-Write-Host "Closed: $wbName" -ForegroundColor Green
-
-[System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
+try {
+    $target.Close($saveChanges)
+    Write-Host "Closed: $wbName" -ForegroundColor Green
+} finally {
+    [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($target) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($excel) | Out-Null
+}
