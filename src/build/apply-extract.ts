@@ -8,7 +8,7 @@ import { Source } from "../manifest/source";
 import { Project } from "../project";
 import { remove } from "../utils/fs";
 import { parallel } from "../utils/parallel";
-import { join, relative } from "../utils/path";
+import { basename, join, relative } from "../utils/path";
 import { Codepage, labelToCodepage } from "./encoding-sniffer";
 import { Component } from "./component";
 import { isCoveredByWildcard, writeComponent } from "./apply-changeset";
@@ -80,7 +80,9 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
  * Resolve target file paths for exported components based on the project's
  * `[source]` (folder + subfolders).
  *
- * Each component is placed under `folder/subfolder/component.filename`, where:
+ * Each component is placed at its explicitly listed manifest path when the
+ * path filename matches `component.filename`; otherwise it is placed under
+ * `folder/subfolder/component.filename`, where:
  * - `folder` comes from `[source].folder` (default `"src"`)
  * - `subfolder` maps the component type via `[source].subfolders`
  *
@@ -93,10 +95,16 @@ export function resolveTargetPaths(
 	const map = new Map<string, Component>();
 	const folder = resolveSrcFolder(project.manifest.srcProperties);
 	const subfolders = project.manifest.srcProperties?.subfolders;
+	const explicitSources = new Map(
+		project.manifest.src
+			.filter(source => !source.path.includes("*"))
+			.map(source => [basename(source.path).toLowerCase(), source.path])
+	);
 
 	for (const component of components) {
+		const explicitPath = explicitSources.get(component.filename.toLowerCase());
 		const sub = resolveSrcSubfolders(subfolders, component.type);
-		const path = join(project.paths.dir, folder, sub, component.filename);
+		const path = explicitPath ?? join(project.paths.dir, folder, sub, component.filename);
 		component.details.path = path;
 		map.set(path, component);
 	}

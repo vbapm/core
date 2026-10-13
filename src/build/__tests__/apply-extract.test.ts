@@ -104,6 +104,32 @@ describe("resolveTargetPaths", () => {
 		expect(pathStr).toContain("src/Excel Objects/Sheet4.cls");
 	});
 
+	test("preserves paths for explicitly listed components", async () => {
+		const { project } = await setup(wildcard);
+		project.manifest.src = [
+			{ name: "ExistingModule", path: `${project.paths.dir}/legacy/ExistingModule.bas` },
+			{ name: "ExistingClass", path: `${project.paths.dir}/legacy/ExistingClass.cls` },
+			{ name: "ExistingForm", path: `${project.paths.dir}/legacy/ExistingForm.frm` },
+			{ name: "ExistingSheet", path: `${project.paths.dir}/legacy/ExistingSheet.cls` }
+		];
+
+		const components = [
+			makeComponent("module", "ExistingModule"),
+			makeComponent("class", "ExistingClass"),
+			makeComponent("form", "ExistingForm"),
+			makeComponent("object", "ExistingSheet")
+		];
+
+		const map = await resolveTargetPaths(project, components);
+
+		expect([...map.keys()]).toEqual([
+			`${project.paths.dir}/legacy/ExistingModule.bas`,
+			`${project.paths.dir}/legacy/ExistingClass.cls`,
+			`${project.paths.dir}/legacy/ExistingForm.frm`,
+			`${project.paths.dir}/legacy/ExistingSheet.cls`
+		]);
+	});
+
 	test("uses default src folder when folder is not set", async () => {
 		const { project } = await setup(wildcard);
 		project.manifest.srcProperties = undefined;
