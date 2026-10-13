@@ -49,7 +49,7 @@ Public Function ImportGraph(Graph As Variant) As String
     Dim Src As Dictionary
     For Each Src In Values("src")
         Output.Messages.Add "src: " & Src("name") & ", " & Src("path")
-        Installer.Import Document.VBProject, Src("name"), Src("path"), Overwrite:=True
+        Installer.Import Document.VBProject, Src("name"), Src("path"), Overwrite:=True, HostDocument:=Document
     Next Src
 
     Dim Ref As Dictionary
@@ -130,7 +130,7 @@ Public Function ExportTo(Info As Variant) As String
 
         ' Skip empty document objects when empty-objects = false
         If Extension <> "" Then
-            If IncludeEmptyObjects = False And Component.Type = vbext_ComponentType.vbext_ct_Document And ComponentIsBlank(Component) Then
+            If IncludeEmptyObjects = False And Installer.IsDocumentComponent(Component, Document) And ComponentIsBlank(Component) Then
                 ' Skip this blank document object
             Else
                 Path = FileSystem.JoinPath(Staging, Component.Name & Extension)
@@ -153,18 +153,20 @@ Public Function ExportTo(Info As Variant) As String
     ' Collect component metadata (name + type) so the CLI can distinguish
     ' document objects (vbext_ct_Document) from class modules (.cls).
     For Each Component In Document.VBProject.VBComponents
-        Select Case Component.Type
-        Case vbext_ComponentType.vbext_ct_StdModule
-            CompType = "module"
-        Case vbext_ComponentType.vbext_ct_ClassModule
-            CompType = "class"
-        Case vbext_ComponentType.vbext_ct_Document
+        If Installer.IsDocumentComponent(Component, Document) Then
             CompType = "object"
-        Case vbext_ComponentType.vbext_ct_MSForm
-            CompType = "form"
-        Case Else
-            CompType = "unknown"
-        End Select
+        Else
+            Select Case Component.Type
+            Case vbext_ComponentType.vbext_ct_StdModule
+                CompType = "module"
+            Case vbext_ComponentType.vbext_ct_ClassModule
+                CompType = "class"
+            Case vbext_ComponentType.vbext_ct_MSForm
+                CompType = "form"
+            Case Else
+                CompType = "unknown"
+            End Select
+        End If
 
         Set CompInfo = New Dictionary
         CompInfo("name") = Component.Name

@@ -36,7 +36,7 @@ Attribute VB_Name = "Installer"
 ' Installer.Import ThisWorkbook.Project, "ModuleName", ImportPath
 ' ```
 ''
-Public Sub Import(Project As VBProject, ComponentName As String, FullPath As String, Optional Overwrite As Boolean = False)
+Public Sub Import(Project As VBProject, ComponentName As String, FullPath As String, Optional Overwrite As Boolean = False, Optional HostDocument As Object)
     Precheck Project
 
     If Not FileSystem.FileExists(FullPath) Then
@@ -53,7 +53,7 @@ Public Sub Import(Project As VBProject, ComponentName As String, FullPath As Str
                 "[10103] Existing component found. A module with the name """ & ModuleName & """ is already part of the project. " & _
                 "Use `Installer.Import(Project, ComponentName, FullPath, Overwrite:=True)` to overwrite an existing module."
         Else
-            If ExistingComponent.Type = vbext_ComponentType.vbext_ct_Document Then
+            If IsDocumentComponent(ExistingComponent, HostDocument) Then
                 ' For ThisWorkbook and Sheets, can't remove and then import
                 ' Instead, overwrite with imported module
                 Dim ImportedComponent As Object
@@ -246,6 +246,27 @@ Private Function GetComponent(Project As VBProject, ComponentName As String) As 
     Set GetComponent = Project.VBComponents(ComponentName)
 
     On Error GoTo 0
+End Function
+
+Public Function IsDocumentComponent(Component As VBComponent, Optional HostDocument As Object) As Boolean
+    On Error GoTo ExitFunction
+
+    If Component.Type = vbext_ComponentType.vbext_ct_Document Then
+        IsDocumentComponent = True
+        Exit Function
+    End If
+
+    If HostDocument Is Nothing Then Exit Function
+
+    Dim Sheet As Object
+    For Each Sheet In HostDocument.Worksheets
+        If StrComp(Sheet.CodeName, Component.Name, vbTextCompare) = 0 Then
+            IsDocumentComponent = True
+            Exit Function
+        End If
+    Next Sheet
+
+ExitFunction:
 End Function
 
 Private Function GetReference(Project As VBProject, Guid As String, MajorVersion As Long, MinorVersion As Long) As Reference
