@@ -1,17 +1,18 @@
-import dedent from "@timhall/dedent";
 import { Args } from "mri";
 import { runHostCommand, HostCloseScope } from "../actions/host";
 import { CliError, ErrorCode } from "../errors";
 
-const help = dedent`
-  Inspect or close running Excel instances on Windows.
-
-	Usage: vbapm host [options]
-
-  Options:
-    --close-all       Close every running Excel instance
-    --close-visible   Close every visible Excel instance
-    --close-invisible Close every invisible Excel instance`;
+const help = [
+	"Inspect or close running Excel instances on Windows.",
+	"",
+	"Usage: vbapm host [options]",
+	"",
+	"Options:",
+	"  --close-all       Close every running Excel instance",
+	"  --close-visible   Close every visible Excel instance",
+	"  --close-invisible Close every invisible Excel instance",
+	"  --force           Close visible instances even when unsaved workbooks are found"
+].join("\n");
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -33,6 +34,6 @@ export default async function (args: Args) {
 		);
 	}
 
-	const output = await runHostCommand(selected[0]?.[1]);
+	const output = await runHostCommand(selected[0]?.[1], !!args.force);
 	if (output) console.log(output);
 }
