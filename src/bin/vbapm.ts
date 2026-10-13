@@ -28,6 +28,7 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	update: async () => (await import("./vbapm-update")).default,
 	open: async () => (await import("./vbapm-open")).default,
 	close: async () => (await import("./vbapm-close")).default,
+	host: async () => (await import("./vbapm-host")).default,
 	run: async () => (await import("./vbapm-run")).default,
 	version: async () => (await import("./vbapm-version")).default,
 	manifest: async () => (await import("./vbapm-manifest")).default
@@ -68,6 +69,7 @@ const help = dedent`
     - update        Update VBA source in a built target
     - open          Open the current built target file
     - close         Close the current built target file
+    - host          Inspect or close running Excel instances (Windows only)
     - run           Run macro in document / add-in
     - help          Outputs this message or the help of the given command
 

@@ -81,6 +81,9 @@ export enum ErrorCode {
 	OpenTargetNotBuilt = "open-target-not-built",
 	OpenTargetFailed = "open-target-failed",
 	CloseTargetUnsavedChanges = "close-target-unsaved-changes",
+	HostUnsupportedPlatform = "host-unsupported-platform",
+	HostCommandFailed = "host-command-failed",
+	HostOptionsConflict = "host-options-conflict",
 	SourceNameMismatch = "source-name-mismatch",
 	PeerReferenceMissingPath = "peer-reference-missing-path"
 }
