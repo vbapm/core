@@ -157,6 +157,8 @@ Public Function ExportTo(Info As Variant) As String
 
     Dim CompInfo As Dictionary
     Dim CompType As String
+    Dim ComponentNameProperty As Object
+    Dim WorksheetName As String
 
     ' Collect component metadata (name + type) so the CLI can distinguish
     ' document objects (vbext_ct_Document) from class modules (.cls).
@@ -179,6 +181,16 @@ Public Function ExportTo(Info As Variant) As String
         Set CompInfo = New Dictionary
         CompInfo("name") = Component.Name
         CompInfo("type") = CompType
+        If CompType = "object" And Component.Name <> "ThisWorkbook" Then
+            WorksheetName = ""
+            Set ComponentNameProperty = Nothing
+            On Error Resume Next
+            Set ComponentNameProperty = Component.Properties("Name")
+            If Not ComponentNameProperty Is Nothing Then WorksheetName = CStr(ComponentNameProperty.Value)
+            Err.Clear
+            On Error GoTo ErrorHandling
+            If WorksheetName <> "" Then CompInfo("worksheetName") = WorksheetName
+        End If
         Project("components").Add CompInfo
     Next Component
 

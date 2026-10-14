@@ -111,7 +111,8 @@ async function readPreviousWorksheetNames(
  */
 export async function normalizeWorksheetNames(
 	extractedDir: string,
-	previousTargetDir?: string
+	previousTargetDir?: string,
+	worksheetCodeNames: Map<string, string> = new Map()
 ): Promise<void> {
 	const xlDir = join(extractedDir, "xl");
 	const relsPath = join(xlDir, "_rels", "workbook.xml.rels");
@@ -153,11 +154,17 @@ export async function normalizeWorksheetNames(
 	const relationshipToSheetId = new Map(
 		[...currentSheetIds.entries()].map(([sheetId, relationshipId]) => [relationshipId, sheetId])
 	);
+	const relationshipToSheetName = extractSheetNames(
+		(await pathExists(currentWorkbookPath))
+			? await readFile(currentWorkbookPath)
+			: Buffer.from("")
+	);
 
 	// --- 2. Determine desired filename for each worksheet ---
 	// rId → desired relative target (e.g. "worksheets/shtSheet1.xml")
 	const renames = new Map<string, string>(); // currentAbsPath → desiredAbsPath
 	const ridToDesiredTarget = new Map<string, string>(); // rId → desired relative target
+	const usedDesiredTargets = new Set<string>();
 
 	for (const rel of worksheetRels) {
 		const currentAbs = join(xlDir, rel.target);
@@ -169,7 +176,9 @@ export async function normalizeWorksheetNames(
 		}
 
 		const buf = (await readFile(currentAbs)) as unknown as Buffer;
-		const codeName = extractCodeName(buf);
+		const worksheetName = relationshipToSheetName.get(rel.id);
+		const codeName =
+			(worksheetName && worksheetCodeNames.get(worksheetName)) ?? extractCodeName(buf);
 		const previousName = previousNames.get(relationshipToSheetId.get(rel.id) ?? "");
 		const desiredFilename = codeName
 			? `sht${codeName}.xml`
@@ -186,6 +195,12 @@ export async function normalizeWorksheetNames(
 		const dir = rel.target.substring(0, rel.target.lastIndexOf("/") + 1); // e.g. "worksheets/"
 		const desiredTarget = dir + desiredFilename;
 		const desiredAbs = join(xlDir, desiredTarget);
+		if (usedDesiredTargets.has(desiredTarget)) {
+			debug(`Duplicate stable name for ${currentAbs}, keeping current name`);
+			ridToDesiredTarget.set(rel.id, rel.target);
+			continue;
+		}
+		usedDesiredTargets.add(desiredTarget);
 
 		ridToDesiredTarget.set(rel.id, desiredTarget);
 
@@ -283,4 +298,22 @@ export async function normalizeWorksheetNames(
 		await writeFile(contentTypesPath, formatted);
 		debug("[Content_Types].xml updated");
 	}
+}
+
+function extractSheetNames(xmlBuf: Buffer): Map<string, string> {
+	if (xmlBuf.length === 0) return new Map();
+	const xml = parseXml(xmlBuf.toString("utf8"));
+	const workbook = findElementByName(xml.elements, "workbook");
+	const sheets = findElementByName(workbook?.elements, "sheets");
+	const result = new Map<string, string>();
+
+	for (const sheet of sheets?.elements ?? []) {
+		const name = sheet.attributes?.name;
+		const relationshipId = sheet.attributes?.["r:id"];
+		if (typeof name === "string" && typeof relationshipId === "string") {
+			result.set(relationshipId, name);
+		}
+	}
+
+	return result;
 }

@@ -11,7 +11,7 @@ import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
 import { Target } from "../manifest/target";
 import { Project } from "../project";
-import { copy, ensureDir, pathExists, remove } from "../utils/fs";
+import { copy, ensureDir, pathExists, readJson, remove } from "../utils/fs";
 import { dirname, join } from "../utils/path";
 import { unzip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
@@ -54,7 +54,11 @@ export async function exportTarget(
 		extracted = await extractTarget(project, target, staging);
 		await preserveWorksheetSelections(extracted, previousWorksheetData);
 		if (!skipSheetNameNormalization) {
-			await normalizeWorksheetNames(extracted, target.path);
+			await normalizeWorksheetNames(
+				extracted,
+				target.path,
+				await readWorksheetCodeNames(staging)
+			);
 		}
 	}
 
@@ -98,6 +102,27 @@ export async function exportTarget(
 
 	// Finally, cleanup staging
 	await remove(staging);
+}
+
+async function readWorksheetCodeNames(staging: string): Promise<Map<string, string>> {
+	const projectPath = join(staging, "project.json");
+	if (!(await pathExists(projectPath))) return new Map();
+
+	const info = (await readJson(projectPath)) as {
+		components?: Array<{ name?: unknown; type?: unknown; worksheetName?: unknown }>;
+	};
+	const codeNames = new Map<string, string>();
+	for (const component of info.components ?? []) {
+		if (
+			component.type === "object" &&
+			typeof component.name === "string" &&
+			typeof component.worksheetName === "string"
+		) {
+			codeNames.set(component.worksheetName, component.name);
+		}
+	}
+
+	return codeNames;
 }
 
 export async function extractTarget(

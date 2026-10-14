@@ -110,6 +110,32 @@ describe("normalizeWorksheetNames", () => {
 		expect(await fileExists("xl/worksheets/_rels/sheet4.xml.rels")).toBe(false);
 	});
 
+	test("uses exported VBA worksheet metadata when codeName is missing", async () => {
+		await ensureDir(join(tmp, "xl", "_rels"));
+		await ensureDir(join(tmp, "xl", "worksheets", "_rels"));
+		await writeFile(
+			join(tmp, "xl", "workbook.xml"),
+			`<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Historical Candidates" sheetId="8" r:id="rId8"/></sheets></workbook>`
+		);
+		await writeFile(
+			join(tmp, "xl", "_rels", "workbook.xml.rels"),
+			`<Relationships><Relationship Id="rId8" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet8.xml"/></Relationships>`
+		);
+		await writeFile(
+			join(tmp, "xl", "worksheets", "sheet8.xml"),
+			`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1"/></worksheet>`
+		);
+		await writeFile(
+			join(tmp, "xl", "worksheets", "_rels", "sheet8.xml.rels"),
+			`<Relationships/>`
+		);
+
+		await normalizeWorksheetNames(tmp, undefined, new Map([["Historical Candidates", "Sheet8"]]));
+
+		expect(await fileExists("xl/worksheets/shtSheet8.xml")).toBe(true);
+		expect(await fileExists("xl/worksheets/_rels/shtSheet8.xml.rels")).toBe(true);
+	});
+
 	test("no-op when worksheet already has the sht{codeName}.xml name", async () => {
 		await copyFixture("already-correct");
 		await normalizeWorksheetNames(tmp);
