@@ -292,8 +292,12 @@ class Excel {
 
 		try {
 			$this.App = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
-			$this.ExcelWasOpen = $true
-			Write-BridgeLog "attach=get-active-object appWasOpen=true"
+			if ($null -ne $this.App) {
+				$this.ExcelWasOpen = $true
+				Write-BridgeLog "attach=get-active-object appWasOpen=true"
+			} else {
+				Write-BridgeLog "attach=get-active-object returned-null"
+			}
 		} catch {
 			Write-BridgeLog "attach=get-active-object failed error=$($_.Exception.Message)"
 			# Excel not running; fall through to create a new instance
