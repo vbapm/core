@@ -40,4 +40,29 @@ describe("openTarget", () => {
 			);
 		}
 	});
+
+	test("reports when Excel is unavailable to open the target", async () => {
+		if (process.platform !== "win32") return;
+
+		const launcher = Object.assign(new EventEmitter(), { ref: jest.fn() });
+		const readinessCheck = Object.assign(new EventEmitter(), {
+			stdout: new EventEmitter(),
+			stderr: new EventEmitter()
+		});
+		(open as jest.Mock).mockImplementationOnce(async () => {
+			setImmediate(() => launcher.emit("close", 0));
+			return launcher;
+		});
+		(spawn as jest.Mock).mockImplementationOnce(() => {
+			setImmediate(() => {
+				readinessCheck.stderr.emit("data", "Excel is not available to open the target.");
+				readinessCheck.emit("close", 1);
+			});
+			return readinessCheck;
+		});
+
+		await expect(openTarget("build/demo.xlsm")).rejects.toThrow(
+			"Excel is not available to open the target."
+		);
+	});
 });

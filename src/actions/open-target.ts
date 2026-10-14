@@ -37,10 +37,7 @@ export async function openTarget(target: string): Promise<boolean> {
 	try {
 		const childProcess = await open(target, { wait: false });
 		childProcess.ref();
-		const exitCode = await new Promise<number | null>((resolve, reject) => {
-			childProcess.once("error", reject);
-			childProcess.once("close", resolve);
-		});
+		const exitCode = await waitForProcess(childProcess);
 		if (exitCode !== 0) {
 			throw new Error(`Launcher exited with code ${exitCode}`);
 		}
@@ -58,6 +55,13 @@ export async function openTarget(target: string): Promise<boolean> {
       `
 		);
 	}
+}
+
+function waitForProcess(childProcess: ReturnType<typeof spawn>): Promise<number | null> {
+	return new Promise((resolve, reject) => {
+		childProcess.once("error", reject);
+		childProcess.once("close", resolve);
+	});
 }
 
 async function waitForExcelWorkbook(target: string): Promise<void> {

@@ -105,5 +105,5 @@ while ([DateTime]::UtcNow -le $deadline) {
 	if ($PollMilliseconds -gt 0) { Start-Sleep -Milliseconds $PollMilliseconds }
 }
 
-Write-Error "Timed out after $TimeoutSeconds seconds waiting for Excel to open '$fullPath'."
+Write-Error "Excel is not available to open '$fullPath'. Close any open Excel dialog and try again."
 exit 1
