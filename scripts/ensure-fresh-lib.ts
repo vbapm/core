@@ -1,5 +1,6 @@
 /**
- * Ensures the compiled `lib/` folder is up to date before running tests.
+ * Ensures the compiled `lib/` folder is up to date before running tests or
+ * deploying the development build.
  *
  * This script compares the modification time of the build outputs against
  * every source input. If any input is newer than the output, the build is
@@ -14,15 +15,20 @@
  *   - `rollup.config.mjs` (build configuration)
  *   - `package.json` (`dependencies` changes can affect the bundle)
  *
- * When stale, it runs `pnpm run build:cli` to rebuild `lib/` and ensure the
- * vendored Node runtime is present, then exits with that command's status.
+ * Without `--dev`, it checks for a production build and runs `pnpm run build:cli`
+ * when stale. With `--dev`, it checks for a development build and runs
+ * `pnpm run build:dev` when stale. A mode record prevents either build from
+ * being mistaken for the other.
  */
 const { execSync } = require("node:child_process");
-const { readdirSync, statSync, existsSync } = require("node:fs");
+const { readFileSync, readdirSync, statSync, existsSync, writeFileSync } = require("node:fs");
 const { join, resolve } = require("node:path");
 
 const ROOT = resolve(__dirname, "..");
 const BUILD_EMOJI = "📦";
+const BUILD_MODE = process.argv.includes("--dev") ? "development" : "production";
+const BUILD_MODE_FILE = join(ROOT, "lib", ".build-mode");
+const BUILD_COMMAND = BUILD_MODE === "development" ? "pnpm run build:dev" : "pnpm run build:cli";
 
 const OUTPUTS = ["lib/vbapm.js", "lib/index.js"];
 const INPUT_ROOTS = ["src"];
@@ -84,6 +90,14 @@ function isStale(): { stale: boolean; reason?: string } {
 		return { stale: true, reason: `missing build output: ${missing.join(", ")}` };
 	}
 
+	if (!existsSync(BUILD_MODE_FILE)) {
+		return { stale: true, reason: `missing build mode record: ${BUILD_MODE_FILE}` };
+	}
+
+	if (readFileSync(BUILD_MODE_FILE, "utf8").trim() !== BUILD_MODE) {
+		return { stale: true, reason: `build output is not a ${BUILD_MODE} build` };
+	}
+
 	const inputs = INPUT_ROOTS.flatMap(r => walk(join(ROOT, r)));
 	for (const p of EXTRA_INPUTS) {
 		inputs.push(join(ROOT, p));
@@ -109,20 +123,22 @@ function main(): void {
 	const { stale, reason } = isStale();
 
 	if (!stale) {
-		console.log(`[ensure-fresh-libry] ${BUILD_EMOJI} lib/ is up to date - skipping rebuild 🚀`);
+		console.log(`[ensure-fresh-lib] ${BUILD_EMOJI} lib/ is up to date - skipping rebuild 🚀`);
 		return;
 	}
 
-	console.log(`[ensure-fresh-libry] ${BUILD_EMOJI} lib/ is stale (${reason}) - rebuilding...`);
+	console.log(`[ensure-fresh-lib] ${BUILD_EMOJI} lib/ is stale (${reason}) - rebuilding...`);
 	try {
-		execSync("pnpm run build:cli", { cwd: ROOT, stdio: "inherit" });
+		execSync(BUILD_COMMAND, { cwd: ROOT, stdio: "inherit" });
 	} catch (err: unknown) {
 		const code =
 			err && typeof err === "object" && "status" in err ? (err as { status: number }).status : 1;
 		process.exit(typeof code === "number" ? code : 1);
 	}
 
-	console.log(`[ensure-fresh-libry] ${BUILD_EMOJI} rebuild complete.`);
+	writeFileSync(BUILD_MODE_FILE, `${BUILD_MODE}\n`, "utf8");
+
+	console.log(`[ensure-fresh-lib] ${BUILD_EMOJI} rebuild complete.`);
 }
 
 main();
