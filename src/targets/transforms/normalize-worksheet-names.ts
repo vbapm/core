@@ -38,6 +38,11 @@ interface RelEntry {
 	target: string; // relative path from xl/, e.g. "worksheets/sheet1.xml"
 }
 
+interface PreviousWorksheetName {
+	sheetId: string;
+	target: string;
+}
+
 /**
  * Reads <sheetPr codeName="…"/> from a worksheet XML buffer.
  * Returns undefined if not present.
@@ -51,13 +56,63 @@ function extractCodeName(xmlBuf: Buffer): string | undefined {
 	return sheetPr.attributes.codeName as string | undefined;
 }
 
+function extractSheetIds(xmlBuf: Buffer): Map<string, string> {
+	const xml = parseXml(xmlBuf.toString("utf8"));
+	const workbook = findElementByName(xml.elements, "workbook");
+	const sheets = findElementByName(workbook?.elements, "sheets");
+	const result = new Map<string, string>();
+
+	for (const sheet of sheets?.elements ?? []) {
+		const sheetId = sheet.attributes?.sheetId;
+		const relationshipId = sheet.attributes?.["r:id"];
+		if (typeof sheetId === "string" && typeof relationshipId === "string") {
+			result.set(sheetId, relationshipId);
+		}
+	}
+
+	return result;
+}
+
+async function readPreviousWorksheetNames(
+	root: string
+): Promise<Map<string, PreviousWorksheetName>> {
+	const workbookPath = join(root, "xl", "workbook.xml");
+	const relsPath = join(root, "xl", "_rels", "workbook.xml.rels");
+	if (!(await pathExists(workbookPath)) || !(await pathExists(relsPath))) return new Map();
+
+	const sheetRelationships = extractSheetIds(await readFile(workbookPath));
+	const relsXml = parseXml(await readFile(relsPath));
+	const relationships = findElementByName(relsXml.elements, "Relationships");
+	if (!relationships) return new Map();
+
+	const targets = new Map<string, string>();
+	for (const relationship of relationships.elements ?? []) {
+		const id = relationship.attributes?.Id;
+		const target = relationship.attributes?.Target;
+		if (typeof id === "string" && typeof target === "string") targets.set(id, target);
+	}
+
+	const result = new Map<string, PreviousWorksheetName>();
+	for (const [sheetId, relationshipId] of sheetRelationships) {
+		const target = targets.get(relationshipId);
+		if (target && /(?:^|\/)sht[^/]+\.xml$/i.test(target)) {
+			result.set(sheetId, { sheetId, target });
+		}
+	}
+
+	return result;
+}
+
 /**
  * Run after extraction into `extractedDir`.
  *
  * @param extractedDir  Root of the unzipped workbook (contains [Content_Types].xml,
  *                      xl/, etc.).
  */
-export async function normalizeWorksheetNames(extractedDir: string): Promise<void> {
+export async function normalizeWorksheetNames(
+	extractedDir: string,
+	previousTargetDir?: string
+): Promise<void> {
 	const xlDir = join(extractedDir, "xl");
 	const relsPath = join(xlDir, "_rels", "workbook.xml.rels");
 	const contentTypesPath = join(extractedDir, "[Content_Types].xml");
@@ -88,6 +143,16 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 		debug("No worksheet relationships found, skipping");
 		return;
 	}
+	const previousNames = previousTargetDir
+		? await readPreviousWorksheetNames(previousTargetDir)
+		: new Map<string, PreviousWorksheetName>();
+	const currentWorkbookPath = join(extractedDir, "xl", "workbook.xml");
+	const currentSheetIds = (await pathExists(currentWorkbookPath))
+		? extractSheetIds(await readFile(currentWorkbookPath))
+		: new Map<string, string>();
+	const relationshipToSheetId = new Map(
+		[...currentSheetIds.entries()].map(([sheetId, relationshipId]) => [relationshipId, sheetId])
+	);
 
 	// --- 2. Determine desired filename for each worksheet ---
 	// rId → desired relative target (e.g. "worksheets/shtSheet1.xml")
@@ -105,13 +170,18 @@ export async function normalizeWorksheetNames(extractedDir: string): Promise<voi
 
 		const buf = (await readFile(currentAbs)) as unknown as Buffer;
 		const codeName = extractCodeName(buf);
-		if (!codeName) {
-			debug(`No codeName found in ${currentAbs}, keeping current name`);
+		const previousName = previousNames.get(relationshipToSheetId.get(rel.id) ?? "");
+		const desiredFilename = codeName
+			? `sht${codeName}.xml`
+			: previousName
+				? basename(previousName.target)
+				: undefined;
+		if (!desiredFilename) {
+			debug(`No stable name found for ${currentAbs}, keeping current name`);
 			ridToDesiredTarget.set(rel.id, rel.target);
 			continue;
 		}
 
-		const desiredFilename = `sht${codeName}.xml`;
 		const existingFilename = basename(rel.target);
 		const dir = rel.target.substring(0, rel.target.lastIndexOf("/") + 1); // e.g. "worksheets/"
 		const desiredTarget = dir + desiredFilename;

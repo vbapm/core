@@ -54,7 +54,7 @@ export async function exportTarget(
 		extracted = await extractTarget(project, target, staging);
 		await preserveWorksheetSelections(extracted, previousWorksheetData);
 		if (!skipSheetNameNormalization) {
-			await normalizeWorksheetNames(extracted);
+			await normalizeWorksheetNames(extracted, target.path);
 		}
 	}
 

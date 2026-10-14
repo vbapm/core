@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { copy } from "fs-extra";
+import { copy, ensureDir, writeFile } from "fs-extra";
 import { pathExists, readFile } from "../../../utils/fs";
 import { parseXml, findElement, findElementByName } from "../../../utils/xml";
 import { normalizeWorksheetNames } from "../normalize-worksheet-names";
@@ -71,6 +71,43 @@ describe("normalizeWorksheetNames", () => {
 
 		expect(await fileExists("xl/worksheets/sheet1.xml")).toBe(true);
 		expect(await fileExists("xl/worksheets/shtSheet1.xml")).toBe(false);
+	});
+
+	test("restores a previous stable name when the new sheet has no codeName", async () => {
+		const previous = join(tmp, "previous");
+		await ensureDir(join(previous, "xl", "_rels"));
+		await ensureDir(join(previous, "xl", "worksheets"));
+		await writeFile(
+			join(previous, "xl", "workbook.xml"),
+			`<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet sheetId="4" r:id="rId4"/></sheets></workbook>`
+		);
+		await writeFile(
+			join(previous, "xl", "_rels", "workbook.xml.rels"),
+			`<Relationships><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/shtSheet4.xml"/></Relationships>`
+		);
+
+		await ensureDir(join(tmp, "xl", "_rels"));
+		await ensureDir(join(tmp, "xl", "worksheets", "_rels"));
+		await writeFile(
+			join(tmp, "xl", "workbook.xml"),
+			`<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet sheetId="4" r:id="rId4"/></sheets></workbook>`
+		);
+		await writeFile(
+			join(tmp, "xl", "_rels", "workbook.xml.rels"),
+			`<Relationships><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/></Relationships>`
+		);
+		await writeFile(
+			join(tmp, "xl", "worksheets", "sheet4.xml"),
+			`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1"/></worksheet>`
+		);
+		await writeFile(join(tmp, "xl", "worksheets", "_rels", "sheet4.xml.rels"), `<Relationships/>`);
+
+		await normalizeWorksheetNames(tmp, previous);
+
+		expect(await fileExists("xl/worksheets/shtSheet4.xml")).toBe(true);
+		expect(await fileExists("xl/worksheets/sheet4.xml")).toBe(false);
+		expect(await fileExists("xl/worksheets/_rels/shtSheet4.xml.rels")).toBe(true);
+		expect(await fileExists("xl/worksheets/_rels/sheet4.xml.rels")).toBe(false);
 	});
 
 	test("no-op when worksheet already has the sht{codeName}.xml name", async () => {
