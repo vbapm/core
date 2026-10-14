@@ -30,8 +30,16 @@ export async function getTargetPath(target?: string): Promise<string> {
 
 export async function openTarget(target: string): Promise<boolean> {
 	try {
-		const childProcess = await open(target, { wait: true });
-		return childProcess.exitCode === 0;
+		const childProcess = await open(target, { wait: false });
+		childProcess.ref();
+		const exitCode = await new Promise<number | null>((resolve, reject) => {
+			childProcess.once("error", reject);
+			childProcess.once("close", resolve);
+		});
+		if (exitCode !== 0) {
+			throw new Error(`Launcher exited with code ${exitCode}`);
+		}
+		return true;
 	} catch (error) {
 		const reason = error instanceof Error && error.message ? `\n\nReason: ${error.message}` : "";
 

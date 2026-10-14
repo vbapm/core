@@ -20,7 +20,7 @@ CLI: vbapm open [--target=TYPE]
   ↓
 getTargetPath() → resolves build/target.xlsx
   ↓
-openTarget(path) → Node.js open(path, { wait: true })
+openTarget(path) → Node.js open(path, { wait: false })
   ↓
 System default app opens the file
 ```
