@@ -1,6 +1,6 @@
 import { Reference } from "../manifest/reference";
 import { Source } from "../manifest/source";
-import { Component } from "./component";
+import { Component, ComponentType } from "./component";
 
 export interface FromDependences {
 	components: Map<Component, string>;
@@ -16,6 +16,6 @@ export interface BuildGraph {
 
 export interface ImportGraph {
 	name: string;
-	components: Source[];
+	components: (Source & { type: ComponentType })[];
 	references: Reference[];
 }

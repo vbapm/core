@@ -4,7 +4,7 @@ import walk from "walk-sync";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
 import { Message } from "../messages";
-import { Manifest } from "../manifest";
+import { Manifest, resolveSrcFolder, resolveSrcSubfolders } from "../manifest";
 import { Reference } from "../manifest/reference";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
@@ -56,6 +56,7 @@ export async function loadFromProject(
 					const absPath = join(baseDir, file);
 					loadingComponents.push(
 						Component.load(absPath, codepage, {}).then(component => {
+							markObjectComponent(component, project, absPath);
 							component.details.sourceEncoding = declaredLabel;
 							if (manifest !== project.manifest) {
 								fromDependencies.components.set(component, manifest.name);
@@ -67,6 +68,7 @@ export async function loadFromProject(
 			} else {
 				loadingComponents.push(
 					Component.load(source.path, codepage, { binary_path: source.binary }).then(component => {
+						markObjectComponent(component, project, source.path);
 						component.details.sourceEncoding = declaredLabel;
 						if (manifest !== project.manifest) {
 							fromDependencies.components.set(component, manifest.name);
@@ -279,4 +281,19 @@ function validateSrcNames(project: Project, components: Component[]): void {
 			);
 		}
 	}
+}
+
+function markObjectComponent(component: Component, project: Project, sourcePath: string): void {
+	const objectSubfolder = project.manifest.srcProperties?.subfolders?.Objects;
+	if (!objectSubfolder) return;
+
+	const sourceFolder = relative(project.paths.dir, sourcePath).toLowerCase();
+	const objectFolder = join(
+		resolveSrcFolder(project.manifest.srcProperties),
+		resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, "object")
+	)
+		.toLowerCase()
+		.replace(/\/$/, "");
+
+	if (sourceFolder.startsWith(`${objectFolder}/`)) component.type = "object";
 }

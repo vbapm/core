@@ -49,7 +49,15 @@ Public Function ImportGraph(Graph As Variant) As String
     Dim Src As Dictionary
     For Each Src In Values("src")
         Output.Messages.Add "src: " & Src("name") & ", " & Src("path")
-        Installer.Import Document.VBProject, Src("name"), Src("path"), Overwrite:=True, HostDocument:=Document
+        If Src.Exists("type") Then
+            If Src("type") = "object" Then
+                Installer.Import Document.VBProject, Src("name"), Src("path"), Overwrite:=True, HostDocument:=Document, RequireDocument:=True
+            Else
+                Installer.Import Document.VBProject, Src("name"), Src("path"), Overwrite:=True, HostDocument:=Document
+            End If
+        Else
+            Installer.Import Document.VBProject, Src("name"), Src("path"), Overwrite:=True, HostDocument:=Document
+        End If
     Next Src
 
     Dim Ref As Dictionary

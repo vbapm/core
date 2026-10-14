@@ -19,6 +19,7 @@ Attribute VB_Name = "Installer"
 ' 10110 - Failed to remove reference
 ' 10111 - Component imported with errors
 ' 10112 - Failed to add project reference
+' 10113 - Required document object not found
 '
 ' @module Installer
 ' @author Tim Hall <tim.hall.engr@gmail.com>
@@ -36,7 +37,7 @@ Attribute VB_Name = "Installer"
 ' Installer.Import ThisWorkbook.Project, "ModuleName", ImportPath
 ' ```
 ''
-Public Sub Import(Project As VBProject, ComponentName As String, FullPath As String, Optional Overwrite As Boolean = False, Optional HostDocument As Object)
+Public Sub Import(Project As VBProject, ComponentName As String, FullPath As String, Optional Overwrite As Boolean = False, Optional HostDocument As Object, Optional RequireDocument As Boolean = False)
     Precheck Project
 
     If Not FileSystem.FileExists(FullPath) Then
@@ -46,6 +47,17 @@ Public Sub Import(Project As VBProject, ComponentName As String, FullPath As Str
 
     Dim ExistingComponent As VBComponent
     Set ExistingComponent = GetComponent(Project, ComponentName)
+
+    If RequireDocument Then
+        If ExistingComponent Is Nothing Then
+            Err.Raise 10113 + &H30000 + vbObjectError, "Installer.Import", _
+                "[10113] Required Excel object not found. No document object named """ & ComponentName & """ exists in the target workbook."
+        End If
+        If Not IsDocumentComponent(ExistingComponent, HostDocument) Then
+            Err.Raise 10113 + &H30000 + vbObjectError, "Installer.Import", _
+                "[10113] Required Excel object not found. No document object named """ & ComponentName & """ exists in the target workbook."
+        End If
+    End If
 
     If Not ExistingComponent Is Nothing Then
         If Not Overwrite Then

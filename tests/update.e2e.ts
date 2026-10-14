@@ -2,14 +2,25 @@
  * End-to-end tests for `vba update`.
  */
 
-import { readFile, writeFile } from "fs-extra";
+import { copy, ensureDir, readFile, writeFile } from "fs-extra";
 import { join } from "path";
-import { dev, targetless } from "./__fixtures__";
+import { dev, targetless, wildcard } from "./__fixtures__";
 import { execute, setup } from "./__helpers__/execute";
 
 jest.setTimeout(180000);
 
 describe("update", () => {
+	test("update rejects Excel objects missing from the target workbook", async () => {
+		await setup(wildcard, "update-missing-object", async cwd => {
+			await ensureDir(join(cwd, "build"));
+			await copy(join(cwd, "targets", "xlsm"), join(cwd, "build", "wildcard.xlsm"));
+
+			await expect(execute(cwd, "update --target xlsm")).rejects.toMatchObject({
+				stderr: expect.stringContaining("Required Excel object not found")
+			});
+		});
+	});
+
 	test("update --target writes src changes into the specified built target", async () => {
 		await setup(targetless, "update-target", async cwd => {
 			// 1. Build the package with explicit --target (targetless has no default target)

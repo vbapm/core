@@ -47,7 +47,7 @@ export async function stageBuildGraph(
 			await writeFile(binaryPath, component.details.binary);
 		}
 
-		return { name: component.name, path };
+		return { name: component.name, path, type: component.type };
 	});
 
 	return {

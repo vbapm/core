@@ -24,7 +24,9 @@ test("should stage BuildGraph", async () => {
 	}
 });
 
-function normalizeImportGraph(graph: ImportGraph): ImportGraph {
+function normalizeImportGraph(
+	graph: ImportGraph
+): Omit<ImportGraph, "components"> & { components: { name: string; path: string }[] } {
 	const { name, references } = graph;
 	const components = graph.components.map(source => {
 		return {
