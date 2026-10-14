@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The top-level `[src]` section in `vbaproject.toml` is deprecated in favor of `[source.files]`. Legacy manifests remain valid: `[src]` entries are treated as `[source.files]`, but a deprecation warning is printed until the manifest is updated.
 
 ### Added
+- `vba host --close-addin` to close and unload the active Excel session's `vbapm.xlam` add-in without closing other workbooks.
 - Windows-only `vba host` command to inspect running Excel instances and close all, visible, or invisible instances. Closing visible instances requires `--force` when unsaved or uninspectable workbooks are detected.
 - `--vba-only` option for `vba build`, equivalent to `vba update`, to update VBA in an existing built target without rebuilding the workbook.
 - `vba extract` command as the new canonical name for extracting source from a built target (replaces `vba export`).

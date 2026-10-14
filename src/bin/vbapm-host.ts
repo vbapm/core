@@ -11,6 +11,7 @@ const help = [
 	"  --close-all       Close every running Excel instance",
 	"  --close-visible   Close every visible Excel instance",
 	"  --close-invisible Close every invisible Excel instance",
+	"  --close-addin     Close the vbapm.xlam add-in in the active Excel instance",
 	"  --force           Close visible instances even when unsaved workbooks are found"
 ].join("\n");
 
@@ -23,7 +24,8 @@ export default async function (args: Args) {
 	const scopes: Array<[string, HostCloseScope]> = [
 		["close-all", "all"],
 		["close-visible", "visible"],
-		["close-invisible", "invisible"]
+		["close-invisible", "invisible"],
+		["close-addin", "addin"]
 	];
 	const selected = scopes.filter(([name]) => !!args[name]);
 

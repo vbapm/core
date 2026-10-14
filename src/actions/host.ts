@@ -4,7 +4,7 @@ import { CliError, ErrorCode } from "../errors";
 import { pathExists } from "../utils/fs";
 import { join } from "../utils/path";
 
-export type HostCloseScope = "all" | "visible" | "invisible";
+export type HostCloseScope = "all" | "visible" | "invisible" | "addin";
 
 export async function runHostCommand(closeScope?: HostCloseScope, force = false): Promise<string> {
 	if (!env.isWindows) {

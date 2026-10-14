@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('list', 'close-all', 'close-visible', 'close-invisible')]
+    [ValidateSet('list', 'close-all', 'close-visible', 'close-invisible', 'close-addin')]
     [string]$Action = 'list',
     [switch]$Force
 )
@@ -157,6 +157,45 @@ function Get-VisibleUnsavedWorkbooks {
     return [pscustomobject]@{ unsaved = @($unsaved); uninspected = @($uninspected) }
 }
 
+function Close-VbapmAddin {
+    param([Parameter(Mandatory)][object]$Application)
+
+    $workbook = $null
+    $closed = $false
+    $disabled = $false
+
+    try {
+        try { $workbook = $Application.Workbooks.Item('vbapm.xlam') } catch {}
+        if ($workbook) {
+            $workbook.Close($false)
+            $closed = $true
+        }
+
+        foreach ($addin in @($Application.AddIns)) {
+            try {
+                $name = [string]$addin.Name
+                $fullName = [string]$addin.FullName
+                if ($name -ieq 'vbapm' -or $name -ieq 'vbapm.xlam' -or $fullName -match '\\vbapm\.xlam$') {
+                    if ([bool]$addin.Installed) {
+                        $addin.Installed = $false
+                        $disabled = $true
+                    }
+                }
+            } finally {
+                try { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($addin) | Out-Null } catch {}
+            }
+        }
+    } finally {
+        if ($workbook) { try { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbook) | Out-Null } catch {} }
+    }
+
+    return [pscustomobject]@{ closed = $closed; disabled = $disabled }
+}
+
+function Get-ActiveExcelApplication {
+    try { return [Runtime.InteropServices.Marshal]::GetActiveObject('Excel.Application') } catch { return $null }
+}
+
 $instances = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue | ForEach-Object {
     Get-ExcelInstanceInfo -Process $_
 })
@@ -167,6 +206,46 @@ if ($Action -eq 'list') {
         count     = $instances.Count
         instances = @($instances)
     } | ConvertTo-Json -Depth 5
+    exit 0
+}
+
+if ($Action -eq 'close-addin') {
+    $closed = @()
+    $notFound = @()
+    $failed = @()
+
+    $app = Get-ActiveExcelApplication
+    if ($app) {
+        try {
+            $result = Close-VbapmAddin -Application $app
+            if ($result.closed -or $result.disabled) {
+                $closed += [pscustomobject]@{
+                    workbook = [bool]$result.closed
+                    addin    = [bool]$result.disabled
+                }
+            } else {
+                $notFound += $true
+            }
+        } catch {
+            $failed += [pscustomobject]@{
+                message = $_.Exception.Message
+            }
+        } finally {
+            try { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
+        }
+    } else {
+        $notFound += $true
+    }
+
+    [pscustomobject]@{
+        action   = $Action
+        requested = $closed.Count + $notFound.Count + $failed.Count
+        closed   = @($closed)
+        notFound = @($notFound)
+        failed   = @($failed)
+    } | ConvertTo-Json -Depth 5
+
+    if ($failed.Count -gt 0) { exit 1 }
     exit 0
 }
 
