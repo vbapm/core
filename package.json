@@ -67,7 +67,7 @@
         "clean": "rimraf lib && rimraf dist && rimraf addins/build",
         "clean:excel": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ps/Close-AllInvisibleExcelInstances.ps1",
         "clean:e2e": "node scripts/clean-e2e.js",
-        "deploy:dev": "pnpm run build:dev:check && powershell -ExecutionPolicy Bypass -File ./installer/devinstall.ps1"
+        "deploy:dev": "pnpm run build:dev:check && node scripts/ensure-fresh-addin.ts && powershell -ExecutionPolicy Bypass -File ./installer/devinstall.ps1"
     },
     "dependencies": {
         "@decimalturn/toml-patch": "^3.0.0",
