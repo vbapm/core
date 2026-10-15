@@ -1,5 +1,12 @@
 # Excel COM lookup on Windows
 
+## PowerShell runtime
+
+Excel/VBE automation is intended to run under Windows PowerShell 5.1
+(`powershell.exe`). PowerShell 7 (`pwsh`) may invoke compatible entry points,
+but those scripts re-launch the COM work under Windows PowerShell. CI steps
+that use `pwsh` for non-COM tests do not change this requirement.
+
 ## How to get the only Excel instance?
 
 When there is exactly one running Excel instance, this can attach to it:
