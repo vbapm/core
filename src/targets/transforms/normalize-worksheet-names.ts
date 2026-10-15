@@ -155,9 +155,7 @@ export async function normalizeWorksheetNames(
 		[...currentSheetIds.entries()].map(([sheetId, relationshipId]) => [relationshipId, sheetId])
 	);
 	const relationshipToSheetName = extractSheetNames(
-		(await pathExists(currentWorkbookPath))
-			? await readFile(currentWorkbookPath)
-			: Buffer.from("")
+		(await pathExists(currentWorkbookPath)) ? await readFile(currentWorkbookPath) : Buffer.from("")
 	);
 
 	// --- 2. Determine desired filename for each worksheet ---
