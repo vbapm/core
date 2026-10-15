@@ -1,28 +1,30 @@
 <#
 .SYNOPSIS
-        Demonstrates that opening the VBE before a workbook and then closing that
-        workbook through COM can leave its VBA project as a ghost in the VBE.
+    Demonstrates that opening the VBE before a workbook and then closing that
+    workbook can leave its VBA project as a ghost in the VBE.
 
 .DESCRIPTION
         This reproduces an Excel/VBE lifecycle bug, not a vbapm build failure.
         The VBE is opened first, a workbook with the explicit VBA project codename
         "GhostDemoProject" is created and opened, and the workbook is then closed
-        through COM while Excel remains running. The final detector verifies that
-        GhostDemoProject remains in the VBE even though its workbook is closed.
+        while Excel remains running. By default the standalone COM helper closes
+        it; -UseCliClose uses the installed vbapm close command and its VBA macro.
+        The final detector verifies whether the project remains in the VBE even
+        though its workbook is closed.
 
         Creates everything from scratch:
-      1. Close all Excel instances
-      2. Create a new vbapm project via vba init --target xlsm
-      3. Add a source module and build
-      4. Open a fresh visible Excel instance
-      5. Open the VBE window
+            1. Close all Excel instances
+            2. Create a new vbapm project via vba init --target xlsm
+            3. Add a source module and build
+            4. Open a fresh visible Excel instance
+            5. Open the VBE window
             6. Open the built file via COM after the VBE is loaded
-      7. Close the workbook via COM
+            7. Close the workbook through the selected path
             8. Check for the GhostDemoProject ghost
 
 .PARAMETER WorkDir
     Directory where the temp project will be created.
-    Default: demo/ghost-demo
+    Default: ghost-demo
 
 .PARAMETER HideVBEBeforeClose
     Hide the VBE window immediately before closing the workbook.
@@ -47,6 +49,9 @@
 
 .EXAMPLE
     .\scripts\ps\repro-ghost-vbe-ci.ps1
+
+.EXAMPLE
+    .\scripts\ps\repro-ghost-vbe-ci.ps1 -UseCliClose -WorkDir ghost-demo-vba
 #>
 
 param(
@@ -377,7 +382,7 @@ Module1 = "src/Module1.bas"
     Write-Host "VBE projects after workbook open:" -ForegroundColor Cyan
     & (Join-Path $scripts "detect-ghost-vbe.ps1")
 
-    Step "7. Close the workbook via COM"
+    Step "7. Close the workbook"
     if (($HideVBEBeforeClose -or $CloseVBEBeforeClose) -and $vbeOpen) {
         $excelForClose = [System.Runtime.InteropServices.Marshal]::GetActiveObject("Excel.Application")
         try {
@@ -406,7 +411,11 @@ Module1 = "src/Module1.bas"
     } else {
         & (Join-Path $scripts "close-workbook.ps1") -Name $wbName -Force
     }
-    Write-Host "Workbook closed via COM." -ForegroundColor Green
+    if ($UseCliClose) {
+        Write-Host "Workbook closed through vbapm VBA (Build.CloseFile)." -ForegroundColor Green
+    } else {
+        Write-Host "Workbook closed through the standalone COM helper." -ForegroundColor Green
+    }
 
     Step "8. Check for ghost VBE projects"
     $detectionJson = & (Join-Path $scripts "detect-ghost-vbe.ps1") -Quiet | Out-String

@@ -1,26 +1,69 @@
 # VBE Ghost VBAProject Reproduction Report
 
-Date: 2026-10-12
-
 ## Summary
 
-The ghost VBAProject is an intermittent Excel/VBE lifecycle problem. It is not currently attributable to VBAPM alone: the same workbook-open and workbook-close sequence has reproduced the ghost through both a standalone PowerShell COM helper and the installed VBAPM `close` command.
+The ghost VBAProject is an intermittent Excel/VBE lifecycle problem. It is not currently attributable to VBAPM alone: the same workbook-open and workbook-close sequence has reproduced the ghost through ordinary Excel UI actions, a standalone PowerShell COM helper, and the installed VBAPM `close` command.
 
-No production fix is included yet. Controlled tests now show that both `Alt+Q` and `Alt+F4` return to Excel by hiding the VBE window, but neither destroys the VBE window or closes the workbook. A separate post-close VBE visibility refresh did clear the ghost in the direct COM test and remains the strongest current workaround candidate.
+No production fix is included yet. Closing the VBE via the X button or `Alt+Q` returns to Excel by hiding the VBE window, but it doesn't destroy the VBE window or closes the workbook. A separate post-close VBE visibility refresh did clear the ghost in the direct COM test and remains the strongest current workaround candidate.
 
-## Reproduction setup
+## Manual Excel reproduction
 
-The diagnostic script:
+The same behavior has been observed through the ordinary Excel user interface, without using vbapm or an external COM helper:
+
+1. Open Excel.
+2. Open a new `Book1` document.
+3. Open an existing Excel document from disk.
+4. Close the existing document from disk.
+5. Open or return to the VBE.
+
+The closed document's VBA project can remain as a ghost in `VBE.VBProjects`. In other words, the ghost can remain visible in the VBE even after the workbook has been closed and the VBE is opened afterward. This manual observation further supports treating the issue as an Excel/VBE lifecycle problem rather than a vbapm-specific close implementation bug.
+
+The same sequence has also reproduced the ghost when Excel is started in Safe Mode. In Safe Mode, open two existing workbooks because the initial `Book1` disappears when the first existing workbook is opened. This indicates that the behavior does not depend on Excel's normal startup add-ins or extension loadout.
+
+
+**Environment observed during the manual test:** Microsoft Excel for Microsoft 365 MSO (Version 2609 Build 16.0.20430.20032) 64-bit.
+
+## Automated reproduction with the PowerShell harness
+
+Run the full harness from the repository root with Windows PowerShell:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+	.\scripts\ps\repro-ghost-vbe-ci.ps1
+```
+
+**Warning:** The full harness closes all Excel instances at startup, saves unsaved workbooks through `close-excel.ps1 -SaveAll`, and force-stops any remaining Excel processes. Run it only when closing the current Excel session is safe.
+
+The script deletes and recreates `ghost-demo/` in the repository root by default. Use `-WorkDir NAME` to choose another directory. It then:
 
 1. Stops existing Excel instances.
-2. Creates and builds a minimal `xlsm` project with codename `GhostDemoProject`.
-3. Starts a visible Excel instance.
-4. Opens the VBE before opening the workbook.
-5. Opens `build/ghost-demo.xlsm` through COM.
-6. Closes that same workbook either through `close-workbook.ps1` or the installed VBAPM `close --force` command.
+2. Creates and builds a minimal `xlsm` project at `ghost-demo/build/ghost-demo.xlsm`, with codename `GhostDemoProject`.
+3. Starts a fresh visible Excel instance.
+4. Opens the VBE before opening the generated workbook.
+5. Opens the generated workbook through COM.
+6. Closes the workbook through the standalone COM helper.
 7. Enumerates `VBE.VBProjects` and compares the projects with open workbooks.
 
-The harness was corrected to use the same `ghost-demo.xlsm` path for both close paths and to invoke `%APPDATA%\vbapm\bin\vba.cmd` explicitly. This avoids the old global npm command shadowing the development CLI.
+To test the vbapm VBA close path instead, add `-UseCliClose`. This invokes the installed `%APPDATA%\vbapm\bin\vba.cmd close --force`, which calls `Build.CloseFile` inside the add-in:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+	.\scripts\ps\repro-ghost-vbe-ci.ps1 `
+	-UseCliClose -WorkDir ghost-demo-vba
+```
+
+The harness prints `GHOST_COUNT_AFTER_WORKBOOK_CLOSE` and the final `GHOST_COUNT`. A nonzero count means that the detector found a VBE project with no matching open workbook. The optional `-HideVBEBeforeClose`, `-CloseVBEBeforeClose`, `-CloseAndReopenVBEAfterClose`, `-RefreshVBEAfterClose`, and `-HoldAfterDetection` switches add targeted experiments after the base reproduction.
+
+## Detector-only check
+
+To inspect the current VBE state without creating, opening, or closing a workbook, run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+	.\scripts\ps\detect-ghost-vbe.ps1
+```
+
+This command only enumerates the current `VBE.VBProjects` collection. It does not reproduce the bug by itself.
 
 ## Findings
 
@@ -45,7 +88,7 @@ The project name may appear as `VBAProject` when the installed add-in is stale r
 
 The PowerShell helper was changed to use indexed workbook lookup and `FinalReleaseComObject` for the workbook and `Workbooks` collection. The ghost still occurred. This rules out the initially suspected simple PowerShell RCW lifetime leak as the complete explanation.
 
-VBAPM's production close path calls the add-in's `Build.CloseFile`, which resolves the workbook and calls `Wb.Close`. The matching repro results do not show a VBAPM-specific object leak.
+VBAPM's production close path calls the add-in's `Build.CloseFile`, which resolves the workbook and dispatches `Close` through `Application.Workbooks(...)`. The matching repro results do not show a VBAPM-specific object leak.
 
 ### Hiding the VBE is not sufficient
 
