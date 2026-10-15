@@ -2,8 +2,9 @@
  * End-to-end tests for `vba update`.
  */
 
-import { copy, ensureDir, readFile, writeFile } from "fs-extra";
+import { ensureDir, readFile, writeFile } from "fs-extra";
 import { join } from "path";
+import { zip } from "../src/utils/zip";
 import { dev, targetless, wildcard } from "./__fixtures__";
 import { execute, setup } from "./__helpers__/execute";
 
@@ -13,7 +14,22 @@ describe("update", () => {
 	test("update rejects Excel objects missing from the target workbook", async () => {
 		await setup(wildcard, "update-missing-object", async cwd => {
 			await ensureDir(join(cwd, "build"));
-			await copy(join(cwd, "targets", "xlsm"), join(cwd, "build", "wildcard.xlsm"));
+			await zip(join(cwd, "targets", "xlsm"), join(cwd, "build", "wildcard.xlsm"));
+			await writeFile(
+				join(cwd, "src", "Excel Objects", "Sheet4.cls"),
+				[
+					"VERSION 1.0 CLASS",
+					"BEGIN",
+					"  MultiUse = -1  'True",
+					"END",
+					'Attribute VB_Name = "Sheet4"',
+					"Attribute VB_GlobalNameSpace = False",
+					"Attribute VB_Creatable = False",
+					"Attribute VB_PredeclaredId = True",
+					"Attribute VB_Exposed = True",
+					""
+				].join("\r\n")
+			);
 
 			await expect(execute(cwd, "update --target xlsm")).rejects.toMatchObject({
 				stderr: expect.stringContaining("Required Excel object not found")
