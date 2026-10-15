@@ -145,6 +145,16 @@ Private Function OpenWorkbook(Path As String, ByRef WB As Object) As Boolean
     On Error Resume Next
     Set WB = Application.Workbooks(FileSystem.GetBase(Path))
 
+    ' Excel matches open workbooks by name only; never hand back a same-named file from elsewhere
+    If Err.Number = 0 And Not WB Is Nothing Then
+        If StrComp(FileSystem.NormalizePath(WB.FullName), Path, vbTextCompare) <> 0 Then
+            Output.Errors.Add "[10203] Cannot open """ & Path & """: a different workbook with the same name is already open at """ & WB.FullName & """"
+            Set WB = Nothing
+            OpenWorkbook = False
+            Exit Function
+        End If
+    End If
+
     If WB Is Nothing Or Err.Number <> 0 Then
         Err.Clear
 

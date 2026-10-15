@@ -22,4 +22,9 @@ Public Property Get Result() As String
     Parts.Add "success", Errors.Count = 0
 
     Result = JsonConverter.ConvertToJson(Parts)
+
+    ' Module state survives across macro calls in a reused Excel session
+    Set Messages = New Collection
+    Set Warnings = New Collection
+    Set Errors = New Collection
 End Property

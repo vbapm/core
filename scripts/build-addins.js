@@ -10,5 +10,9 @@ main().catch(err => {
 });
 
 async function main() {
-	await vba.buildProject({ addin: join(__dirname, "bootstrap/build/bootstrap.xlsm") });
+	// Hidden instance: a visible Excel may have the installed vbapm.xlam loaded under the same name
+	await vba.buildProject({
+		addin: join(__dirname, "bootstrap/build/bootstrap.xlsm"),
+		background: true
+	});
 }
