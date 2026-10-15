@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
 	[ValidateSet("Q", "F4")]
-	[string]$Key = "Q"
+	[string]$Key = "Q",
+	[Parameter(Mandatory)]
+	[uint32]$ProcessId
 )
 
 $ErrorActionPreference = "Stop"
@@ -92,14 +94,16 @@ public static class VbeWindowApi
 	[DllImport("user32.dll", SetLastError = true)]
 	private static extern uint SendInput(uint count, INPUT[] inputs, int size);
 
-	public static IntPtr FindVbeWindow()
+	public static IntPtr FindVbeWindow(uint processId)
 	{
 		IntPtr result = IntPtr.Zero;
 		EnumWindows((hwnd, lParam) =>
 		{
 			var title = new StringBuilder(256);
+			uint ownerProcessId = 0;
 			GetWindowText(hwnd, title, title.Capacity);
-			if (IsWindowVisible(hwnd) && title.ToString().Contains("Microsoft Visual Basic"))
+			GetWindowThreadProcessId(hwnd, out ownerProcessId);
+			if (IsWindowVisible(hwnd) && ownerProcessId == processId && title.ToString().Contains("Microsoft Visual Basic"))
 			{
 				result = hwnd;
 				return false;
@@ -143,7 +147,7 @@ public static class VbeWindowApi
 }
 "@
 
-$vbeHwnd = [VbeWindowApi]::FindVbeWindow()
+$vbeHwnd = [VbeWindowApi]::FindVbeWindow($ProcessId)
 if ($vbeHwnd -eq [IntPtr]::Zero) {
 	throw "No visible VBE window was found."
 }

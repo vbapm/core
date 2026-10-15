@@ -65,7 +65,22 @@ param(
 )
 
 if ($PSVersionTable.PSEdition -eq 'Core') {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -WorkDir $WorkDir
+    $psArgs = @(
+        '-NoProfile'
+        '-ExecutionPolicy'
+        'Bypass'
+        '-File'
+        $PSCommandPath
+        '-WorkDir'
+        $WorkDir
+    )
+    if ($HideVBEBeforeClose) { $psArgs += '-HideVBEBeforeClose' }
+    if ($CloseVBEBeforeClose) { $psArgs += '-CloseVBEBeforeClose' }
+    if ($UseCliClose) { $psArgs += '-UseCliClose' }
+    if ($CloseAndReopenVBEAfterClose) { $psArgs += '-CloseAndReopenVBEAfterClose' }
+    if ($RefreshVBEAfterClose) { $psArgs += '-RefreshVBEAfterClose' }
+    if ($HoldAfterDetection) { $psArgs += '-HoldAfterDetection' }
+    & powershell.exe @psArgs
     exit $LASTEXITCODE
 }
 
@@ -73,7 +88,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot + "/../.."
 $scripts  = Join-Path $repoRoot "scripts/ps"
 
-$Win32 = Add-Type -MemberDefinition @'
+$Win32 = ([System.Management.Automation.PSTypeName]'U.W32').Type
+if (-not $Win32) {
+    $Win32 = Add-Type -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
 [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
 [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -88,8 +105,10 @@ $Win32 = Add-Type -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint sourceThreadId, uint targetThreadId, bool attach);
 [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 '@ -Name "W32" -Namespace "U" -PassThru
+}
 
-Add-Type @'
+if (-not ([System.Management.Automation.PSTypeName]'W32Input').Type) {
+    Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 
@@ -165,13 +184,21 @@ public static class W32Input {
     }
 }
 '@
+}
+
+$script:ExcelProcessId = [uint32]0
 
 function Find-VBEWindow {
-    Add-Type @'
+    param([uint32]$ProcessId = $script:ExcelProcessId)
+
+    if (-not $ProcessId) { throw "The target Excel process ID is not set." }
+    if (-not ([System.Management.Automation.PSTypeName]'Wf').Type) {
+        Add-Type @'
 using System;using System.Runtime.InteropServices;using System.Text;
-public static class Wf{[DllImport("user32.dll")]static extern bool EnumWindows(E cb,IntPtr l);[DllImport("user32.dll")]static extern int GetWindowText(IntPtr h,StringBuilder t,int m);[DllImport("user32.dll")]static extern bool IsWindowVisible(IntPtr h);delegate bool E(IntPtr h,IntPtr l);public static IntPtr ByTitle(string p){IntPtr f=IntPtr.Zero;EnumWindows((h,_)=>{var s=new StringBuilder(256);GetWindowText(h,s,256);if(IsWindowVisible(h)&&s.ToString().Contains(p)){f=h;return false;}return true;},IntPtr.Zero);return f;}}
+public static class Wf{[DllImport("user32.dll")]static extern bool EnumWindows(E cb,IntPtr l);[DllImport("user32.dll")]static extern int GetWindowText(IntPtr h,StringBuilder t,int m);[DllImport("user32.dll")]static extern bool IsWindowVisible(IntPtr h);[DllImport("user32.dll")]static extern uint GetWindowThreadProcessId(IntPtr h,out uint p);delegate bool E(IntPtr h,IntPtr l);public static IntPtr ByTitle(string title,uint processId){IntPtr f=IntPtr.Zero;EnumWindows((h,_)=>{var s=new StringBuilder(256);uint ownerProcessId=0;GetWindowText(h,s,256);GetWindowThreadProcessId(h,out ownerProcessId);if(IsWindowVisible(h)&&ownerProcessId==processId&&s.ToString().Contains(title)){f=h;return false;}return true;},IntPtr.Zero);return f;}}
 '@
-    return [Wf]::ByTitle("Microsoft Visual Basic")
+    }
+    return [Wf]::ByTitle("Microsoft Visual Basic", $ProcessId)
 }
 
 function Close-VBEWindow {
@@ -358,6 +385,10 @@ Module1 = "src/Module1.bas"
         catch { Start-Sleep -Seconds 1 }
     }
     if (-not $excel) { throw "Excel never became COM-reachable after open." }
+    $excelHwnd = [IntPtr]$excel.Hwnd
+    $script:ExcelProcessId = [uint32]0
+    $Win32::GetWindowThreadProcessId($excelHwnd, [ref]$script:ExcelProcessId) | Out-Null
+    if (-not $script:ExcelProcessId) { throw "Could not determine the target Excel process ID." }
     Start-Sleep -Seconds 3
     Write-Host "Excel ready." -ForegroundColor Green
 
@@ -389,7 +420,7 @@ Module1 = "src/Module1.bas"
             if ($CloseVBEBeforeClose) {
                 $sender = Join-Path $scripts "Send-AltQ-To-VBE.ps1"
                 if (!(Test-Path $sender)) { throw "Alt+F4 sender not found at $sender" }
-                & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sender -Key F4
+                & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sender -Key F4 -ProcessId $script:ExcelProcessId
                 if ($LASTEXITCODE -ne 0) { throw "Alt+F4 sender failed (exit $LASTEXITCODE)." }
                 if ([bool]$excelForClose.VBE.MainWindow.Visible) {
                     throw "Alt+F4 sender completed but VBE.MainWindow.Visible is still True."
