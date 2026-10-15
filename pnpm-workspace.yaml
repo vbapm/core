@@ -1,4 +1,5 @@
 allowBuilds:
+  '@parcel/watcher': false
   aws-sdk: false
   lefthook: true
   unrs-resolver: true
