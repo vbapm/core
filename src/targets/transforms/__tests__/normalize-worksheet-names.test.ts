@@ -125,10 +125,7 @@ describe("normalizeWorksheetNames", () => {
 			join(tmp, "xl", "worksheets", "sheet8.xml"),
 			`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1"/></worksheet>`
 		);
-		await writeFile(
-			join(tmp, "xl", "worksheets", "_rels", "sheet8.xml.rels"),
-			`<Relationships/>`
-		);
+		await writeFile(join(tmp, "xl", "worksheets", "_rels", "sheet8.xml.rels"), `<Relationships/>`);
 
 		await normalizeWorksheetNames(tmp, undefined, new Map([["Historical Candidates", "Sheet8"]]));
 
