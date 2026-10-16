@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking changes
 - The `vbapm` package is now ESM-only. CommonJS consumers must replace `require("vbapm")` with an ESM `import`.
 
+### Fixed
+- Updated Renovate dependencies, including TypeScript 7, while preserving Jest and Rollup compatibility.
+
 ## [0.11.0] - 2026-10-15
 
 ### Deprecated
