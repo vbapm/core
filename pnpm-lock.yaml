@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@rollup/plugin-typescript@12.3.0': 80d8a6da3d46f2166056ac9d6a5980ff23ec346d02ef572e4e72e227fbad81f1
+  '@rollup/plugin-typescript@12.3.0': 2677d5b17fc21784b6824b5aa346e4e92a5d472e2da517c0a32305b213a3cab7
   ts-jest@29.4.14: 0f63971623dd7b85bc22ab8634510946a428156def5c19efc89da94d6c84eb88
 
 importers:
@@ -266,7 +266,7 @@ importers:
         version: 1.0.0(rollup@4.64.3)
       '@rollup/plugin-typescript':
         specifier: ^12.1.2
-        version: 12.3.0(patch_hash=80d8a6da3d46f2166056ac9d6a5980ff23ec346d02ef572e4e72e227fbad81f1)(rollup@4.64.3)(tslib@2.8.1)(typescript@7.0.2)
+        version: 12.3.0(patch_hash=2677d5b17fc21784b6824b5aa346e4e92a5d472e2da517c0a32305b213a3cab7)(rollup@4.64.3)(tslib@2.8.1)(typescript@7.0.2)
       '@types/archiver':
         specifier: ^8.0.0
         version: 8.0.0
@@ -4134,7 +4134,7 @@ snapshots:
     optionalDependencies:
       rollup: 4.64.3
 
-  '@rollup/plugin-typescript@12.3.0(patch_hash=80d8a6da3d46f2166056ac9d6a5980ff23ec346d02ef572e4e72e227fbad81f1)(rollup@4.64.3)(tslib@2.8.1)(typescript@7.0.2)':
+  '@rollup/plugin-typescript@12.3.0(patch_hash=2677d5b17fc21784b6824b5aa346e4e92a5d472e2da517c0a32305b213a3cab7)(rollup@4.64.3)(tslib@2.8.1)(typescript@7.0.2)':
     dependencies:
       '@rollup/pluginutils': 5.4.0(rollup@4.64.3)
       resolve: 1.22.12
