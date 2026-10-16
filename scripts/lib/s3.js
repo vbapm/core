@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import fsExtra from "fs-extra";
 import dotenv from "dotenv";
-import AWS from "aws-sdk";
 import hash from "./hash.js";
 
 const { readFile } = fsExtra;
 dotenv.config({ path: join(process.cwd(), ".env") });
+const { default: AWS } = await import("aws-sdk");
 const Bucket = process.env.VBA_BLOCKS_AWS_S3_BUCKET;
 
 // Load AWS_PROFILE from .env before loading SDK
@@ -20,3 +20,4 @@ export default {
 		return await s3.upload({ Bucket, Key, Body, ACL, ContentMD5 }).promise();
 	}
 };
+
