@@ -11,7 +11,7 @@ export async function getLatestRelease(options: { owner: string; repo: string })
 	const headers = { Accept: "application/vnd.github.v3+json" };
 
 	const response = await fetch(url, { headers });
-	const release: Release = await response.json();
+	const release = (await response.json()) as Release;
 
 	return release;
 }

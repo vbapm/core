@@ -6,3 +6,6 @@ allowBuilds:
 minimumReleaseAge: 3
 minimumReleaseAgeExclude:
   - '@decimalturn/toml-patch@2.0.1'
+patchedDependencies:
+  '@rollup/plugin-typescript@12.3.0': patches/@rollup__plugin-typescript@12.3.0.patch
+  ts-jest@29.4.14: patches/ts-jest@29.4.14.patch

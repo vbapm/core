@@ -5,6 +5,7 @@ import resolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
+import typescript6 from "@typescript/typescript6";
 import fs from "fs";
 import { createRequire } from "module";
 import path from "path";
@@ -35,7 +36,7 @@ export default [
 			);
 		},
 		plugins: [
-			resolve(),
+			resolve({ exportConditions: ["node", "import", "default"] }),
 			replace({
 				preventAssignment: true,
 				"process.env.NODE_ENV": JSON.stringify(mode),
@@ -47,7 +48,7 @@ export default [
 				include: "node_modules/**"
 			}),
 			json(),
-			typescript(),
+			typescript({ typescript: typescript6 }),
 			mode === "production" && terser(),
 			debug(),
 			workerThreads(),
@@ -56,11 +57,14 @@ export default [
 		onwarn(warning, warn) {
 			// Ignore known errors
 			if (warning.code === "CIRCULAR_DEPENDENCY" && /glob/.test(warning.importer)) return;
-			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable-stream/.test(warning.importer || "")) return;
+			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable-stream/.test(warning.importer || ""))
+				return;
 			// semver's Range <-> Comparator mutual dependency is an internal cycle
-			// that cannot be avoided from outside the package; safe to ignore.			
-			if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some(id => /semver/.test(id))) return;
-			if (warning.code === "UNRESOLVED_IMPORT" && (warning.source || "").startsWith("node:")) return;
+			// that cannot be avoided from outside the package; safe to ignore.
+			if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some(id => /semver/.test(id)))
+				return;
+			if (warning.code === "UNRESOLVED_IMPORT" && (warning.source || "").startsWith("node:"))
+				return;
 			if (warning.code === "EVAL" && /minisat/.test(warning.id)) return;
 
 			warn(warning);
@@ -128,16 +132,15 @@ function shebang() {
 				}
 			}
 
-			const templates = [
-				"template.editorconfig",
-				"template.gitattributes",
-				"template.gitignore"
-			];
+			const templates = ["template.editorconfig", "template.gitattributes", "template.gitignore"];
 			const templatesSourceDir = path.resolve("src", "actions", "templates");
 			const templatesTargetDir = path.resolve(options.dir, "templates");
 			fs.mkdirSync(templatesTargetDir, { recursive: true });
 			for (const templateFile of templates) {
-				fs.copyFileSync(path.join(templatesSourceDir, templateFile), path.join(templatesTargetDir, templateFile));
+				fs.copyFileSync(
+					path.join(templatesSourceDir, templateFile),
+					path.join(templatesTargetDir, templateFile)
+				);
 			}
 
 			// editorconfig's one-ini parser may load this wasm file at runtime.

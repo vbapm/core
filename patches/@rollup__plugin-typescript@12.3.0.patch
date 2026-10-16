@@ -1,0 +1,13 @@
+diff --git a/dist/es/index.js b/dist/es/index.js
+index 31bae2cfde4114d4e9a400781f774f7ecbceb315..68535c147d56af46a773c6359aadb1395b6dd91c 100644
+--- a/dist/es/index.js
++++ b/dist/es/index.js
+@@ -4,7 +4,7 @@ import * as fs from 'fs';
+ import fs__default, { readFileSync, promises } from 'fs';
+ import * as os from 'os';
+ import { createFilter } from '@rollup/pluginutils';
+-import typescript$1 from 'typescript';
++import typescript$1 from '@typescript/typescript6';
+ import { fileURLToPath } from 'url';
+ import resolve from 'resolve';
+
