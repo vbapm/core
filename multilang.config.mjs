@@ -13,15 +13,20 @@
 export default {
 	testEnvironment: "node",
 	testTimeout: 300000,
+	extensionsToTreatAsEsm: [".ts"],
 	testMatch: ["**/tests/**/*.multilang.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
+	setupFilesAfterEnv: ["<rootDir>/tests/__helpers__/jest-globals.ts"],
 	transformIgnorePatterns: [
 		"/node_modules/(?!.*(?:@decimalturn/toml-patch|env-paths|is-safe-filename)/)",
 		"<rootDir>/lib/"
 	],
 	transform: {
-		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: "tests/tsconfig.json", diagnostics: false }]
+		"^.+\\.[tj]sx?$": [
+			"ts-jest",
+			{ useESM: true, tsconfig: "tests/tsconfig.json", diagnostics: false }
+		]
 	},
 	moduleNameMapper: {
 		"^vbapm$": "<rootDir>/lib/index.js",

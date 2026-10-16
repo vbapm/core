@@ -21,21 +21,28 @@
  *   - Git credentials with push access to the registry repository.
  */
 
-const { promisify } = require("util");
-const { resolve, join } = require("path");
-const assert = require("assert");
-const execFile = promisify(require("child_process").execFile);
-const { readFile, ensureFile, pathExists, writeFile } = require("fs-extra");
-const mri = require("mri");
-const tmpDir = promisify(require("tmp").dir);
-const joinUrl = require("url-join");
-const checksum = require("./lib/checksum");
-const download = require("./lib/download");
-const git = require("./lib/git");
-const s3 = require("./lib/s3");
-const sanitizeName = require("./lib/sanitize-name");
+import { promisify } from "node:util";
+import { resolve, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import assert from "node:assert";
+import { execFile as execFileCallback } from "node:child_process";
+import fsExtra from "fs-extra";
+import mri from "mri";
+import tmp from "tmp";
+import joinUrl from "url-join";
+import { parse } from "@decimalturn/toml-patch";
+import checksum from "./lib/checksum.js";
+import download from "./lib/download.js";
+import git from "./lib/git.js";
+import s3 from "./lib/s3.js";
+import sanitizeName from "./lib/sanitize-name.js";
 
-const registry = join(__dirname, "registry");
+const { readFile, ensureFile, pathExists, writeFile } = fsExtra;
+const execFile = promisify(execFileCallback);
+const tmpDir = promisify(tmp.dir);
+
+const scriptDirectory = fileURLToPath(new URL(".", import.meta.url));
+const registry = join(scriptDirectory, "registry");
 
 main().catch(error => {
 	console.error(error);
@@ -44,7 +51,6 @@ main().catch(error => {
 
 // Usage: node scripts/publish ./input/dir
 async function main() {
-	const { parse } = await import("@decimalturn/toml-patch");
 	let {
 		_: [input],
 		dryrun = false
@@ -74,7 +80,7 @@ async function uploadAndValidate(dir, manifest, { dryrun }) {
 
 	if (!(await pathExists(block_path))) {
 		await act(dryrun, `Packing ${block_name}...`, async () => {
-			await execFile("node", [join(__dirname, "pack.js"), dir]);
+			await execFile("node", [join(scriptDirectory, "pack.js"), dir]);
 		});
 	}
 
@@ -128,7 +134,7 @@ async function publishToRegistry(entry, { dryrun }) {
 	// 1. git pull (or git clone if not found)
 	const registry_exists = await pathExists(join(registry, ".git"));
 	if (!registry_exists) {
-		await act(dryrun, `git clone...`, () => git.clone({ dir: __dirname }));
+		await act(dryrun, `git clone...`, () => git.clone({ dir: scriptDirectory }));
 	} else {
 		await act(dryrun, `git pull "${registry}"...`, () => git.pull({ dir: registry }));
 	}

@@ -1,8 +1,8 @@
-const { createHash } = require("node:crypto");
-const { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require("node:fs");
-const { dirname, join, relative, resolve } = require("node:path");
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 
-const ROOT = resolve(__dirname, "..");
+export const ROOT = resolve(process.cwd());
 const SCHEMA_VERSION = 1;
 const ALGORITHM = "sha256";
 
@@ -171,8 +171,7 @@ function writeFreshness(metadata: string, scope: FingerprintScope = "all") {
 	return record;
 }
 
-module.exports = {
-	ROOT,
+export {
 	checkFreshness,
 	computeFingerprint,
 	createFreshnessRecord,

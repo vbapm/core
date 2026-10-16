@@ -242,6 +242,9 @@ importers:
         specifier: ^1.6
         version: 1.6.11
     devDependencies:
+      '@jest/globals':
+        specifier: ^30.5.2
+        version: 30.5.2(supports-color@8.1.1)
       '@rollup/plugin-commonjs':
         specifier: ^29.0.0
         version: 29.0.3(rollup@4.64.3)

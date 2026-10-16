@@ -1,6 +1,6 @@
-const { createHash } = require("crypto");
+import { createHash } from "node:crypto";
 
-module.exports = function hash(data, options = {}) {
+export default function hash(data, options = {}) {
 	const { algorithm = "sha256", digest = "hex", prefix = true } = options;
 
 	return `${prefix ? `${algorithm}-` : ""}${createHash(algorithm)

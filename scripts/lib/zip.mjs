@@ -1,21 +1,21 @@
 /**
- * zip.js — Utility function to create a zip archive from a set of files.
+ * zip.mjs — Utility function to create a zip archive from a set of files.
  *
  * This is used by the publish.js script to create a .block archive from the package files.
  *
  * Usage:
- *   const zip = require("./lib/zip");
+ *   const { default: zip } = await import("./lib/zip.mjs");
  *   await zip({ "path/to/file1": "name/in/archive1", "path/to/file2": "name/in/archive2" }, "output.zip");
  */
 
-const { createWriteStream } = require("fs");
-const { create: createArchive } = require("archiver");
+import { createWriteStream } from "node:fs";
+import archiver from "archiver";
 
-module.exports = async function zip(input, dest, type = "zip", options = {}) {
+export default async function zip(input, dest, type = "zip", options = {}) {
 	return new Promise((resolve, reject) => {
 		try {
 			const output = createWriteStream(dest);
-			const archive = createArchive(type, options);
+			const archive = archiver(type, options);
 
 			output.on("close", resolve);
 			output.on("error", reject);
@@ -32,4 +32,4 @@ module.exports = async function zip(input, dest, type = "zip", options = {}) {
 			reject(err);
 		}
 	});
-};
+}

@@ -1,13 +1,13 @@
-const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
-const { tmpdir } = require("node:os");
-const { join } = require("node:path");
-const {
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
 	checkFreshness,
 	computeFingerprint,
 	createFreshnessRecord,
 	getFingerprintInputs,
 	writeFreshness
-} = require("../freshness.ts");
+} from "../freshness";
 
 describe("freshness metadata", () => {
 	let directory: string;

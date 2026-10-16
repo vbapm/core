@@ -5,11 +5,11 @@
  *   node scripts/generate-evolution-html.ts
  *   node scripts/generate-evolution-html.ts --input <dir> --output <file>
  */
-const { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require("node:fs");
-const { spawnSync } = require("node:child_process");
-const { createServer } = require("node:http");
-const { dirname, join, resolve } = require("node:path");
-const { pathToFileURL } = require("node:url");
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createServer } from "node:http";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 function argumentValue(name: string): string | undefined {
 	const index = process.argv.indexOf(name);
@@ -529,7 +529,11 @@ function main(): void {
 	const output = resolve(argumentValue("--output") || join(input, "instances-evolution.html"));
 	if (!existsSync(input)) throw new Error(`Evolution directory not found: ${input}`);
 
-	const listScript = join(__dirname, "ps", "List-ExcelInstances.ps1");
+	const listScript = join(
+		fileURLToPath(new URL(".", import.meta.url)),
+		"ps",
+		"List-ExcelInstances.ps1"
+	);
 	const entries = readdirSync(input, { withFileTypes: true });
 	const runs = entries
 		.filter((entry: any) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}--/.test(entry.name))

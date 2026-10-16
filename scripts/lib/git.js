@@ -1,9 +1,11 @@
-const { promisify } = require("util");
-const execFile = promisify(require("child_process").execFile);
+import { promisify } from "node:util";
+import { execFile as execFileCallback } from "node:child_process";
+
+const execFile = promisify(execFileCallback);
 
 const remote = "https://github.com/vba-blocks/registry.git";
 
-module.exports = {
+export default {
 	async pull({ dir }) {
 		try {
 			await execFile("git", ["pull"], { cwd: dir });

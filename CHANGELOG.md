@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Breaking changes
+- The `vbapm` package is now ESM-only. CommonJS consumers must replace `require("vbapm")` with an ESM `import`.
 
 ## [0.11.0] - 2026-10-15
+
 ### Deprecated
 - `vba export` command is deprecated in favor of `vba extract`. It still functions but prints a deprecation warning and will be removed in a future version.
 - The top-level `[src]` section in `vbaproject.toml` is deprecated in favor of `[source.files]`. Legacy manifests remain valid: `[src]` entries are treated as `[source.files]`, but a deprecation warning is printed until the manifest is updated.

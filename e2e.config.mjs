@@ -1,12 +1,16 @@
 export default {
 	testEnvironment: "node",
 	testTimeout: 120000,
-	globalSetup: "<rootDir>/tests/global-setup.js",
-	globalTeardown: "<rootDir>/tests/global-teardown.js",
+	extensionsToTreatAsEsm: [".ts"],
+	globalSetup: "<rootDir>/tests/global-setup.mjs",
+	globalTeardown: "<rootDir>/tests/global-teardown.mjs",
 	// Runs per test file (i.e. per Jest worker), which is where a persistent
 	// PowerShell/Excel session lives. globalTeardown runs in the main process and
 	// cannot see worker-owned sessions, so cleanup must be registered here.
-	setupFilesAfterEnv: ["<rootDir>/tests/__helpers__/session-teardown.ts"],
+	setupFilesAfterEnv: [
+		"<rootDir>/tests/__helpers__/jest-globals.ts",
+		"<rootDir>/tests/__helpers__/session-teardown.ts"
+	],
 	testMatch: ["**/tests/**/*.e2e.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
@@ -15,7 +19,10 @@ export default {
 		"<rootDir>/lib/"
 	],
 	transform: {
-		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: "tests/tsconfig.json", diagnostics: false }]
+		"^.+\\.[tj]sx?$": [
+			"ts-jest",
+			{ useESM: true, tsconfig: "tests/tsconfig.json", diagnostics: false }
+		]
 	},
 	moduleNameMapper: {
 		"^vbapm$": "<rootDir>/lib/index.js",

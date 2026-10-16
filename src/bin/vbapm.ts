@@ -5,6 +5,7 @@ import meant from "meant";
 import mri, { Args } from "mri";
 import { version } from "../../package.json";
 import { env } from "../env";
+import { enableDebug } from "../debug";
 import { cleanError, CliError, ErrorCode, isCliError } from "../errors";
 import { checkForUpdate, checkDualInstall, updateAvailable, updateVersion } from "../installer";
 import { Message } from "../messages";
@@ -50,6 +51,7 @@ if (args.debug) {
 	const existing = process.env.DEBUG ? process.env.DEBUG.split(",") : [];
 
 	process.env.DEBUG = existing.concat(filters).join(",");
+	enableDebug(process.env.DEBUG);
 }
 
 const help = dedent`

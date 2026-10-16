@@ -1,6 +1,6 @@
-const { join } = require("path");
-const walkSync = require("walk-sync");
+import { join } from "node:path";
+import walkSync from "walk-sync";
 
-module.exports = function ls(dir) {
+export default function ls(dir) {
 	return walkSync(dir, { directories: false }).map(path => join(dir, path));
 };

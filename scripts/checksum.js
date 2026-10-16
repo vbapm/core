@@ -1,5 +1,5 @@
-const { resolve } = require("path");
-const checksum = require("./lib/checksum");
+import { resolve } from "node:path";
+import checksum from "./lib/checksum.js";
 
 main().catch(err => {
 	console.error(err);

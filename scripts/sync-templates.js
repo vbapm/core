@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const TEMPLATES_DIR = path.join(ROOT, "src", "actions", "templates");
 const SUBMODULE_DIR = path.join(TEMPLATES_DIR, "VBA-on-GitHub");
 

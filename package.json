@@ -8,6 +8,7 @@
         "Tim Hall <tim.hall.engr@gmail.com> (https://github.com/timhall)"
     ],
     "license": "MIT",
+    "type": "module",
     "bin": {
         "vbapm": "lib/vbapm.js",
         "vba": "lib/vbapm.js"
@@ -16,7 +17,7 @@
     "types": "lib/src/index.d.ts",
     "exports": {
         ".": {
-            "require": "./lib/index.js",
+            "import": "./lib/index.js",
             "types": "./lib/src/index.d.ts"
         }
     },
@@ -39,25 +40,25 @@
         "lefthook:install": "lefthook install && node scripts/lefthook-cleanup.js",
         "sync:config-templates": "node scripts/sync-templates.js",
         "check:config-templates": "node scripts/sync-templates.js --check",
-        "test": "jest --runInBand",
+        "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
         "typecheck": "tsc",
         "deps": "pnpm install",
         "dev": "run-s deps typecheck format:check test build:cli",
-        "test:e2e": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --runInBand",
-        "test:e2e:visible": "pnpm run build:check && cross-env E2E_BACKGROUND=0 jest --config e2e.config.mjs --runInBand",
-        "test:e2e:in-process": "pnpm run build:check && cross-env E2E_BACKGROUND=0 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --runInBand",
-        "test:e2e:background": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --runInBand",
-        "test:e2e:background:clean": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 E2E_CLEAN=1 jest --config e2e.config.mjs --runInBand",
-        "test:e2e:background:evolution": "pnpm run build:check && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ps/Clear-ExcelRegistryEvolution.ps1 && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=6 VBA_EVOLUTION=1 jest --config e2e.config.mjs --maxWorkers=6 --reporters=default --reporters=./scripts/evolution-jest-reporter.js",
+        "test:e2e": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --runInBand",
+        "test:e2e:visible": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=0 jest --config e2e.config.mjs --runInBand",
+        "test:e2e:in-process": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=0 E2E_IN_PROCESS=1 jest --config e2e.config.mjs --runInBand",
+        "test:e2e:background": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --runInBand",
+        "test:e2e:background:clean": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 E2E_CLEAN=1 jest --config e2e.config.mjs --runInBand",
+        "test:e2e:background:evolution": "pnpm run build:check && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ps/Clear-ExcelRegistryEvolution.ps1 && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=6 VBA_EVOLUTION=1 jest --config e2e.config.mjs --maxWorkers=6 --reporters=default --reporters=./scripts/evolution-jest-reporter.js",
         "evolution:html": "node scripts/generate-evolution-html.ts",
         "evolution:html:serve": "node scripts/generate-evolution-html.ts --serve",
-        "test:e2e:background:updateSnapshots": "pnpm run build:check && cross-env E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --updateSnapshot --runInBand",
-        "test:e2e:multilang": "pnpm run build:check && cross-env E2E_ML=1 jest --config multilang.config.mjs --runInBand",
+        "test:e2e:background:updateSnapshots": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_BACKGROUND=1 E2E_IN_PROCESS=1 VBA_PERSISTENT_SESSION=1 jest --config e2e.config.mjs --updateSnapshot --runInBand",
+        "test:e2e:multilang": "pnpm run build:check && cross-env NODE_OPTIONS=--experimental-vm-modules E2E_ML=1 jest --config multilang.config.mjs --runInBand",
         "build": "node scripts/ensure-fresh-build.ts",
         "build:js": "rimraf lib && rollup -c rollup.config.mjs",
         "build:check": "node scripts/ensure-fresh-build.ts",
         "build:lib": "run-s build:js && tsc -p tsconfig.build.json",
-        "build:cli": "run-s build:js && node scripts/build-mode.ts production && node scripts/ensure-vendor",
+        "build:cli": "cross-env VBAPM_STANDALONE=1 run-s build:js && node scripts/build-mode.ts production && node scripts/ensure-vendor",
         "build:dev": "pnpm run build:dev:rollup && node scripts/build-mode.ts development",
         "build:dev:rollup": "cross-env NODE_ENV=development rollup -c rollup.config.mjs",
         "build:dev:check": "node scripts/ensure-fresh-lib.ts --dev",
@@ -97,6 +98,7 @@
         "xml-js": "^1.6"
     },
     "devDependencies": {
+        "@jest/globals": "^30.5.2",
         "@rollup/plugin-commonjs": "^29.0.0",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.1",

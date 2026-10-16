@@ -8,8 +8,8 @@
  * safe for use as a filename across different operating systems.
  */
 
-const sanitizeFilename = require("sanitize-filename");
+import sanitizeFilename from "sanitize-filename";
 
-module.exports = function sanitizeName(name) {
+export default function sanitizeName(name) {
 	return sanitizeFilename(name.replace("/", "--"), { replacement: "-" });
 };

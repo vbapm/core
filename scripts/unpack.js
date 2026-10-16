@@ -17,10 +17,12 @@
  *   # Extracts to: ./output/dictionary/
  */
 
-const { resolve, dirname, basename, extname, join } = require("path");
-const mri = require("mri");
-const { ensureDir, pathExists } = require("fs-extra");
-const decompress = require("decompress");
+import { resolve, dirname, basename, extname, join } from "node:path";
+import mri from "mri";
+import fsExtra from "fs-extra";
+import decompress from "decompress";
+
+const { ensureDir, pathExists } = fsExtra;
 
 main().catch(error => {
 	console.error(error);

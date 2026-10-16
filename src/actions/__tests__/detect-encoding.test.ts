@@ -2,6 +2,7 @@ import { detectImportEncoding } from "../detect-encoding";
 import { join } from "../../utils/path";
 import { dir } from "../../../tests/__fixtures__";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
+import iconv from "iconv-lite";
 
 const fixtureDir = join(dir, "projects", "detect-encoding-test");
 
@@ -50,7 +51,6 @@ describe("detectImportEncoding", () => {
 
 	test("detects system codepage for non-ASCII file", async () => {
 		const path = join(fixtureDir, "cp1252.bas");
-		const iconv = require("iconv-lite");
 		const buf = iconv.encode(
 			'Attribute VB_Name = "M"\n' +
 				"' Voilà déjà quelques caractères accentués\n" +

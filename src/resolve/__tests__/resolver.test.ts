@@ -5,8 +5,6 @@ import { cache } from "../../../tests/__fixtures__";
 
 import { Resolver } from "../resolver";
 
-jest.mock("../../utils/git");
-
 const original_env = { ...env };
 
 beforeEach(() => {

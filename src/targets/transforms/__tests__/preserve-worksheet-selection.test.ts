@@ -1,7 +1,13 @@
-import { mkdtemp, rm } from "fs/promises";
+import {
+	mkdir,
+	mkdtemp,
+	readFile as readFileNative,
+	rm,
+	writeFile as writeFileNative
+} from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { ensureDir, readFile, writeFile } from "../../../utils/fs";
+import { readFile } from "../../../utils/fs";
 import { findElementByName, parseXml } from "../../../utils/xml";
 import {
 	preserveWorksheetSelections,
@@ -27,8 +33,8 @@ describe("preserveWorksheetSelections", () => {
 
 	beforeEach(async () => {
 		tmp = await mkdtemp(join(tmpdir(), "vbapm-selection-"));
-		await ensureDir(join(tmp, "old/xl/worksheets"));
-		await ensureDir(join(tmp, "new/xl/worksheets"));
+		await mkdir(join(tmp, "old/xl/worksheets"), { recursive: true });
+		await mkdir(join(tmp, "new/xl/worksheets"), { recursive: true });
 	});
 
 	afterEach(async () => {
@@ -36,8 +42,8 @@ describe("preserveWorksheetSelections", () => {
 	});
 
 	test("restores selection attributes when they are the only worksheet XML changes", async () => {
-		await writeFile(join(tmp, "old/xl/worksheets/shtSheet1.xml"), OLD_XML);
-		await writeFile(join(tmp, "new/xl/worksheets/sheet1.xml"), worksheetXml("A1", "A1"));
+		await writeFileNative(join(tmp, "old/xl/worksheets/shtSheet1.xml"), OLD_XML);
+		await writeFileNative(join(tmp, "new/xl/worksheets/sheet1.xml"), worksheetXml("A1", "A1"));
 
 		const previous = await readPreviousWorksheetData(join(tmp, "old"));
 		await preserveWorksheetSelections(join(tmp, "new"), previous);
@@ -51,8 +57,11 @@ describe("preserveWorksheetSelections", () => {
 	});
 
 	test("keeps selection changes when worksheet data also changed", async () => {
-		await writeFile(join(tmp, "old/xl/worksheets/sheet1.xml"), OLD_XML);
-		await writeFile(join(tmp, "new/xl/worksheets/sheet1.xml"), worksheetXml("A1", "A1", "B2"));
+		await writeFileNative(join(tmp, "old/xl/worksheets/sheet1.xml"), OLD_XML);
+		await writeFileNative(
+			join(tmp, "new/xl/worksheets/sheet1.xml"),
+			worksheetXml("A1", "A1", "B2")
+		);
 
 		const previous = await readPreviousWorksheetData(join(tmp, "old"));
 		await preserveWorksheetSelections(join(tmp, "new"), previous);

@@ -3,7 +3,7 @@
     "strict": true,
     "target": "es2019",
     "lib": ["es2020"],
-    "module": "es2020",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "types": ["jest", "node"],
     "resolveJsonModule": true,

@@ -47,7 +47,7 @@ try {
 
         # Run the multilingual test suite
         $env:CI = "1"
-        npx jest --config multilang.config.mjs --runInBand --no-coverage
+        node --experimental-vm-modules .\node_modules\jest\bin\jest.js --config multilang.config.mjs --runInBand --no-coverage
 
         if ($LASTEXITCODE -eq 0) {
             Write-Output "✓ Codepage $cp PASSED"

@@ -10,24 +10,36 @@ import { createRequire } from "module";
 import path from "path";
 
 const mode = process.env.NODE_ENV || "production";
+const standalone = process.env.VBAPM_STANDALONE === "1";
 const builtins = new Set(builtin);
+const nodeGlobalsBanner = [
+	'import { dirname as __dirnameFn } from "node:path";',
+	'import { fileURLToPath as __fileURLToPath } from "node:url";',
+	"const __filename = __fileURLToPath(import.meta.url);",
+	"const __dirname = __dirnameFn(__filename);"
+].join("\n");
 export default [
 	{
 		input: ["src/index.ts", "src/bin/vbapm.ts", "src/debug.ts"],
 		output: {
-			format: "cjs",
+			format: "es",
 			dir: "lib",
 			sourcemap: false,
-			exports: "auto"
+			banner: standalone ? nodeGlobalsBanner : undefined
 		},
 		external(id) {
-			return builtins.has(id) || id.startsWith("node:");
+			return (
+				builtins.has(id) ||
+				id.startsWith("node:") ||
+				(!standalone && ["conf", "editorconfig", "debug"].includes(id))
+			);
 		},
 		plugins: [
 			resolve(),
 			replace({
 				preventAssignment: true,
 				"process.env.NODE_ENV": JSON.stringify(mode),
+				"process.env.VBAPM_STANDALONE": JSON.stringify(standalone),
 				"process.env.READABLE_STREAM": '"disable"',
 				"require.cache": "{}"
 			}),
@@ -64,7 +76,7 @@ function debug() {
 		load(id) {
 			if (isBrowser.test(id)) {
 				return {
-					code: `module.exports = {};`
+					code: `export default {};`
 				};
 			}
 		}

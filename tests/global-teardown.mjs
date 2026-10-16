@@ -10,9 +10,12 @@
  * Report-only by default so a race-y Excel Quit() doesn't flake CI. Set
  * VBA_FAIL_ON_ZOMBIE=1 to fail the suite when zombies are detected.
  */
-const { spawnSync } = require("child_process");
-const fs = require("fs");
-const { join } = require("path");
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 function teardownTrace(message) {
 	if (!/^(1|true|yes)$/i.test(process.env.VBA_SESSION_TRACE || "")) return;
@@ -22,7 +25,7 @@ function teardownTrace(message) {
 	} catch {}
 }
 
-module.exports = async function globalTeardown() {
+export default async function globalTeardown() {
 	teardownTrace("start");
 	const script = join(__dirname, "..", "scripts", "ps", "Assess-ExcelInstances.ps1");
 

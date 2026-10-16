@@ -9,6 +9,7 @@ import { copy, ensureDir, pathExists, writeFile } from "../utils/fs";
 import { init as git_init } from "../utils/git";
 import { basename, dirname, extname, join } from "../utils/path";
 import { detectImportEncoding } from "./detect-encoding";
+import { fileURLToPath } from "node:url";
 
 const TEMPLATE_FILES = [
 	{ source: "template.gitignore", target: ".gitignore" },
@@ -17,7 +18,7 @@ const TEMPLATE_FILES = [
 ];
 
 async function copyTemplateConfigFiles(dir: string) {
-	const templatesDir = join(__dirname, "templates");
+	const templatesDir = fileURLToPath(new URL("./templates/", import.meta.url));
 
 	for (const { source, target } of TEMPLATE_FILES) {
 		await copy(join(templatesDir, source), join(dir, target));

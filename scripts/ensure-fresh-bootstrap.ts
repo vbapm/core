@@ -1,7 +1,7 @@
-const { execSync } = require("node:child_process");
-const { existsSync } = require("node:fs");
-const { join } = require("node:path");
-const { ROOT, checkFreshness, displayPath, writeFreshness } = require("./freshness.ts");
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { ROOT, checkFreshness, displayPath, writeFreshness } from "./freshness.ts";
 
 const BUILD_EMOJI = "🥾";
 const OUTPUT = join(ROOT, "scripts", "bootstrap", "build", "bootstrap.xlsm");
@@ -53,6 +53,3 @@ function main(): void {
 }
 
 main();
-
-type CommonJsEntryPoint = never;
-export type { CommonJsEntryPoint };
