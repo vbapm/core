@@ -8,7 +8,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const hookPath = path.resolve(fileURLToPath(new URL("..", import.meta.url)), ".git", "hooks", "pre-commit");
+const hookPath = path.resolve(
+	fileURLToPath(new URL("..", import.meta.url)),
+	".git",
+	"hooks",
+	"pre-commit"
+);
 
 if (!fs.existsSync(hookPath)) {
 	console.log("patch-hook-no-color: .git/hooks/pre-commit not found, skipping");

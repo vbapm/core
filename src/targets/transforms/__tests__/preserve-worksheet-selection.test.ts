@@ -1,4 +1,10 @@
-import { mkdir, mkdtemp, readFile as readFileNative, rm, writeFile as writeFileNative } from "fs/promises";
+import {
+	mkdir,
+	mkdtemp,
+	readFile as readFileNative,
+	rm,
+	writeFile as writeFileNative
+} from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { readFile } from "../../../utils/fs";
@@ -52,7 +58,10 @@ describe("preserveWorksheetSelections", () => {
 
 	test("keeps selection changes when worksheet data also changed", async () => {
 		await writeFileNative(join(tmp, "old/xl/worksheets/sheet1.xml"), OLD_XML);
-		await writeFileNative(join(tmp, "new/xl/worksheets/sheet1.xml"), worksheetXml("A1", "A1", "B2"));
+		await writeFileNative(
+			join(tmp, "new/xl/worksheets/sheet1.xml"),
+			worksheetXml("A1", "A1", "B2")
+		);
 
 		const previous = await readPreviousWorksheetData(join(tmp, "old"));
 		await preserveWorksheetSelections(join(tmp, "new"), previous);

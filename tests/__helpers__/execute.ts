@@ -310,7 +310,7 @@ function getVbaBin(binDir?: string): string {
 	if (dir) {
 		return resolve(dir, "vba");
 	}
-		return resolve(process.cwd(), "bin", "vba");
+	return resolve(process.cwd(), "bin", "vba");
 }
 
 export async function execute(

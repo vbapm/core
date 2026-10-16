@@ -11,13 +11,8 @@ await jest.unstable_mockModule("../../utils/zip", () => ({
 	})
 }));
 
-const {
-	extractSource,
-	sanitizePackageName,
-	getRemotePackage,
-	getLocalPackage,
-	getSource
-} = await import("../registry-source");
+const { extractSource, sanitizePackageName, getRemotePackage, getLocalPackage, getSource } =
+	await import("../registry-source");
 
 test("should resolve registry dependency", () => {
 	// TODO

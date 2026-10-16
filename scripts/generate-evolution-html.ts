@@ -529,7 +529,11 @@ function main(): void {
 	const output = resolve(argumentValue("--output") || join(input, "instances-evolution.html"));
 	if (!existsSync(input)) throw new Error(`Evolution directory not found: ${input}`);
 
-	const listScript = join(fileURLToPath(new URL(".", import.meta.url)), "ps", "List-ExcelInstances.ps1");
+	const listScript = join(
+		fileURLToPath(new URL(".", import.meta.url)),
+		"ps",
+		"List-ExcelInstances.ps1"
+	);
 	const entries = readdirSync(input, { withFileTypes: true });
 	const runs = entries
 		.filter((entry: any) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}--/.test(entry.name))

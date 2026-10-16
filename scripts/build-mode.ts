@@ -13,4 +13,3 @@ if (mode !== "development" && mode !== "production") {
 const libDirectory = join(ROOT, "lib");
 mkdirSync(libDirectory, { recursive: true });
 writeFileSync(join(libDirectory, ".build-mode"), `${mode}\n`, "utf8");
-

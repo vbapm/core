@@ -24,7 +24,11 @@ function main() {
 		process.exit(0);
 	}
 
-	const statusScript = join(fileURLToPath(new URL(".", import.meta.url)), "ps", "Ensure-ExcelInstancesClean.ps1");
+	const statusScript = join(
+		fileURLToPath(new URL(".", import.meta.url)),
+		"ps",
+		"Ensure-ExcelInstancesClean.ps1"
+	);
 	const result = spawnSync(
 		"powershell.exe",
 		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", statusScript],
