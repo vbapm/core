@@ -1,6 +1,7 @@
 export default {
 	testEnvironment: "node",
 	testTimeout: 120000,
+	extensionsToTreatAsEsm: [".ts"],
 	globalSetup: "<rootDir>/tests/global-setup.mjs",
 	globalTeardown: "<rootDir>/tests/global-teardown.mjs",
 	// Runs per test file (i.e. per Jest worker), which is where a persistent
