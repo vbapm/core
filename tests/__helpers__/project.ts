@@ -7,9 +7,6 @@ import { reset as resetFs } from "../../src/utils/fs";
 import { join } from "../../src/utils/path";
 import { cache } from "../__fixtures__";
 
-jest.mock("../../src/utils/fs");
-jest.mock("../../src/utils/git");
-
 const original_env = { ...env };
 
 interface EnvironmentOptions {

@@ -33,6 +33,8 @@
 
 import { readFile } from "fs-extra";
 import { join } from "path";
+import { execSync } from "node:child_process";
+import iconv from "iconv-lite";
 import { execute, setup } from "./__helpers__/execute";
 
 const isMultilingualTest =
@@ -49,7 +51,6 @@ const describeML = isMultilingualTest ? describe : describe.skip;
  */
 async function readExportedFile(dir: string, filename: string): Promise<string> {
 	const { getSystemCodepage, codepageToLabel } = await import("../src/build/encoding-sniffer");
-	const iconv = require("iconv-lite");
 	const buffer = await readFile(join(dir, "src", filename));
 	return iconv.decode(buffer, codepageToLabel(getSystemCodepage()));
 }
@@ -61,7 +62,6 @@ async function readExportedFile(dir: string, filename: string): Promise<string> 
  */
 function getSystemAnsiCodepage(): string | undefined {
 	try {
-		const { execSync } = require("child_process");
 		const result = execSync(
 			"powershell -Command \"(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage').ACP\"",
 			{ encoding: "utf8", timeout: 5000 }
@@ -69,7 +69,6 @@ function getSystemAnsiCodepage(): string | undefined {
 		return result.trim();
 	} catch {
 		try {
-			const { execSync } = require("child_process");
 			const result = execSync(
 				'reg query "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage" /v ACP',
 				{ encoding: "utf8", timeout: 5000 }
@@ -115,7 +114,7 @@ interface MultilingualFixture {
 	expectedStrings: string[];
 }
 
-const fixturesDir = join(__dirname, "__fixtures__/multilingual");
+const fixturesDir = join(process.cwd(), "tests", "__fixtures__", "multilingual");
 
 const FIXTURES: MultilingualFixture[] = [
 	{
@@ -232,7 +231,6 @@ describeML("multilingual encoding", () => {
  */
 async function closeExcel(): Promise<void> {
 	try {
-		const { execSync } = require("child_process");
 		execSync("taskkill /f /im excel.exe 2>nul", { timeout: 5000 });
 	} catch {
 		// Excel may not be running — that's fine

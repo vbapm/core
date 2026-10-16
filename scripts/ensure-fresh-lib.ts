@@ -20,11 +20,12 @@
  * `pnpm run build:dev` when stale. A mode record prevents either build from
  * being mistaken for the other.
  */
-const { execSync } = require("node:child_process");
-const { readFileSync, readdirSync, statSync, existsSync, writeFileSync } = require("node:fs");
-const { join, resolve } = require("node:path");
+import { execSync } from "node:child_process";
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(__dirname, "..");
+const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const BUILD_EMOJI = "📦";
 const BUILD_MODE = process.argv.includes("--dev") ? "development" : "production";
 const BUILD_MODE_FILE = join(ROOT, "lib", ".build-mode");
@@ -142,6 +143,3 @@ function main(): void {
 }
 
 main();
-
-type CommonJsEntryPoint = never;
-export type { CommonJsEntryPoint };

@@ -4,10 +4,11 @@
 //   1. Injects NO_COLOR + companion env vars after the shebang.
 //   2. Wraps the final lefthook call to strip any remaining ANSI via sed.
 // Runs after every `lefthook install` since the hook file is regenerated.
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const hookPath = path.resolve(__dirname, "..", ".git", "hooks", "pre-commit");
+const hookPath = path.resolve(fileURLToPath(new URL("..", import.meta.url)), ".git", "hooks", "pre-commit");
 
 if (!fs.existsSync(hookPath)) {
 	console.log("patch-hook-no-color: .git/hooks/pre-commit not found, skipping");

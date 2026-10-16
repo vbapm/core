@@ -1,5 +1,8 @@
-const { join } = require("path");
-const vba = require("../lib/index");
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import * as vba from "../lib/index.js";
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 main().catch(err => {
 	console.error(err.message);

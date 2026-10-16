@@ -1,5 +1,8 @@
 import { join, normalize } from "../path";
+import { readFileSync as _readFileSync, watch as _watch } from "fs";
 import { pathExists as _pathExists, readFile as _readFile } from "fs-extra";
+import tmp from "tmp";
+import { hash } from "../hash";
 
 let filesystem: { [path: string]: null | Buffer } = {};
 let index = 0;
@@ -7,6 +10,14 @@ export function reset() {
 	filesystem = {};
 	index = 0;
 }
+
+export const readFileSync = jest.fn(_readFileSync);
+export const watch = jest.fn(_watch);
+
+export const checksum = jest.fn(async (path: string, algorithm = "sha256") => {
+	const data = await readFile(path);
+	return hash(data, { algorithm });
+});
 
 export const copy = jest.fn(async (from, to) => {
 	from = normalize(from);
@@ -20,6 +31,7 @@ export const copy = jest.fn(async (from, to) => {
 
 export const ensureDir = jest.fn(async () => {});
 export const ensureDirSync = jest.fn(async () => {});
+export const emptyDir = jest.fn(async () => {});
 
 export const move = jest.fn(async (from, to) => {
 	from = normalize(from);
@@ -71,7 +83,7 @@ export interface TmpOptions {
 export const tmpFile = jest.fn(async (options: TmpOptions = {}) => {
 	let { dir, prefix = "vbapm-" } = options;
 	if (!dir) {
-		({ tmpdir: dir } = require("tmp"));
+		dir = tmp.tmpdir;
 	}
 
 	return join(dir!, `${prefix}${index++}.tmp`);
@@ -80,7 +92,7 @@ export const tmpFile = jest.fn(async (options: TmpOptions = {}) => {
 export const tmpFolder = jest.fn(async (options: TmpOptions = {}) => {
 	let { dir, prefix = "vbapm-" } = options;
 	if (!dir) {
-		({ tmpdir: dir } = require("tmp"));
+		dir = tmp.tmpdir;
 	}
 
 	return join(dir!, `${prefix}${index++}`);

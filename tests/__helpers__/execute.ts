@@ -1,4 +1,5 @@
 import { appendFileSync } from "fs";
+import { exec as execCallback } from "node:child_process";
 import { copy, ensureDirSync, readFile, remove } from "fs-extra";
 import { promisify } from "util";
 import { run as _run, closePowerShellSession, resetPersistentPowerShellSession } from "vbapm";
@@ -15,7 +16,7 @@ import {
 	run as sourceRun
 } from "../../src/utils/run";
 import { truncate } from "../../src/utils/text";
-const exec = promisify(require("child_process").exec);
+const exec = promisify(execCallback);
 
 export { RunResult };
 
@@ -65,7 +66,7 @@ export { RunResult };
  * - `E2E_VERBOSE` (or `--verbose`) — echo every executed command + its output.
  * - `VBA_BIN_DIR` — resolve the CLI from this dir instead of `bin/vba`.
  */
-const tmp_dir = join(__dirname, "../.tmp");
+const tmp_dir = join(process.cwd(), "tests", ".tmp");
 ensureDirSync(tmp_dir);
 // To keep the tmp folder around for inspection, run `$env:KEEP_E2E_TMP=1` in PowerShell or `export KEEP_E2E_TMP=1` in bash before running the tests. The tmp folder is located at `tests/.tmp`.
 const keepTmp = /^(1|true|yes)$/i.test(process.env.KEEP_E2E_TMP || "");
@@ -309,7 +310,7 @@ function getVbaBin(binDir?: string): string {
 	if (dir) {
 		return resolve(dir, "vba");
 	}
-	return resolve(__dirname, "../../bin/vba");
+		return resolve(process.cwd(), "bin", "vba");
 }
 
 export async function execute(

@@ -8,6 +8,7 @@
         "Tim Hall <tim.hall.engr@gmail.com> (https://github.com/timhall)"
     ],
     "license": "MIT",
+    "type": "module",
     "bin": {
         "vbapm": "lib/vbapm.js",
         "vba": "lib/vbapm.js"
@@ -16,7 +17,7 @@
     "types": "lib/src/index.d.ts",
     "exports": {
         ".": {
-            "require": "./lib/index.js",
+            "import": "./lib/index.js",
             "types": "./lib/src/index.d.ts"
         }
     },
@@ -39,7 +40,7 @@
         "lefthook:install": "lefthook install && node scripts/lefthook-cleanup.js",
         "sync:config-templates": "node scripts/sync-templates.js",
         "check:config-templates": "node scripts/sync-templates.js --check",
-        "test": "jest --runInBand",
+        "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
         "typecheck": "tsc",
         "deps": "pnpm install",
         "dev": "run-s deps typecheck format:check test build:cli",
@@ -97,6 +98,7 @@
         "xml-js": "^1.6"
     },
     "devDependencies": {
+        "@jest/globals": "^30.5.2",
         "@rollup/plugin-commonjs": "^29.0.0",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.1",

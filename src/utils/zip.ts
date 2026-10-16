@@ -1,8 +1,9 @@
 import { createWriteStream } from "fs";
+import archiver from "archiver";
 import { getDefault } from "./interop";
 
 export async function zip(dir: string, file: string): Promise<void> {
-	const { create: createArchive } = (await import("archiver")).default;
+	const createArchive = archiver;
 
 	return new Promise<void>((resolve, reject) => {
 		try {

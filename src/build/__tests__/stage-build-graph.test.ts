@@ -3,6 +3,7 @@ import { reset, setup } from "../../../tests/__helpers__/project";
 import { pathExists, readFile, ensureDir } from "../../utils/fs";
 import { join, relative } from "../../utils/path";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
+import iconv from "iconv-lite";
 import { ImportGraph } from "../build-graph";
 import { Codepage } from "../encoding-sniffer";
 import { loadFromProject } from "../load-from-project";
@@ -81,7 +82,6 @@ Module1 = "src/Module1.bas"
 	expect(buf).toBeDefined();
 
 	// Decode as CP932 to verify the content survived transcoding
-	const iconv = require("iconv-lite");
 	const decoded = iconv.decode(buf, "cp932");
 	expect(decoded).toContain("Bonjour");
 

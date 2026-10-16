@@ -1,6 +1,6 @@
 import { join, normalize } from "../../src/utils/path";
 
-export const dir = normalize(__dirname);
+export const dir = normalize(join(process.cwd(), "tests", "__fixtures__"));
 
 export const cache = join(dir, ".vbapm");
 export const sources = join(cache, "sources");

@@ -5,10 +5,11 @@
 import { writeFile } from "fs-extra";
 import { join } from "path";
 import { promisify } from "util";
+import { exec as execCallback } from "node:child_process";
 import { standard } from "./__fixtures__";
 import { execute, readdir, setup } from "./__helpers__/execute";
 
-const exec = promisify(require("child_process").exec);
+const exec = promisify(execCallback);
 
 jest.setTimeout(180000);
 

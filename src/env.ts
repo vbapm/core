@@ -1,4 +1,6 @@
 import envPaths from "env-paths";
+import { fileURLToPath } from "node:url";
+import debugFactory from "./debug";
 import { Reporter, reporter } from "./reporter";
 import { getStaging } from "./utils/get-staging";
 import { join } from "./utils/path";
@@ -30,7 +32,7 @@ export interface Env {
 const paths = envPaths("vbapm", { suffix: "" });
 
 const cache = paths.cache;
-const root = join(__dirname, "../");
+const root = fileURLToPath(new URL("../", import.meta.url));
 
 export const env: Env = {
 	isWindows: process.platform === "win32",
@@ -53,8 +55,7 @@ export const env: Env = {
 
 		return (...args) => {
 			if (!debug) {
-				const _debug = require("./debug").default;
-				debug = _debug(id);
+				debug = debugFactory(id);
 			}
 
 			return debug(...args);

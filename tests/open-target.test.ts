@@ -1,17 +1,19 @@
 import { EventEmitter } from "events";
-import { spawn } from "child_process";
-import open from "open";
-import { openTarget } from "../src/actions/open-target";
+import { jest } from "@jest/globals";
 
-jest.mock("child_process", () => ({
-	...jest.requireActual("child_process"),
+await jest.unstable_mockModule("child_process", () => ({
+	execFile: jest.fn(),
+	execSync: jest.fn(),
 	spawn: jest.fn()
 }));
 
-jest.mock("open", () => ({
-	__esModule: true,
+await jest.unstable_mockModule("open", () => ({
 	default: jest.fn()
 }));
+
+const { spawn } = await import("child_process");
+const { default: open } = await import("open");
+const { openTarget } = await import("../src/actions/open-target");
 
 describe("openTarget", () => {
 	test("launches the target without waiting for the application to exit", async () => {

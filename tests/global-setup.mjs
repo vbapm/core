@@ -13,11 +13,14 @@
  * In background mode (E2E_BACKGROUND=1) this is a no-op: each test spins up
  * its own hidden instance and we don't reuse a visible one.
  */
-const { spawnSync } = require("child_process");
-const { join } = require("path");
-const fs = require("fs");
+import { spawnSync } from "node:child_process";
+import { join, dirname } from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-module.exports = async function globalSetup() {
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+
+export default async function globalSetup() {
 	recordEvolutionRunStart();
 	clearActiveE2EInstanceLogs();
 	ensureExcelInstancesClean();
@@ -176,7 +179,7 @@ function writeRunBanner() {
 		const logPath =
 			process.env.VBA_INSTANCE_LOG || join(process.env.TEMP, "Excel-Instances", "instances.log");
 
-		fs.mkdirSync(require("path").dirname(logPath), { recursive: true });
+		fs.mkdirSync(dirname(logPath), { recursive: true });
 
 		const mode = /^(1|true|yes)$/i.test(process.env.E2E_BACKGROUND || "")
 			? "background"

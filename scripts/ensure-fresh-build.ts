@@ -20,10 +20,12 @@
  * point for commands that need fresh build artifacts. Use `--force` when a
  * TypeScript change is known to affect the generated Office artifacts.
  */
-const { execFileSync } = require("node:child_process");
-const { join, resolve } = require("node:path");
+import { execFileSync } from "node:child_process";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(__dirname, "..");
+const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
+const ROOT = resolve(SCRIPT_DIR, "..");
 const CHECKS = ["ensure-fresh-lib.ts", "ensure-fresh-addin.ts"];
 const FORCE_CHECKS = ["ensure-fresh-bootstrap.ts"];
 const CHECK_EMOJIS: Record<string, string> = {
@@ -49,8 +51,8 @@ function main(): void {
 		try {
 			const args =
 				force && check === "ensure-fresh-addin.ts"
-					? [join(__dirname, check), "--force"]
-					: [join(__dirname, check)];
+					? [join(SCRIPT_DIR, check), "--force"]
+					: [join(SCRIPT_DIR, check)];
 			execFileSync(process.execPath, args, {
 				cwd: ROOT,
 				stdio: "inherit"

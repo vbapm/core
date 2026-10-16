@@ -1,5 +1,5 @@
-const { existsSync, readFileSync, writeFileSync } = require("node:fs");
-const { join } = require("node:path");
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 class EvolutionJestReporter {
 	onRunComplete(_contexts, results) {
@@ -65,4 +65,4 @@ class EvolutionJestReporter {
 	}
 }
 
-module.exports = EvolutionJestReporter;
+export default EvolutionJestReporter;

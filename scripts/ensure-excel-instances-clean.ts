@@ -13,11 +13,10 @@
  * same way).
  *
  * Run natively by Node 24 type-stripping (like scripts/ensure-fresh-build.ts).
- * Must use CommonJS `require` + `__dirname` (the repo package.json has no
- * "type": "module").
  */
-const { spawnSync } = require("child_process");
-const { join } = require("path");
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 function main() {
 	if (process.platform !== "win32") {
@@ -25,7 +24,7 @@ function main() {
 		process.exit(0);
 	}
 
-	const statusScript = join(__dirname, "ps", "Ensure-ExcelInstancesClean.ps1");
+	const statusScript = join(fileURLToPath(new URL(".", import.meta.url)), "ps", "Ensure-ExcelInstancesClean.ps1");
 	const result = spawnSync(
 		"powershell.exe",
 		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", statusScript],

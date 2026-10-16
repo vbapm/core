@@ -1,9 +1,11 @@
-const { join, relative, extname } = require("path");
-const { ensureDir } = require("fs-extra");
-const ls = require("./lib/ls");
-const zip = require("./lib/zip");
+import { join, relative, extname } from "node:path";
+import { fileURLToPath } from "node:url";
+import fsExtra from "fs-extra";
+import ls from "./lib/ls.js";
 
-const root = join(__dirname, "../");
+const { ensureDir } = fsExtra;
+
+const root = fileURLToPath(new URL("../", import.meta.url));
 const dist = join(root, "dist");
 
 main().catch(err => {
@@ -12,19 +14,20 @@ main().catch(err => {
 });
 
 async function main() {
+	const { default: zip } = await import("./lib/zip.mjs");
 	await ensureDir(dist);
-	await windows();
-	await mac();
+	await windows(zip);
+	await mac(zip);
 }
 
-async function windows() {
+async function windows(zip) {
 	const file = join(dist, `vbapm-win.zip`);
 	const input = getInput("win32");
 
 	await zip(input, file);
 }
 
-async function mac() {
+async function mac(zip) {
 	const file = join(dist, `vbapm-mac.tar.gz`);
 	const input = getInput("darwin");
 

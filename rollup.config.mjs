@@ -15,10 +15,9 @@ export default [
 	{
 		input: ["src/index.ts", "src/bin/vbapm.ts", "src/debug.ts"],
 		output: {
-			format: "cjs",
+			format: "es",
 			dir: "lib",
-			sourcemap: false,
-			exports: "auto"
+			sourcemap: false
 		},
 		external(id) {
 			return builtins.has(id) || id.startsWith("node:");
@@ -64,7 +63,7 @@ function debug() {
 		load(id) {
 			if (isBrowser.test(id)) {
 				return {
-					code: `module.exports = {};`
+					code: `export default {};`
 				};
 			}
 		}

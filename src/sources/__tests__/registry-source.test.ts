@@ -1,21 +1,23 @@
 import { mkdirSync, readdirSync, writeFileSync } from "fs";
+import { jest } from "@jest/globals";
 import { join } from "../../utils/path";
 import { pathExists, tmpFolder } from "../../utils/fs";
-import {
-	extractSource,
-	sanitizePackageName,
-	getRemotePackage,
-	getLocalPackage,
-	getSource
-} from "../registry-source";
 
-jest.mock("../../utils/zip", () => ({
+await jest.unstable_mockModule("../../utils/zip", () => ({
 	unzip: jest.fn(async (_file: string, dest: string) => {
 		// Simulate `decompress` writing the package's legacy manifest.
 		mkdirSync(dest, { recursive: true });
 		writeFileSync(join(dest, "vba-block.toml"), '[package]\nname = "dictionary"\n');
 	})
 }));
+
+const {
+	extractSource,
+	sanitizePackageName,
+	getRemotePackage,
+	getLocalPackage,
+	getSource
+} = await import("../registry-source");
 
 test("should resolve registry dependency", () => {
 	// TODO

@@ -1,5 +1,6 @@
 import dedent from "@timhall/dedent";
 import { existsSync, renameSync, unlinkSync } from "fs";
+import { rm } from "fs/promises";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
 import { Dependency, RegistryDependency } from "../manifest/dependency";
@@ -11,7 +12,6 @@ import {
 	move,
 	pathExists,
 	readFile,
-	remove,
 	tmpFile
 } from "../utils/fs";
 import { clone, isGitRepository, pull } from "../utils/git";
@@ -270,7 +270,7 @@ export async function extractSource(
 		}
 	} finally {
 		// Best-effort cleanup of our temp dir (no-op after a successful rename).
-		await remove(tmp).catch(() => {});
+		await rm(tmp, { recursive: true, force: true }).catch(() => {});
 	}
 
 	return src;

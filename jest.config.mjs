@@ -1,7 +1,9 @@
 export default {
 	testEnvironment: "node",
+	extensionsToTreatAsEsm: [".ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
+	setupFilesAfterEnv: ["<rootDir>/tests/__helpers__/jest-globals.ts"],
 	// ESM-only packages. Jest (CJS mode via ts-jest) skips transforming
 	// node_modules by default. The ignore pattern excludes everything EXCEPT
 	// these packages so ts-jest can downcompile them to CJS.
@@ -9,10 +11,12 @@ export default {
 	transformIgnorePatterns: ["/node_modules/(?!.*(?:@decimalturn/toml-patch|env-paths|is-safe-filename)/)"],	
 	// allowJs is required so ts-jest can process the plain .js ESM dist file of toml-patch.
 	transform: {
-		"^.+\\.[tj]sx?$": ["ts-jest", { tsconfig: { allowJs: true } }]
+		"^.+\\.[tj]sx?$": ["ts-jest", { useESM: true, tsconfig: { allowJs: true, module: "ESNext" } }]
 	},
 	moduleNameMapper: {
-		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js"
+		"^@timhall/dedent$": "<rootDir>/node_modules/@timhall/dedent/dist/dedent.js",
+		"^.*utils/fs$": "<rootDir>/src/utils/__mocks__/fs.ts",
+		"^.*utils/git$": "<rootDir>/src/utils/__mocks__/git.ts"
 	},
 	snapshotFormat: {
 		escapeString: true,

@@ -6,7 +6,15 @@ import { pathExists, readFile } from "../../../utils/fs";
 import { parseXml, findElement, findElementByName } from "../../../utils/xml";
 import { normalizeWorksheetNames } from "../normalize-worksheet-names";
 
-const FIXTURES = join(__dirname, "__fixtures__", "normalize-worksheet-names");
+const FIXTURES = join(
+	process.cwd(),
+	"src",
+	"targets",
+	"transforms",
+	"__tests__",
+	"__fixtures__",
+	"normalize-worksheet-names"
+);
 const WS_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet";
 const WORKSHEET_CT = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml";
 

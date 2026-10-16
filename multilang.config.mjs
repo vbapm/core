@@ -16,6 +16,7 @@ export default {
 	testMatch: ["**/tests/**/*.multilang.ts"],
 	testPathIgnorePatterns: ["/node_modules/", "/lib/", "<rootDir>/worktrees/"],
 	modulePathIgnorePatterns: ["<rootDir>/worktrees/"],
+	setupFilesAfterEnv: ["<rootDir>/tests/__helpers__/jest-globals.ts"],
 	transformIgnorePatterns: [
 		"/node_modules/(?!.*(?:@decimalturn/toml-patch|env-paths|is-safe-filename)/)",
 		"<rootDir>/lib/"

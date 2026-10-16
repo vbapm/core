@@ -9,11 +9,12 @@
  *
  * Visible Excel sessions (a user's own workbooks) are never touched.
  */
-const { spawnSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repoRoot = path.join(__dirname, "..");
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const tmpRoot = path.join(repoRoot, "tests", ".tmp");
 
 function closeInvisibleExcel() {

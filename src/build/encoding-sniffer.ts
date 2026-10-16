@@ -14,6 +14,7 @@
  */
 
 import * as iconv from "iconv-lite";
+import { execSync } from "node:child_process";
 
 /**
  * Known codepage for a VBA source buffer.
@@ -197,7 +198,6 @@ const ACP_TO_CODEPAGE: Record<string, Codepage> = {
  */
 export function getSystemCodepage(): Codepage {
 	try {
-		const { execSync } = require("child_process");
 		const result = execSync(
 			'reg query "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage" /v ACP',
 			{ encoding: "utf8", timeout: 5000 }

@@ -1,10 +1,14 @@
-const { promisify } = require("util");
-const { join, dirname, basename } = require("path");
-const { get: httpsGet } = require("https");
-const { createWriteStream } = require("fs");
-const { ensureDir, pathExists, remove, writeFile, readFile } = require("fs-extra");
-const tmpDir = promisify(require("tmp").dir);
-const decompress = require("decompress");
+import { promisify } from "node:util";
+import { join, dirname, basename } from "node:path";
+import { get as httpsGet } from "node:https";
+import { createWriteStream } from "node:fs";
+import fsExtra from "fs-extra";
+import tmp from "tmp";
+import decompress from "decompress";
+import { fileURLToPath } from "node:url";
+
+const { ensureDir, pathExists, remove, writeFile, readFile } = fsExtra;
+const tmpDir = promisify(tmp.dir);
 
 const node_version = "v22.22.0";
 
@@ -13,7 +17,7 @@ function getWindowsArch(version) {
 	const major = parseInt(version.replace(/^v/, "").split(".")[0], 10);
 	return major >= 23 ? "x64" : "x86";
 }
-const vendor = join(__dirname, "../vendor");
+const vendor = fileURLToPath(new URL("../vendor", import.meta.url));
 const version = join(vendor, ".version");
 
 main().catch(err => {
@@ -94,7 +98,7 @@ async function download(url, dest) {
 	});
 }
 
-module.exports = {
+export default {
 	versions: {
 		node: node_version
 	}
