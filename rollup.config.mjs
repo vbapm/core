@@ -20,7 +20,13 @@ export default [
 			sourcemap: false
 		},
 		external(id) {
-			return builtins.has(id) || id.startsWith("node:");
+			return (
+				builtins.has(id) ||
+				id.startsWith("node:") ||
+				id === "conf" ||
+				id === "editorconfig" ||
+				id === "debug"
+			);
 		},
 		plugins: [
 			resolve(),
