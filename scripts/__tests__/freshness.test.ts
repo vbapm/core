@@ -107,5 +107,3 @@ describe("freshness metadata", () => {
 		expect(checkFreshness(output, metadata).fresh).toBe(false);
 	});
 });
-
-export {};

@@ -27,7 +27,7 @@ function isSnapshotFileMap(value: any): value is { [path: string]: string } {
 	}
 
 	return (
-		entries.every(([_, contents]) => typeof contents === "string") &&
+		entries.every(([, contents]) => typeof contents === "string") &&
 		entries.some(([path]) => path.includes("/") || path.endsWith(".toml"))
 	);
 }

@@ -1,10 +1,4 @@
-import {
-	mkdir,
-	mkdtemp,
-	readFile as readFileNative,
-	rm,
-	writeFile as writeFileNative
-} from "fs/promises";
+import { mkdir, mkdtemp, rm, writeFile as writeFileNative } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { readFile } from "../../../utils/fs";

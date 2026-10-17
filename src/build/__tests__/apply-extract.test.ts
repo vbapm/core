@@ -74,7 +74,6 @@ describe("resolveSourceFiles", () => {
 
 describe("resolveTargetPaths", () => {
 	function makeComponent(type: ComponentType, name: string): Component {
-		const ext = type === "module" ? ".bas" : type === "form" ? ".frm" : ".cls";
 		const code =
 			type === "form"
 				? `VERSION 5.00\r\nBegin Form\r\nEnd\r\nAttribute VB_Name = "${name}"\r\n`
@@ -241,7 +240,7 @@ describe("applyExtract", () => {
 	test("writes created files to subfolders and deletes orphaned files", async () => {
 		jest.spyOn(console, "log").mockImplementation(() => {});
 
-		const { project, dependencies } = await setup(wildcard, { silent: false });
+		const { project } = await setup(wildcard, { silent: false });
 		const sources = await resolveSourceFiles(project);
 
 		// Build the export graph (standard changes export has added, changed,

@@ -173,7 +173,7 @@ async function detectSourceEncoding(project: import("../project").Project): Prom
 	if (!encoding) return;
 
 	project.manifest.srcProperties = {
-		...(project.manifest.srcProperties || {}),
+		...project.manifest.srcProperties,
 		encoding
 	};
 	if (project.manifest.target) {
