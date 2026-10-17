@@ -214,7 +214,7 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 				const results = (
 					jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
 				)
-					.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding))
+					.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding.toLowerCase()))
 					.sort((a, b) => b.confidence - a.confidence);
 
 				if (results.length > 0 && results[0].confidence >= 0.5) {
