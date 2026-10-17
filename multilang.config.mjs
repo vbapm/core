@@ -25,7 +25,12 @@ export default {
 	transform: {
 		"^.+\\.[tj]sx?$": [
 			"ts-jest",
-			{ useESM: true, tsconfig: "tests/tsconfig.json", diagnostics: false }
+			{
+				compiler: "@typescript/typescript6",
+				useESM: true,
+				tsconfig: "tests/tsconfig.json",
+				diagnostics: false
+			}
 		]
 	},
 	moduleNameMapper: {
