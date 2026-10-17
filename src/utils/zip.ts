@@ -1,14 +1,12 @@
 import { createWriteStream } from "fs";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import { getDefault } from "./interop";
 
 export async function zip(dir: string, file: string): Promise<void> {
-	const createArchive = archiver;
-
 	return new Promise<void>((resolve, reject) => {
 		try {
 			const output = createWriteStream(file);
-			const archive = createArchive("zip");
+			const archive = new ZipArchive();
 
 			output.on("close", () => resolve());
 			output.on("error", reject);

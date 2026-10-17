@@ -7,10 +7,15 @@ export async function download(url: string, dest: string): Promise<void> {
 	await ensureDir(dirname(dest));
 
 	return fetch(url).then(response => {
+		const body = response.body;
+		if (!body) {
+			throw new Error(`Response body is empty for ${url}`);
+		}
+
 		const file = createWriteStream(dest);
 
 		return new Promise<void>((resolve, reject) => {
-			response.body
+			body
 				.pipe(file)
 				.on("finish", () => resolve())
 				.on("error", reject);

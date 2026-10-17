@@ -16,7 +16,7 @@ import jschardet from "jschardet";
  *
  * That policy is:
  * 1. Default to the system codepage.
- * 2. If jschardet confidently (≥ 80 %) detects a *different* Windows
+ * 2. If jschardet confidently (>= 35%) detects a *different* Windows
  *    codepage, adopt that instead (e.g. a Japanese workbook opened on
  *    a Western European machine).
 
@@ -70,14 +70,14 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 		// (e.g. MacCyrillic will never be a VBA source encoding)
 		const remapped = results.map(r => ({
 			...r,
-			encoding: remapForVbaContext(r.encoding)
+			encoding: remapForVbaContext(r.encoding.toLowerCase())
 		}));
 
 		const filtered = remapped.filter((r: { encoding: string }) =>
 			SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding)
 		);
 
-		if (filtered.length > 0 && filtered[0].confidence >= 0.4) {
+		if (filtered.length > 0 && filtered[0].confidence >= 0.35) {
 			const detectedLabel = filtered[0].encoding.toLowerCase();
 			const detectedCp = labelToCodepage(detectedLabel);
 

@@ -9,13 +9,13 @@
  */
 
 import { createWriteStream } from "node:fs";
-import archiver from "archiver";
+import { TarArchive, ZipArchive } from "archiver";
 
 export default async function zip(input, dest, type = "zip", options = {}) {
 	return new Promise((resolve, reject) => {
 		try {
 			const output = createWriteStream(dest);
-			const archive = archiver(type, options);
+						const archive = type === "tar" ? new TarArchive(options) : new ZipArchive(options);
 
 			output.on("close", resolve);
 			output.on("error", reject);

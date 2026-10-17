@@ -16,7 +16,7 @@ export const watch = jest.fn(_watch);
 
 export const checksum = jest.fn(async (path: string, algorithm = "sha256") => {
 	const data = await readFile(path);
-	return hash(data, { algorithm });
+	return hash(typeof data === "string" ? Buffer.from(data) : data, { algorithm });
 });
 
 export const copy = jest.fn(async (from, to) => {
