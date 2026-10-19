@@ -246,3 +246,53 @@ Sub ПоказатьСправку()
     текстСправки = текстСправки & "При возникновении вопросов обратитесь к администратору."
     MsgBox текстСправки, vbInformation, "Справка"
 End Sub
+Private Type Клиент
+    Имя As String
+    Телефон As String
+    ЭлектроннаяПочта As String
+    ДатаРегистрации As Date
+End Type
+
+Private Const МаксимальнаяСкидка As Double = 0.2
+Private Const МинимальнаяСумма As Currency = 1000
+
+Function РассчитатьСумму(цена As Currency, количество As Long, скидка As Double) As Currency
+    Dim итог As Currency
+    итог = цена * количество
+    If скидка > 0 And скидка <= МаксимальнаяСкидка Then итог = итог * (1 - скидка)
+    РассчитатьСумму = итог
+End Function
+
+Function НайтиКлиента(лист As Worksheet, имя As String) As Long
+    Dim последняяСтрока As Long
+    последняяСтрока = лист.Cells(лист.Rows.Count, 1).End(xlUp).Row
+    If последняяСтрока < 2 Then Exit Function
+    НайтиКлиента = Application.Match(имя, лист.Range("A2:A" & последняяСтрока), 0)
+End Function
+
+Function ПроверитьЗаказ(сумма As Currency, количество As Long) As Boolean
+    If количество <= 0 Or сумма < МинимальнаяСумма Then Exit Function
+    ПроверитьЗаказ = True
+End Function
+
+Sub СохранитьОтчёт()
+    Dim лист As Worksheet
+    Set лист = ThisWorkbook.Worksheets("Отчёт")
+    лист.Range("A1").Value = "Отчёт по продажам"
+    лист.Range("A2").Value = "Дата формирования"
+    лист.Range("B2").Value = Format(Now, "dd.mm.yyyy hh:nn")
+    лист.Range("A3").Value = "Ответственный сотрудник"
+    лист.Range("B3").Value = Environ("USERNAME")
+    лист.Range("A5:C5").Value = Array("Клиент", "Сумма заказа", "Статус")
+    лист.Range("A1:C5").Font.Bold = True
+    лист.Columns("A:C").AutoFit
+    MsgBox "Отчёт сохранён", vbInformation, "Готово"
+End Sub
+
+Sub ОбновитьСтатус(лист As Worksheet, строка As Long, сумма As Currency)
+    If ПроверитьЗаказ(сумма, лист.Cells(строка, 2).Value) Then
+        лист.Cells(строка, 3).Value = "Подтверждён"
+    Else
+        лист.Cells(строка, 3).Value = "Требуется проверка"
+    End If
+End Sub

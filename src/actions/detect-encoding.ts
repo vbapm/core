@@ -9,6 +9,9 @@ import {
 
 import jschardet from "jschardet";
 
+/** Minimum jschardet score required to override the system codepage. */
+export const MIN_ENCODING_CONFIDENCE = 0.4;
+
 /**
  * Decide which encoding to declare for a newly downloaded VBA project.
  *
@@ -16,7 +19,7 @@ import jschardet from "jschardet";
  *
  * That policy is:
  * 1. Default to the system codepage.
- * 2. If jschardet confidently (>= 35%) detects a *different* Windows
+ * 2. If jschardet confidently detects a *different* Windows
  *    codepage, adopt that instead (e.g. a Japanese workbook opened on
  *    a Western European machine).
 
@@ -77,7 +80,7 @@ export async function detectImportEncoding(firstSourcePath: string): Promise<str
 			SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding)
 		);
 
-		if (filtered.length > 0 && filtered[0].confidence >= 0.35) {
+		if (filtered.length > 0 && filtered[0].confidence >= MIN_ENCODING_CONFIDENCE) {
 			const detectedLabel = filtered[0].encoding.toLowerCase();
 			const detectedCp = labelToCodepage(detectedLabel);
 

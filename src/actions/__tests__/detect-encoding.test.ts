@@ -3,6 +3,7 @@ import { join } from "../../utils/path";
 import { dir } from "../../../tests/__fixtures__";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import iconv from "iconv-lite";
+import { codepageToLabel, getSystemCodepage } from "../../build/encoding-sniffer";
 
 const fixtureDir = join(dir, "projects", "detect-encoding-test");
 
@@ -64,6 +65,12 @@ describe("detectImportEncoding", () => {
 		expect(result).toBeDefined();
 		expect(validLabels.has(result!)).toBe(true);
 		expect(result!.toLowerCase()).toMatch(/^(windows-?1252|cp1252)$/);
+	});
+
+	test("keeps the default for ambiguous CP1252 VBA fixture", async () => {
+		const path = join(dir, "multilingual", "cp1252", "src", "AmbiguousWesternExample.bas");
+		const result = await detectImportEncoding(path);
+		expect(result).toBe(codepageToLabel(getSystemCodepage()));
 	});
 
 	test("detects CP1252 from Portuguese VBA fixture", async () => {
