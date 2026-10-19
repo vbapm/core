@@ -17,6 +17,7 @@ export interface AddinOptions {
 	open?: boolean;
 	staging?: boolean;
 	background?: boolean;
+	metadataOnly?: boolean;
 }
 
 export const extensions: { [application: string]: string[] } = {
@@ -110,6 +111,7 @@ export async function exportTo(
 			JSON.stringify({
 				file,
 				staging,
+				metadataOnly: options.metadataOnly ?? false,
 				// Respect [source] "include-empty-objects" flag (default: true)
 				includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
 			})

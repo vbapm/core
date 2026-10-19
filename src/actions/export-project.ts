@@ -92,12 +92,14 @@ export async function exportProject(options: ExportOptions = {}) {
 			await ensureDir(staging);
 			await emptyDir(staging);
 
-			if (!options.xmlOnly) {
-				env.reporter.log(
-					Message.ExportToStaging,
-					`\n[2/3] Exporting src from "${target.filename}"`
-				);
-				await exportTo(project, target, staging, options);
+			if (!options.xmlOnly || !options.skipSheetNameNormalization) {
+				if (!options.xmlOnly) {
+					env.reporter.log(
+						Message.ExportToStaging,
+						`\n[2/3] Exporting src from "${target.filename}"`
+					);
+				}
+				await exportTo(project, target, staging, { ...options, metadataOnly: options.xmlOnly });
 			}
 		} else {
 			staging = options.completed;
@@ -106,7 +108,8 @@ export async function exportProject(options: ExportOptions = {}) {
 		env.reporter.log(Message.ExportToProject, `\n[${steps}/${steps}] Updating project`);
 		await exportTarget(target, { project, dependencies, blankTarget }, staging, {
 			xmlOnly: options.xmlOnly,
-			vbaOnly: options.vbaOnly
+			vbaOnly: options.vbaOnly,
+			skipSheetNameNormalization: options.skipSheetNameNormalization
 		});
 	} finally {
 		// @ts-ignore Variable is used before being assigned

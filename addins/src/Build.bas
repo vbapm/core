@@ -121,31 +121,34 @@ Public Function ExportTo(Info As Variant) As String
     ' Iterate through all components in document and export directly to staging
     Dim Component As VBComponent
     Dim Path As String
-    For Each Component In Document.VBProject.VBComponents
-        Dim Extension As String
-        Select Case Component.Type
-        Case vbext_ComponentType.vbext_ct_StdModule
-            Extension = ".bas"
-        Case vbext_ComponentType.vbext_ct_ClassModule, vbext_ComponentType.vbext_ct_Document
-            Extension = ".cls"
-        Case vbext_ComponentType.vbext_ct_MSForm
-            Extension = ".frm"
-        Case Else
-            ' The only other component type for Excel is vbext_ct_ActiveXDesigner = 11
-            ' I'm not sure when this could occur, so just warn for now
-            Output.Warnings.Add "Unknown component type: " & Component.Type
-        End Select
+    If Not Values.Exists("metadataOnly") Then Values("metadataOnly") = False
+    If Not Values("metadataOnly") Then
+        For Each Component In Document.VBProject.VBComponents
+            Dim Extension As String
+            Select Case Component.Type
+            Case vbext_ComponentType.vbext_ct_StdModule
+                Extension = ".bas"
+            Case vbext_ComponentType.vbext_ct_ClassModule, vbext_ComponentType.vbext_ct_Document
+                Extension = ".cls"
+            Case vbext_ComponentType.vbext_ct_MSForm
+                Extension = ".frm"
+            Case Else
+                ' The only other component type for Excel is vbext_ct_ActiveXDesigner = 11
+                ' I'm not sure when this could occur, so just warn for now
+                Output.Warnings.Add "Unknown component type: " & Component.Type
+            End Select
 
-        ' Skip empty document objects when empty-objects = false
-        If Extension <> "" Then
-            If IncludeEmptyObjects = False And Installer.IsDocumentComponent(Component, Document) And ComponentIsBlank(Component) Then
-                ' Skip this blank document object
-            Else
-                Path = FileSystem.JoinPath(Staging, Component.Name & Extension)
-                Installer.Export Document.VBProject, Component.Name, Path, Overwrite:=True
+            ' Skip empty document objects when empty-objects = false
+            If Extension <> "" Then
+                If IncludeEmptyObjects = False And Installer.IsDocumentComponent(Component, Document) And ComponentIsBlank(Component) Then
+                    ' Skip this blank document object
+                Else
+                    Path = FileSystem.JoinPath(Staging, Component.Name & Extension)
+                    Installer.Export Document.VBProject, Component.Name, Path, Overwrite:=True
+                End If
             End If
-        End If
-    Next Component
+        Next Component
+    End If
 
     ' For "indirect" values (VBA project name and references)
     ' export to project.json for post-processing by vbapm
