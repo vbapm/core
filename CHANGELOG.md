@@ -6,8 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Breaking changes
 - The `vbapm` package is now ESM-only. CommonJS consumers must replace `require("vbapm")` with an ESM `import`.
+
+### Added
+- `vba e` as a short alias for `vba extract`.
+
 
 ### Fixed
 - Updated Renovate dependencies, including TypeScript 7, while preserving Jest and Rollup compatibility.

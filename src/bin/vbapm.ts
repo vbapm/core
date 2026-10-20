@@ -163,6 +163,7 @@ async function main(): Promise<string | undefined> {
 		args.help = true;
 	}
 	command = command.toLowerCase();
+	if (command === "e") command = "extract";
 
 	const available = Object.keys(commands);
 	if (!available.includes(command)) {
