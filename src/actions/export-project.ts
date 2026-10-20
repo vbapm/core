@@ -18,6 +18,7 @@ export interface ExportOptions {
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
 	skipSheetNameNormalization?: boolean;
+	skipDxfIndexNormalization?: boolean;
 	background?: boolean;
 }
 
@@ -109,7 +110,8 @@ export async function exportProject(options: ExportOptions = {}) {
 		await exportTarget(target, { project, dependencies, blankTarget }, staging, {
 			xmlOnly: options.xmlOnly,
 			vbaOnly: options.vbaOnly,
-			skipSheetNameNormalization: options.skipSheetNameNormalization
+			skipSheetNameNormalization: options.skipSheetNameNormalization,
+			skipDxfIndexNormalization: options.skipDxfIndexNormalization
 		});
 	} finally {
 		// @ts-ignore Variable is used before being assigned

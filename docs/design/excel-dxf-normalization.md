@@ -19,6 +19,8 @@ Make stable DXF definitions retain their previous indexes after extraction, so E
 
 ## Proposed Behavior
 
+Implemented in `src/targets/transforms/normalize-dxf-indexes.ts` and integrated into target extraction.
+
 Add a focused transform, tentatively `normalizeDxfIndexes(extractedDir, previousTargetDir)`, and call it during target extraction alongside `normalizeWorksheetNames`. It should run on the extracted OOXML package before that package replaces the project target. Like sheet normalization, it should be a no-op when there is no previous target or when either package lacks the required styles data.
 
 1. Read the current and previous `xl/styles.xml` files and locate their `<dxfs>` lists. Treat list positions as the DXF indexes used by OOXML references.
@@ -41,7 +43,7 @@ The transform must inventory and cover every OOXML attribute whose value is a DX
 - `dxfId` on conditional-formatting rules in worksheet XML.
 - `dataDxfId`, `headerRowDxfId`, and `totalsRowDxfId` on table-column/table XML elements.
 
-Search package XML structurally and update only recognized attributes with integer index values. Preserve missing attributes and non-DXF attributes. If a recognized reference is malformed or outside the current `<dxfs>` range, do not guess a replacement: log diagnostic context and leave it unchanged, or fail normalization according to the repository's established transform error policy. Add tests before choosing between warning and failure.
+Search worksheet and table XML structurally and update only recognized attributes with integer index values. Preserve missing attributes and non-DXF attributes. If a recognized reference is malformed or outside the current `<dxfs>` range, log the attribute, value, and XML path through the transform's debug logger, then leave it unchanged. Do not guess a replacement.
 
 ## Integration and Options
 
@@ -66,15 +68,15 @@ Search package XML structurally and update only recognized attributes with integ
 
 ### End-to-End Test
 
-Use a small OOXML fixture with at least one table reference and one conditional-formatting reference. Simulate Excel reordering DXFs and changing the corresponding IDs, run extraction normalization, and verify that the normalized target has the baseline DXF order and unchanged references for equivalent formats. Also assert that a real format change remains represented in the output.
+The unit tests cover table references and conditional-formatting references. The Excel-backed XML-only extraction test simulates reordered DXFs and verifies that the target returns to its baseline order and remaps a conditional-formatting reference. Unit tests also verify that a real format change remains represented in the output.
 
 ## Implementation Sequence
 
-1. Confirm the full set of DXF-index attributes from the OOXML parts supported by this project and settle malformed-reference handling.
-2. Add the transform and unit fixtures, including duplicate, added, removed, and changed DXFs.
-3. Integrate the transform into the existing extraction path and add the opt-out CLI flag.
-4. Add the end-to-end test and verify repeated extraction is idempotent.
-5. Re-run the Candidats-Election-Quebec save/extract scenario and confirm that the DXF-related diffs disappear while real format edits remain visible.
+1. Confirm the supported references and choose diagnostic logging with no rewrite for malformed or out-of-range indexes. **Complete.**
+2. Add the transform and unit fixtures for reordered, duplicate, added, removed, and changed DXFs. **Complete.**
+3. Integrate the transform into extraction and add the `--skip-dxf-index-normalization` option to extract/export. **Complete.**
+4. Add extraction-level regression coverage and verify unit-test idempotence. **Complete.**
+5. Re-run the original workbook save/extract scenario and confirm that DXF-only diffs disappear while real format edits remain visible. **Pending.**
 
 ## Risks and Open Questions
 

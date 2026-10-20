@@ -16,6 +16,7 @@ import { dirname, join } from "../utils/path";
 import { unzip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
 import { filterTarget, mapTarget } from "./transform-target";
+import { normalizeDxfIndexes } from "./transforms/normalize-dxf-indexes";
 import { normalizeWorksheetNames } from "./transforms/normalize-worksheet-names";
 import {
 	preserveWorksheetSelections,
@@ -27,6 +28,7 @@ export interface ExportOptions {
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
 	skipSheetNameNormalization?: boolean;
+	skipDxfIndexNormalization?: boolean;
 }
 
 /**
@@ -44,7 +46,12 @@ export async function exportTarget(
 	options: ExportOptions = {}
 ) {
 	const { project, dependencies, blankTarget } = info;
-	const { xmlOnly = false, vbaOnly = false, skipSheetNameNormalization = false } = options;
+	const {
+		xmlOnly = false,
+		vbaOnly = false,
+		skipSheetNameNormalization = false,
+		skipDxfIndexNormalization = false
+	} = options;
 
 	// Extract target to staging
 	let extracted: string;
@@ -56,6 +63,7 @@ export async function exportTarget(
 		if (!skipSheetNameNormalization) {
 			await normalizeWorksheetNames(extracted, target.path, await readWorksheetCodeNames(staging));
 		}
+		if (!skipDxfIndexNormalization) await normalizeDxfIndexes(extracted, target.path);
 	}
 
 	if (!xmlOnly) {

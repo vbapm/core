@@ -14,8 +14,9 @@ const help = dedent`
 	--vba-only      Only extract the VBA source, skip target XML extraction
 	--background    Use a hidden Excel instance
 
-  Debugging options:
-    --skip-sheet-name-normalization   Skip sheet name normalization (keep sheetN.xml names)`;
+  Additional options:
+	--skip-sheet-name-normalization   Skip sheet name normalization (keep sheetN.xml names)
+	--skip-dxf-index-normalization   Skip differential format index normalization`;
 
 export default async function (args: Args) {
 	if (args.help) {
@@ -29,6 +30,7 @@ export default async function (args: Args) {
 	const xmlOnly = !!args["xml-only"];
 	const vbaOnly = !!args["vba-only"];
 	const skipSheetNameNormalization = !!args["skip-sheet-name-normalization"];
+	const skipDxfIndexNormalization = !!args["skip-dxf-index-normalization"];
 	const background =
 		typeof args.background === "boolean" ? args.background : await resolveBackgroundMode();
 
@@ -39,6 +41,7 @@ export default async function (args: Args) {
 		xmlOnly,
 		vbaOnly,
 		skipSheetNameNormalization,
+		skipDxfIndexNormalization,
 		background
 	});
 }
