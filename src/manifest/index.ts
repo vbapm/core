@@ -13,13 +13,13 @@ import {
 	resolveSrcSubfolders,
 	SrcProperties,
 	SrcStructure,
-	SrcSubfolders
+	type SrcSubfolders
 } from "./src-sort";
 import { formatTarget, parseTarget, Target } from "./target";
 import { DEFAULT_VERSION, Version } from "./version";
 
 // Re-export for consumers
-export { resolveSrcFolder, resolveSrcSubfolders, SrcSubfolders };
+export { resolveSrcFolder, resolveSrcSubfolders, type SrcSubfolders };
 
 /**
  * Snapshot is the minimal manifest needed to support both Manifest

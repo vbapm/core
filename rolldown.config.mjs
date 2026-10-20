@@ -1,14 +1,8 @@
 import builtin from "builtin-modules";
-import commonjs from "@rollup/plugin-commonjs";
-import json from "@rollup/plugin-json";
-import resolve from "@rollup/plugin-node-resolve";
-import replace from "@rollup/plugin-replace";
-import terser from "@rollup/plugin-terser";
-import typescript from "@rollup/plugin-typescript";
-import typescript6 from "@typescript/typescript6";
 import fs from "fs";
 import { createRequire } from "module";
 import path from "path";
+import { replacePlugin } from "rolldown/plugins";
 
 const mode = process.env.NODE_ENV || "production";
 const standalone = process.env.VBAPM_STANDALONE === "1";
@@ -20,6 +14,7 @@ const nodeGlobalsBanner = [
 	"const __filename = __fileURLToPath(import.meta.url);",
 	"const __dirname = __dirnameFn(__filename);"
 ].join("\n");
+
 export default [
 	{
 		input: ["src/index.ts", "src/bin/vbapm.ts", "src/debug.ts"],
@@ -27,41 +22,44 @@ export default [
 			format: "es",
 			dir: "lib",
 			sourcemap: false,
-				banner: selfContained ? nodeGlobalsBanner : undefined
+			banner: selfContained ? nodeGlobalsBanner : undefined,
+			minify: mode === "production"
 		},
+		platform: "node",
 		external(id) {
 			return (
 				builtins.has(id) ||
 				id.startsWith("node:") ||
-							   (!selfContained && ["conf", "editorconfig", "debug"].includes(id))
+				(!selfContained && ["conf", "editorconfig", "debug"].includes(id))
 			);
 		},
+		transform: {
+			define: {
+				"process.env.NODE_ENV": JSON.stringify(mode),
+				"process.env.VBAPM_STANDALONE": JSON.stringify(selfContained),
+				"process.env.READABLE_STREAM": '"disable"',
+				"require.cache": "{}"
+			},
+			typescript: {
+				onlyRemoveTypeImports: false
+			}
+		},
 		plugins: [
-			resolve({ exportConditions: ["node", "import", "default"] }),
-			replace({
-				preventAssignment: true,
+			replacePlugin({
 				"process.env.NODE_ENV": JSON.stringify(mode),
 				"process.env.VBAPM_STANDALONE": JSON.stringify(selfContained),
 				"process.env.READABLE_STREAM": '"disable"',
 				"require.cache": "{}"
 			}),
-			commonjs({
-				include: "node_modules/**"
-			}),
-			json(),
-			typescript({ typescript: typescript6 }),
-			mode === "production" && terser(),
 			debug(),
 			workerThreads(),
+			openPackageGlobals(),
 			shebang()
 		].filter(Boolean),
 		onwarn(warning, warn) {
-			// Ignore known errors
 			if (warning.code === "CIRCULAR_DEPENDENCY" && /glob/.test(warning.importer)) return;
 			if (warning.code === "CIRCULAR_DEPENDENCY" && /readable-stream/.test(warning.importer || ""))
 				return;
-			// semver's Range <-> Comparator mutual dependency is an internal cycle
-			// that cannot be avoided from outside the package; safe to ignore.
 			if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some(id => /semver/.test(id)))
 				return;
 			if (warning.code === "UNRESOLVED_IMPORT" && (warning.source || "").startsWith("node:"))
@@ -72,6 +70,18 @@ export default [
 		}
 	}
 ];
+
+function openPackageGlobals() {
+	const openEntry = /[\\/]open@[^\\/]+[\\/]node_modules[\\/]open[\\/]index\.js$/;
+
+	return {
+		name: "open-package-globals",
+		transform(code, id) {
+			if (!openEntry.test(id)) return null;
+			return { code: code.replace(/\b__dirname\b/g, "__openDirname"), map: null };
+		}
+	};
+}
 
 function debug() {
 	const isBrowser = /debug[/,\\]src[/,\\]browser\.js/;
@@ -108,10 +118,6 @@ function workerThreads() {
 	};
 }
 
-// Add shebang to CLI entry point and make it executable.
-// Needed for npm's "bin" field to work. The standalone build
-// ignores the shebang because it invokes lib/vbapm.js explicitly
-// via the vendored node binary.
 function shebang() {
 	return {
 		name: "shebang",
@@ -144,8 +150,6 @@ function shebang() {
 				);
 			}
 
-			// editorconfig's one-ini parser may load this wasm file at runtime.
-			// Uses require.resolve to find it even in pnpm's .pnpm/ directory layout.
 			const localRequire = createRequire(import.meta.url);
 			const wasmPkg = localRequire.resolve("@one-ini/wasm/package.json");
 			const wasmSource = path.resolve(path.dirname(wasmPkg), "one_ini_bg.wasm");

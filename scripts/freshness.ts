@@ -8,7 +8,7 @@ const ALGORITHM = "sha256";
 
 const INPUT_ROOTS = ["addins", "scripts/bootstrap", "lib"];
 const ADDIN_INPUT_ROOTS = ["addins"];
-const EXTRA_INPUTS = ["package.json", "pnpm-lock.yaml", "rollup.config.mjs"];
+const EXTRA_INPUTS = ["package.json", "pnpm-lock.yaml", "rolldown.config.mjs"];
 const SCRIPT_INPUTS = [
 	"scripts/build-addins.js",
 	"scripts/ensure-fresh-addin.ts",

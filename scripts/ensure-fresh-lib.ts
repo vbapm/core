@@ -12,7 +12,7 @@
  *
  * Inputs (any of these newer than an output marks the build stale):
  *   - all files under `src/` (code + templates + submodules)
- *   - `rollup.config.mjs` (build configuration)
+ *   - `rolldown.config.mjs` (build configuration)
  *   - `package.json` (`dependencies` changes can affect the bundle)
  *
  * Without `--dev`, it checks for a production build and runs `pnpm run build:cli`
@@ -33,7 +33,7 @@ const BUILD_COMMAND = BUILD_MODE === "development" ? "pnpm run build:dev" : "pnp
 
 const OUTPUTS = ["lib/vbapm.js", "lib/index.js"];
 const INPUT_ROOTS = ["src"];
-const EXTRA_INPUTS = ["rollup.config.mjs", "package.json"];
+const EXTRA_INPUTS = ["rolldown.config.mjs", "package.json"];
 
 function walk(dir: string, acc: string[] = []): string[] {
 	let entries: ReturnType<typeof readdirSync>;
