@@ -1,6 +1,6 @@
 ## Context
 
-When exporting Excel worksheets in XML, the filenames are unstable and dependent on the order in which the worksheets appear in the workbook. This can lead to inconsistencies and difficulties in tracking worksheet identities across different exports. To address this, a normalization workflow is introduced to assign stable and predictable filenames based on the worksheet's VBA metadata.
+When exporting Excel worksheets in XML, the filenames are unstable and dependent on the order in which the worksheets appear in the workbook. This can lead to inconsistencies and difficulties in tracking worksheet identities across different extractions. To address this, a normalization workflow is introduced to assign stable and predictable filenames based on the worksheet's VBA metadata.
 
 
 The normalization workflow is:
