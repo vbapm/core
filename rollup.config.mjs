@@ -12,6 +12,7 @@ import path from "path";
 
 const mode = process.env.NODE_ENV || "production";
 const standalone = process.env.VBAPM_STANDALONE === "1";
+const selfContained = standalone || mode === "development";
 const builtins = new Set(builtin);
 const nodeGlobalsBanner = [
 	'import { dirname as __dirnameFn } from "node:path";',
@@ -26,13 +27,13 @@ export default [
 			format: "es",
 			dir: "lib",
 			sourcemap: false,
-			banner: standalone ? nodeGlobalsBanner : undefined
+				banner: selfContained ? nodeGlobalsBanner : undefined
 		},
 		external(id) {
 			return (
 				builtins.has(id) ||
 				id.startsWith("node:") ||
-				(!standalone && ["conf", "editorconfig", "debug"].includes(id))
+							   (!selfContained && ["conf", "editorconfig", "debug"].includes(id))
 			);
 		},
 		plugins: [
@@ -40,7 +41,7 @@ export default [
 			replace({
 				preventAssignment: true,
 				"process.env.NODE_ENV": JSON.stringify(mode),
-				"process.env.VBAPM_STANDALONE": JSON.stringify(standalone),
+				"process.env.VBAPM_STANDALONE": JSON.stringify(selfContained),
 				"process.env.READABLE_STREAM": '"disable"',
 				"require.cache": "{}"
 			}),
