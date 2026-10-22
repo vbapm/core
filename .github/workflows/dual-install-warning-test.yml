@@ -7,15 +7,21 @@ on:
       - dev
       - dev-*
     paths:
-      - 'src/installer.ts'
-      - 'src/bin/vbapm.ts'
+      - 'src/**'
       - 'bin/**'
+      - 'package.json'
+      - 'rolldown.config.mjs'
+      - 'scripts/build-mode.ts'
+      - 'scripts/ensure-vendor.js'
       - '.github/workflows/dual-install-warning-test.yml'
   pull_request:
     paths:
-      - 'src/installer.ts'
-      - 'src/bin/vbapm.ts'
+      - 'src/**'
       - 'bin/**'
+      - 'package.json'
+      - 'rolldown.config.mjs'
+      - 'scripts/build-mode.ts'
+      - 'scripts/ensure-vendor.js'
       - '.github/workflows/dual-install-warning-test.yml'
   workflow_dispatch:
 
@@ -43,31 +49,10 @@ jobs:
         with:
           run_install: false
 
-      - name: Install dependencies and build
+      - name: Install dependencies and build npm package
         run: |
           pnpm install --frozen-lockfile
           pnpm run build:lib
-
-      # ---------------------------------------------------------------
-      # Simulate standalone CLI install (%APPDATA%\vbapm\bin\)
-      # ---------------------------------------------------------------
-      - name: Simulate standalone CLI install
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $standaloneDir = Join-Path $env:APPDATA "vbapm"
-          $binDir = Join-Path $standaloneDir "bin"
-          $libDir = Join-Path $standaloneDir "lib"
-
-          New-Item -ItemType Directory -Force -Path $binDir | Out-Null
-          New-Item -ItemType Directory -Force -Path $libDir | Out-Null
-
-          # Copy bin scripts and lib to simulate a standalone installation
-          Copy-Item "bin\*" $binDir -Force
-          Copy-Item "lib\*" $libDir -Force
-          Write-Output "Standalone install simulated at: $standaloneDir"
-          Get-ChildItem $binDir
-          Get-ChildItem $libDir
 
       # ---------------------------------------------------------------
       # Install as npm global package
@@ -79,6 +64,31 @@ jobs:
           Write-Output "npm global prefix: $(npm prefix -g)"
           Write-Output "npm global vbapm location:"
           Get-ChildItem (Join-Path (npm prefix -g) "node_modules\vbapm") -Name
+
+      # ---------------------------------------------------------------
+      # Build and simulate standalone CLI install (%APPDATA%\vbapm\bin\)
+      # ---------------------------------------------------------------
+      - name: Build standalone CLI
+        run: pnpm run build:cli
+
+      - name: Simulate standalone CLI install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $standaloneDir = Join-Path $env:APPDATA "vbapm"
+          $binDir = Join-Path $standaloneDir "bin"
+          $libDir = Join-Path $standaloneDir "lib"
+
+          New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $libDir | Out-Null
+
+          # Copy bin scripts, standalone lib, and bundled Node runtime
+          Copy-Item "bin\*" $binDir -Force
+          Copy-Item "lib\*" $libDir -Force
+          Copy-Item "vendor" $standaloneDir -Recurse -Force
+          Write-Output "Standalone install simulated at: $standaloneDir"
+          Get-ChildItem $binDir
+          Get-ChildItem $libDir
 
       # ---------------------------------------------------------------
       # Test: vba --version shows dual-install warning when both exist
@@ -137,6 +147,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $libDir | Out-Null
           Copy-Item "bin\*" $binDir -Force
           Copy-Item "lib\*" $libDir -Force
+          Copy-Item "vendor" $standaloneDir -Recurse -Force
 
           # Add standalone bin to PATH for this step and subsequent steps
           $env:Path += ";$binDir"
