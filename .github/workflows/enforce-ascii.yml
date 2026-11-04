@@ -1,10 +1,16 @@
 name: Enforce ASCII in VBA files
 
+# This workflow is no longer needed since we can now enforce ASCII 
+# through the build process (encoding target).
+# This workflow is kept for reference but is no longer actively used.
+
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+  workflow_dispatch:
+  #push:
+  #  branches: ["main"]
+  #pull_request:
+  #  branches: ["main"]
+  
 
 permissions:
   contents: read
