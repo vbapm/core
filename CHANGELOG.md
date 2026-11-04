@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `vba e` as a short alias for `vba extract`.
 - `vba extract` preserve stable Excel differential-format indexes during extraction and remap worksheet and table references. Use `--skip-dxf-index-normalization` to disable this normalization.
+- `vba extract` exports Power Query definitions as `.pq` files and registers their source mappings in `vbaproject.toml`.
 
 
 ### Fixed
