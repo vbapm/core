@@ -4,7 +4,7 @@ import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
 import { Reference, relativizePeerPath } from "../manifest/reference";
-import { isPowerQuerySource, Source } from "../manifest/source";
+import { isPowerQueryPath, isPowerQuerySource, Source } from "../manifest/source";
 import { Project } from "../project";
 import { remove } from "../utils/fs";
 import { parallel } from "../utils/parallel";
@@ -49,6 +49,8 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 				: source.path;
 			const matched = walk(baseDir, { globs: [pattern], directories: false });
 			for (const file of matched) {
+				if (isPowerQueryPath(file)) continue;
+
 				const absPath = join(baseDir, file);
 				const component = await Component.load(absPath, codepage);
 				component.details.sourceEncoding = declaredLabel;

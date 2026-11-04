@@ -41,6 +41,28 @@ test("should ignore Power Query wildcard matches in the VBA build graph", async 
 	}
 });
 
+test("filters Power Query matches from broad source and dev-source wildcards", async () => {
+	const { project, dependencies } = await setup(empty);
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-wildcard-"));
+
+	try {
+		await mkdir(join(root, "src"), { recursive: true });
+		await mkdir(join(root, "dev-src"), { recursive: true });
+		await writeFile(join(root, "src", "Main.bas"), 'Attribute VB_Name = "Main"\n', "utf8");
+		await writeFile(join(root, "src", "Query.pq"), "not a VBA component", "utf8");
+		await writeFile(join(root, "dev-src", "Dev.bas"), 'Attribute VB_Name = "Dev"\n', "utf8");
+		await writeFile(join(root, "dev-src", "DevQuery.pq"), "not a VBA component", "utf8");
+		project.paths.dir = root;
+		project.manifest.src = [{ name: "AllSources", path: "src/**/*" }];
+		project.manifest.devSrc = [{ name: "AllDevSources", path: "dev-src/**/*" }];
+
+		const graph = await loadFromProject(project, dependencies);
+		expect(graph.components.map(component => component.name).sort()).toEqual(["Dev", "Main"]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
 test("should load BuildGraph with devDependencies", async () => {
 	const { project, dependencies } = await setup(dev);
 	const graph = await loadFromProject(project, dependencies);

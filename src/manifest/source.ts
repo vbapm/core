@@ -19,7 +19,11 @@ export interface Source {
 }
 
 export function isPowerQuerySource(source: Source): boolean {
-	return extname(source.path).toLowerCase() === ".pq";
+	return isPowerQueryPath(source.path);
+}
+
+export function isPowerQueryPath(path: string): boolean {
+	return extname(path).toLowerCase() === ".pq";
 }
 
 const EXAMPLE = `Example vbaproject.toml:

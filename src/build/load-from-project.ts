@@ -6,7 +6,7 @@ import { CliError, ErrorCode } from "../errors";
 import { Message } from "../messages";
 import { Manifest, resolveSrcFolder, resolveSrcSubfolders } from "../manifest";
 import { Reference } from "../manifest/reference";
-import { isPowerQuerySource } from "../manifest/source";
+import { isPowerQueryPath, isPowerQuerySource } from "../manifest/source";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
 import { readFile } from "../utils/fs";
@@ -56,6 +56,8 @@ export async function loadFromProject(
 					: source.path;
 				const matched = walk(baseDir, { globs: [pattern], directories: false });
 				for (const file of matched) {
+					if (isPowerQueryPath(file)) continue;
+
 					const absPath = join(baseDir, file);
 					loadingComponents.push(
 						Component.load(absPath, codepage, {}).then(component => {
@@ -107,6 +109,8 @@ export async function loadFromProject(
 					: source.path;
 				const matched = walk(baseDir, { globs: [pattern], directories: false });
 				for (const file of matched) {
+					if (isPowerQueryPath(file)) continue;
+
 					const absPath = join(baseDir, file);
 					loadingComponents.push(
 						Component.load(absPath, Codepage.Unknown, { binary_path: source.binary })
