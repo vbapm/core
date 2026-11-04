@@ -152,7 +152,7 @@ Public Function ExportTo(Info As Variant) As String
         Dim QueryFolder As String
         Dim QueryPath As String
         Dim QueryName As String
-        Dim QueryStream As Object
+        Dim QueryFormula As String
         Dim Pquery As Object
 
         QueryFolder = FileSystem.JoinPath(Staging, "pq")
@@ -166,15 +166,8 @@ Public Function ExportTo(Info As Variant) As String
                     "Power Query names map to the same filename: " & QueryName
             End If
 
-            Set QueryStream = CreateObject("ADODB.Stream")
-            With QueryStream
-                .Type = 2
-                .Charset = "utf-8"
-                .Open
-                .WriteText CStr(Pquery.Formula)
-                .SaveToFile QueryPath, 2
-                .Close
-            End With
+            QueryFormula = CStr(Pquery.Formula)
+            Utf8.WriteUtf8File QueryPath, QueryFormula
         Next Pquery
     End If
 

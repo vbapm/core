@@ -5,12 +5,16 @@ version = "0.1.0"
 authors = ["Martin Leduc <31558169+DecimalTurn@users.noreply.github.com> (https://github.com/DecimalTurn)"]
 target = { type = "xlam", path = "targets/xlam" }
 
+[source]
+encoding = "utf-8"
+
 [source.files]
 Build = "src/Build.bas"
 DebugLog = "src/DebugLog.bas"
 OfficeApplication = "src/OfficeApplication.cls"
 Output = "src/Output.bas"
 ThisWorkbook = "src/ThisWorkbook.cls"
+Utf8 = "src/Utf8.bas"
 
 [dependencies]
 installer = { path = "vba-installer" }
