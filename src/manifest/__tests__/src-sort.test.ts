@@ -63,6 +63,19 @@ describe("detectSrcStructure", () => {
 		expect(result.sortedByTypeThenAlphabetically).toBe(true);
 	});
 
+	test("ignores Power Query source groups when detecting VBA ordering", () => {
+		const sources: Source[] = [
+			src("ModuleA", "src/Modules/ModuleA.bas"),
+			src("FormA", "src/Forms/FormA.frm"),
+			src("ClassA", "src/Classes/ClassA.cls"),
+			src("PowerQueries", "src/Power Queries/*.pq")
+		];
+
+		expect(detectSrcStructure(sources)).toEqual(
+			detectSrcStructure(sources.filter(source => source.name !== "PowerQueries"))
+		);
+	});
+
 	test("unstructured when mix of types is scattered", () => {
 		const sources: Source[] = [
 			src("ModuleA", "src/ModuleA.bas"),
@@ -116,6 +129,12 @@ describe("parseSrcProperties", () => {
 		});
 		expect(result).toEqual({
 			sort: { "by-types": true }
+		});
+	});
+
+	test("parses the PowerQueries subfolder", () => {
+		expect(parseSrcProperties({ subfolders: { PowerQueries: "Power Queries" } })).toEqual({
+			subfolders: { PowerQueries: "Power Queries" }
 		});
 	});
 

@@ -23,6 +23,7 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 			return (
 				file !== "project.json" &&
 				!file.startsWith("target") &&
+				!file.startsWith("pq/") &&
 				!file.startsWith("staged") &&
 				!ignoreFile(file)
 			);

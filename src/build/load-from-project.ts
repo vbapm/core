@@ -6,6 +6,7 @@ import { CliError, ErrorCode } from "../errors";
 import { Message } from "../messages";
 import { Manifest, resolveSrcFolder, resolveSrcSubfolders } from "../manifest";
 import { Reference } from "../manifest/reference";
+import { isPowerQuerySource } from "../manifest/source";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
 import { readFile } from "../utils/fs";
@@ -39,6 +40,8 @@ export async function loadFromProject(
 	// Load components and references from project and dependencies
 	for (const manifest of manifests) {
 		for (const source of manifest.src) {
+			if (isPowerQuerySource(source)) continue;
+
 			// Resolve encoding: per-source override > project-level > Unknown
 			const declaredLabel = source.encoding ?? manifest.srcProperties?.encoding;
 			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
@@ -93,6 +96,8 @@ export async function loadFromProject(
 
 	if (!options.release) {
 		for (const source of project.manifest.devSrc) {
+			if (isPowerQuerySource(source)) continue;
+
 			if (source.path.includes("*")) {
 				const baseDir = project.paths.dir;
 				const normalizedSourcePath = source.path.replace(/\\/g, "/");

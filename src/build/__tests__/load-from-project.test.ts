@@ -1,3 +1,6 @@
+import { mkdtemp, mkdir, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import { complex, dev, empty, nameMismatch } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { env } from "../../env";
@@ -18,6 +21,24 @@ test("should load BuildGraph from empty project", async () => {
 	const graph = await loadFromProject(project, dependencies);
 
 	expect(normalizeBuildGraph(graph)).toMatchSnapshot();
+});
+
+test("should ignore Power Query wildcard matches in the VBA build graph", async () => {
+	const { project, dependencies } = await setup(empty);
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-build-"));
+	const sourceDirectory = join(root, "src", "Power Queries");
+
+	try {
+		await mkdir(sourceDirectory, { recursive: true });
+		await writeFile(join(sourceDirectory, "Query.pq"), "not a VBA component", "utf8");
+		project.paths.dir = root;
+		project.manifest.src = [{ name: "PowerQueries", path: "src/Power Queries/*.pq" }];
+
+		const graph = await loadFromProject(project, dependencies);
+		expect(graph.components).toHaveLength(0);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });
 
 test("should load BuildGraph with devDependencies", async () => {

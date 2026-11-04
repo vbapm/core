@@ -18,6 +18,7 @@ import { ProjectInfo } from "./project-info";
 import { filterTarget, mapTarget } from "./transform-target";
 import { normalizeDxfIndexes } from "./transforms/normalize-dxf-indexes";
 import { normalizeWorksheetNames } from "./transforms/normalize-worksheet-names";
+import { exportPowerQueries } from "./export-power-queries";
 import {
 	preserveWorksheetSelections,
 	readPreviousWorksheetData,
@@ -96,6 +97,7 @@ export async function exportTarget(
 		}
 
 		await applyExtract(project, classified);
+		await exportPowerQueries(project, staging);
 	}
 
 	// Move target to dest

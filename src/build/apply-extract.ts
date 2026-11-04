@@ -4,7 +4,7 @@ import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
 import { Reference, relativizePeerPath } from "../manifest/reference";
-import { Source } from "../manifest/source";
+import { isPowerQuerySource, Source } from "../manifest/source";
 import { Project } from "../project";
 import { remove } from "../utils/fs";
 import { parallel } from "../utils/parallel";
@@ -32,6 +32,8 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 	const map = new Map<string, ResolvedSource>();
 
 	for (const source of project.manifest.src) {
+		if (isPowerQuerySource(source)) continue;
+
 		// Resolve encoding: per-source override > project-level > Unknown
 		const declaredLabel = source.encoding ?? project.manifest.srcProperties?.encoding;
 		const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;

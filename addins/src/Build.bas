@@ -148,6 +148,34 @@ Public Function ExportTo(Info As Variant) As String
                 End If
             End If
         Next Component
+
+        Dim QueryFolder As String
+        Dim QueryPath As String
+        Dim QueryName As String
+        Dim QueryStream As Object
+        Dim Pquery As Object
+
+        QueryFolder = FileSystem.JoinPath(Staging, "pq")
+        If VBA.Dir(QueryFolder, vbDirectory) = "" Then VBA.MkDir QueryFolder
+
+        For Each Pquery In Document.Queries
+            QueryName = SafeQueryFileName(CStr(Pquery.Name))
+            QueryPath = FileSystem.JoinPath(QueryFolder, QueryName & ".pq")
+            If FileSystem.FileExists(QueryPath) Then
+                Err.Raise vbObjectError + 513, "Build.ExportTo", _
+                    "Power Query names map to the same filename: " & QueryName
+            End If
+
+            Set QueryStream = CreateObject("ADODB.Stream")
+            With QueryStream
+                .Type = 2
+                .Charset = "utf-8"
+                .Open
+                .WriteText CStr(Pquery.Formula)
+                .SaveToFile QueryPath, 2
+                .Close
+            End With
+        Next Pquery
     End If
 
     ' For "indirect" values (VBA project name and references)
@@ -237,6 +265,27 @@ ErrorHandling:
 
     Output.Errors.Add Err.Number & ": " & Err.Description
     ExportTo = Output.Result
+End Function
+
+Private Function SafeQueryFileName(QueryName As String) As String
+    Dim i As Long
+    Dim Character As String
+
+    SafeQueryFileName = QueryName
+    For i = 1 To Len(QueryName)
+        Character = Mid$(QueryName, i, 1)
+        If (AscW(Character) >= 0 And AscW(Character) < 32) Or _
+            InStr(1, "\/:*?""<>|", Character, vbBinaryCompare) > 0 Then
+            Mid$(SafeQueryFileName, i, 1) = "_"
+        End If
+    Next i
+
+    Do While Len(SafeQueryFileName) > 0 And _
+        (Right$(SafeQueryFileName, 1) = "." Or Right$(SafeQueryFileName, 1) = " ")
+        SafeQueryFileName = Left$(SafeQueryFileName, Len(SafeQueryFileName) - 1)
+    Loop
+
+    If SafeQueryFileName = "" Then SafeQueryFileName = "Query"
 End Function
 
 ''
