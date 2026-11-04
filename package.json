@@ -122,7 +122,7 @@
         "ts-jest": "^29",
         "tslib": "^2.0.0",
         "typescript": "^7.0.0",
-        "url-join": "^5.0.0"
+        "url-join": "^6.0.0"
     },
     "overrides": {
         "minimatch": "^10.2.1"
