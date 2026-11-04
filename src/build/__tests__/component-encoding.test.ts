@@ -1,3 +1,4 @@
+import { CliError, ErrorCode } from "../../errors";
 import { Codepage } from "../encoding-sniffer";
 import { Component } from "../component";
 
@@ -143,4 +144,36 @@ describe("Component encoding", () => {
 		expect(comp.code).toBe(source);
 		expect(comp.code).not.toContain("\uFFFD");
 	});
+});
+
+test("missing VB_Name error includes component path and a bounded code preview", () => {
+	const code = [
+		"VERSION 5.00",
+		"Begin VB.Form Broken",
+		"x".repeat(220),
+		"End",
+		"Fifth line",
+		"Sixth line"
+	].join("\n");
+	const component = new Component("form", code, Codepage.Unknown, {
+		path: "src/Forms/Broken.frm"
+	});
+	let error: unknown;
+
+	try {
+		component.name;
+	} catch (caught) {
+		error = caught;
+	}
+
+	expect(error).toBeInstanceOf(CliError);
+	expect(error).toMatchObject({
+		code: ErrorCode.ComponentInvalidNoName,
+		message: expect.stringContaining(
+			"Invalid form component: No attribute VB_Name found.\nSource: src/Forms/Broken.frm\nCode preview:\n  1: VERSION 5.00\n  2: Begin VB.Form Broken"
+		)
+	});
+	const message = (error as Error).message;
+	expect(message).toContain(`  3: ${"x".repeat(200)}...`);
+	expect(message).not.toContain("Sixth line");
 });
