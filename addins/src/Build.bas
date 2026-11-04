@@ -279,6 +279,46 @@ Private Function SafeQueryFileName(QueryName As String) As String
     Loop
 
     If SafeQueryFileName = "" Then SafeQueryFileName = "Query"
+    If IsReservedWindowsDeviceName(SafeQueryFileName) Then _
+        SafeQueryFileName = "_" & SafeQueryFileName
+End Function
+
+Private Function IsReservedWindowsDeviceName(FileName As String) As Boolean
+    Dim BaseName As String
+    Dim DotPosition As Long
+    Dim i As Long
+
+    DotPosition = InStr(1, FileName, ".", vbBinaryCompare)
+    If DotPosition > 0 Then
+        BaseName = Left$(FileName, DotPosition - 1)
+    Else
+        BaseName = FileName
+    End If
+
+    Do While Len(BaseName) > 0 And _
+        (Right$(BaseName, 1) = "." Or Right$(BaseName, 1) = " ")
+        BaseName = Left$(BaseName, Len(BaseName) - 1)
+    Loop
+
+    BaseName = UCase$(BaseName)
+    Select Case BaseName
+        Case "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"
+            IsReservedWindowsDeviceName = True
+            Exit Function
+    End Select
+
+    For i = 1 To 9
+        If BaseName = "COM" & CStr(i) Or BaseName = "LPT" & CStr(i) Then
+            IsReservedWindowsDeviceName = True
+            Exit Function
+        End If
+    Next i
+
+    If BaseName = "COM" & ChrW(&HB2) Or BaseName = "COM" & ChrW(&HB3) Or _
+        BaseName = "COM" & ChrW(&HB9) Or BaseName = "LPT" & ChrW(&HB2) Or _
+        BaseName = "LPT" & ChrW(&HB3) Or BaseName = "LPT" & ChrW(&HB9) Then
+        IsReservedWindowsDeviceName = True
+    End If
 End Function
 
 ''
