@@ -125,7 +125,7 @@
         "url-join": "^5.0.0"
     },
     "overrides": {
-        "minimatch": "^10.2.1"
+        "minimatch": "^11.0.0"
     },
     "json-comments": {
         "tips": "You may install the JsonComments plugin to enable commenting functionality for JSON files, see: https://github.com/zhangfisher/json_comments_extension",
