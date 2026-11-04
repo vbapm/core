@@ -153,3 +153,121 @@ test("uses an existing Power Query source path without adding a generic folder",
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("uses an unused source key when PowerQueries is already a VBA source", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-"));
+	const staging = join(root, "staging");
+	const stagedQueries = join(staging, "pq");
+	const existingVbaSource = { name: "PowerQueries", path: join(root, "src", "PowerQueries.bas") };
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			type: "project",
+			name: "power-query-test",
+			version: "0.0.0",
+			metadata: { authors: [] },
+			src: [existingVbaSource],
+			srcProperties: { folder: "src", subfolders: { Modules: "Modules" } },
+			dependencies: [],
+			references: [],
+			devSrc: [],
+			devDependencies: [],
+			devReferences: []
+		}
+	} as unknown as Project;
+
+	try {
+		await mkdir(stagedQueries, { recursive: true });
+		await writeFile(join(stagedQueries, "Query.pq"), "query", "utf8");
+		jest.clearAllMocks();
+
+		await exportPowerQueries(project, staging);
+
+		expect(project.manifest.src).toEqual([
+			existingVbaSource,
+			{ name: "PowerQueries2", path: join(root, "src", "Power Queries", "*.pq") }
+		]);
+		expect(writeManifestFile).toHaveBeenCalledWith(
+			expect.stringContaining("vbaproject.toml"),
+			expect.stringContaining('PowerQueries2 = "src/Power Queries/*.pq"')
+		);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("writes an explicitly mapped query and preserves unrelated query files", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-"));
+	const staging = join(root, "staging");
+	const stagedQueries = join(staging, "pq");
+	const queryDirectory = join(root, "src", "queries");
+	const mappedPath = join(queryDirectory, "stored-name.pq");
+	const staleMappedPath = join(queryDirectory, "Removed.pq");
+	const unrelatedPath = join(queryDirectory, "Unrelated.pq");
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			src: [
+				{ name: "Query", path: mappedPath },
+				{ name: "Removed", path: staleMappedPath }
+			],
+			srcProperties: { subfolders: { PowerQueries: "queries" } }
+		}
+	} as unknown as Project;
+
+	try {
+		await mkdir(stagedQueries, { recursive: true });
+		await mkdir(queryDirectory, { recursive: true });
+		await writeFile(join(stagedQueries, "Query.pq"), "updated query", "utf8");
+		await writeFile(staleMappedPath, "remove this mapped query", "utf8");
+		await writeFile(unrelatedPath, "keep this query", "utf8");
+
+		await exportPowerQueries(project, staging);
+
+		expect(await readFile(mappedPath, "utf8")).toBe("updated query");
+		expect(await readFile(unrelatedPath, "utf8")).toBe("keep this query");
+		await expect(readFile(staleMappedPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+		expect(project.manifest.src).toEqual([
+			{ name: "Query", path: mappedPath },
+			{ name: "Removed", path: staleMappedPath }
+		]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("updates existing nested matches for a recursive Power Query source", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-"));
+	const staging = join(root, "staging");
+	const stagedQueries = join(staging, "pq");
+	const queryRoot = join(root, "src", "Power Queries");
+	const nestedDirectory = join(queryRoot, "Customer", "Reports");
+	const existingPath = join(nestedDirectory, "Existing.pq");
+	const stalePath = join(nestedDirectory, "Stale.pq");
+	const sourcePath = join(queryRoot, "**", "*.pq");
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			src: [{ name: "PowerQueries", path: sourcePath }],
+			srcProperties: { subfolders: { PowerQueries: "Power Queries" } }
+		}
+	} as unknown as Project;
+
+	try {
+		await mkdir(stagedQueries, { recursive: true });
+		await mkdir(nestedDirectory, { recursive: true });
+		await writeFile(join(stagedQueries, "Existing.pq"), "updated nested query", "utf8");
+		await writeFile(join(stagedQueries, "New.pq"), "new query", "utf8");
+		await writeFile(existingPath, "old query", "utf8");
+		await writeFile(stalePath, "stale query", "utf8");
+
+		await exportPowerQueries(project, staging);
+
+		expect(await readFile(existingPath, "utf8")).toBe("updated nested query");
+		expect(await readFile(join(queryRoot, "New.pq"), "utf8")).toBe("new query");
+		await expect(readFile(stalePath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+		expect(project.manifest.src).toEqual([{ name: "PowerQueries", path: sourcePath }]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
