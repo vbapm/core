@@ -1,0 +1,68 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+	replaceFileContents,
+	replaceWithNamedHtmlEntities
+} from "../replace-unicode-with-html-entities.js";
+
+describe("replaceWithNamedHtmlEntities", () => {
+	test("uses the semicolon-terminated named reference for ö", () => {
+		expect(replaceWithNamedHtmlEntities(String.fromCodePoint(0xf6))).toEqual({
+			text: "&ouml;",
+			replacements: 1,
+			unconverted: 0
+		});
+	});
+
+	test("matches multi-codepoint entities and leaves existing ASCII references alone", () => {
+		const text = `&ouml; ${String.fromCodePoint(0x2242, 0x338)} A`;
+
+		expect(replaceWithNamedHtmlEntities(text)).toEqual({
+			text: "&ouml; &nesim; A",
+			replacements: 1,
+			unconverted: 0
+		});
+	});
+
+	test("leaves Unicode characters without a named reference unchanged", () => {
+		const text = String.fromCodePoint(0x1f600);
+
+		expect(replaceWithNamedHtmlEntities(text)).toEqual({
+			text,
+			replacements: 0,
+			unconverted: 1
+		});
+	});
+});
+
+describe("replaceFileContents", () => {
+	let directory: string;
+
+	afterEach(() => {
+		rmSync(directory, { recursive: true, force: true });
+	});
+
+	test("preserves a UTF-8 BOM and CRLF line endings", () => {
+		directory = mkdtempSync(join(tmpdir(), "html-entities-"));
+		const filePath = join(directory, "source.txt");
+		const original = Buffer.concat([
+			Buffer.from([0xef, 0xbb, 0xbf]),
+			Buffer.from(`Name: ${String.fromCodePoint(0xf6)}\r\n`, "utf8")
+		]);
+		writeFileSync(filePath, original);
+
+		expect(replaceFileContents(filePath)).toEqual({ replacements: 1, unconverted: 0 });
+		expect(readFileSync(filePath)).toEqual(
+			Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from("Name: &ouml;\r\n", "utf8")])
+		);
+	});
+
+	test("rejects files that are not valid UTF-8", () => {
+		directory = mkdtempSync(join(tmpdir(), "html-entities-"));
+		const filePath = join(directory, "invalid.txt");
+		writeFileSync(filePath, Buffer.from([0xff, 0xfe, 0xfd]));
+
+		expect(() => replaceFileContents(filePath)).toThrow("File is not valid UTF-8");
+	});
+});
