@@ -249,10 +249,10 @@ export async function writeComponent(path: string, component: Component) {
 				}
 			}
 
-			data = iconv.encode(component.code, srcEncoding);
+			data = Buffer.from(iconv.encode(component.code, srcEncoding));
 		} else {
 			// Same encoding as system codepage — encode directly
-			data = iconv.encode(component.code, srcEncoding);
+			data = Buffer.from(iconv.encode(component.code, srcEncoding));
 		}
 	}
 

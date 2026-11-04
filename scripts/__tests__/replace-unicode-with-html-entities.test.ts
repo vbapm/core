@@ -5,6 +5,7 @@ import {
 	replaceFileContents,
 	replaceWithNamedHtmlEntities
 } from "../replace-unicode-with-html-entities.js";
+import { createNamedHtmlEntityInvalidCharHandler } from "../html-entities.js";
 
 describe("replaceWithNamedHtmlEntities", () => {
 	test("uses the semicolon-terminated named reference for ö", () => {
@@ -34,6 +35,28 @@ describe("replaceWithNamedHtmlEntities", () => {
 			unconverted: 1
 		});
 	});
+});
+
+test("reports named-sequence and numeric substitutions at their original character indices", () => {
+	const entities = {
+		"&ouml;": { codepoints: [246], characters: "ö" },
+		"&nesim;": { codepoints: [8770, 824], characters: String.fromCodePoint(0x2242, 0x338) }
+	};
+	const text = `Aö${entities["&nesim;"].characters} ${String.fromCodePoint(0xac00)}`;
+	const substitutions: Array<[string, string, number]> = [];
+	const handler = createNamedHtmlEntityInvalidCharHandler(entities, text, (...event) => {
+		substitutions.push(event);
+	});
+
+	expect(handler("ö", 1)).toBe("&ouml;");
+	expect(handler("≂", 2)).toBe("&nesim;");
+	expect(handler("̸", 3)).toBe("");
+	expect(handler("가", 4)).toBe("&#xac00;");
+	expect(substitutions).toEqual([
+		["ö", "&ouml;", 1],
+		[entities["&nesim;"].characters, "&nesim;", 2],
+		["가", "&#xac00;", 4]
+	]);
 });
 
 describe("replaceFileContents", () => {

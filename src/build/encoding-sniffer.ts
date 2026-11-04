@@ -29,6 +29,7 @@ import { execSync } from "node:child_process";
  */
 export enum Codepage {
 	Unknown = 0,
+	Ascii = 20127,
 
 	// ANSI codepages (used by VBA's Component.Export on different locales)
 	Windows1250 = 1250, // Central European
@@ -77,6 +78,7 @@ export function labelToCodepage(label: string): Codepage {
 const LABEL_TO_CODEPAGE: Record<string, Codepage> = {};
 
 const CODEPAGE_LABELS: Record<number, string> = {
+	[Codepage.Ascii]: "ascii",
 	[Codepage.UTF8]: "utf-8",
 	[Codepage.Windows1250]: "windows-1250", // Central European
 	[Codepage.Windows1251]: "windows-1251", // Cyrillic
@@ -106,6 +108,7 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 	const short = "cp" + cp;
 	LABEL_TO_CODEPAGE[short] = Number(cp) as Codepage;
 }
+LABEL_TO_CODEPAGE["us-ascii"] = Codepage.Ascii;
 // jschardet may return "SHIFT_JIS" for Windows-932 content
 LABEL_TO_CODEPAGE["shift_jis"] = Codepage.Windows932;
 // jschardet may return "x-mac-cyrillic" for Windows-1251 content
@@ -125,7 +128,7 @@ LABEL_TO_CODEPAGE["x-mac-cyrillic"] = Codepage.Windows1251;
  */
 export const SUPPORTED_WINDOWS_CODEPAGE_LABELS: ReadonlySet<string> = new Set(
 	Object.keys(CODEPAGE_LABELS)
-		.filter(cp => Number(cp) !== Codepage.UTF8)
+		.filter(cp => Number(cp) !== Codepage.UTF8 && Number(cp) !== Codepage.Ascii)
 		.flatMap(cp => ["CP" + cp, "cp" + cp, "windows-" + cp])
 );
 
@@ -250,7 +253,7 @@ export function encodeForCodepage(text: string, codepage: Codepage): Buffer {
 	if (!label) {
 		throw new Error(`Cannot encode: no label for codepage ${codepage} (${Codepage[codepage]})`);
 	}
-	return iconv.encode(text, label);
+	return Buffer.from(iconv.encode(text, label));
 }
 
 // ── helpers ──────────────────────────────────────────────────────

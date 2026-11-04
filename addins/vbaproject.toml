@@ -3,7 +3,7 @@ name = "vbapm"
 codename = "vbapm"
 version = "0.1.0"
 authors = ["Martin Leduc <31558169+DecimalTurn@users.noreply.github.com> (https://github.com/DecimalTurn)"]
-target = { type = "xlam", path = "targets/xlam" }
+target = { type = "xlam", path = "targets/xlam", encoding = "ascii" }
 
 [source]
 encoding = "utf-8"

@@ -5,6 +5,7 @@ import { join, relative } from "../../utils/path";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import iconv from "iconv-lite";
 import { ImportGraph } from "../build-graph";
+import { Component } from "../component";
 import { Codepage } from "../encoding-sniffer";
 import { loadFromProject } from "../load-from-project";
 import { stageBuildGraph } from "../stage-build-graph";
@@ -87,4 +88,36 @@ Module1 = "src/Module1.bas"
 
 	// Cleanup
 	rmSync(fixtureDir, { recursive: true, force: true });
+});
+
+test("uses named HTML entities, then hex references for unmapped characters in ASCII targets", async () => {
+	const stagingDir = join(dir, "projects", "ascii-encoding-stage");
+	await ensureDir(stagingDir);
+
+	const component = new Component(
+		"module",
+		`Attribute VB_Name = "AsciiModule"\n' Café ${String.fromCodePoint(0x2242, 0x338)} ${String.fromCodePoint(0xac00)} ${String.fromCodePoint(0x1f600)}\n`,
+		Codepage.Unknown,
+		{ sourceEncoding: "utf-8" }
+	);
+	const graph = {
+		name: "ascii-encoding-test",
+		components: [component],
+		references: [],
+		fromDependencies: { components: new Map(), references: new Map() }
+	};
+
+	try {
+		const importGraph = await stageBuildGraph(graph, stagingDir, Codepage.Ascii);
+		const output = await readFile(importGraph.components[0].path);
+		const encodedText = output.toString("ascii");
+
+		expect(encodedText).toContain("Caf&eacute;");
+		expect(encodedText).toContain("&nesim;");
+		expect(encodedText).toContain("&#xac00;");
+		expect(encodedText).toContain("&#x1f600;");
+		expect(output.every(byte => byte <= 0x7f)).toBe(true);
+	} finally {
+		rmSync(stagingDir, { recursive: true, force: true });
+	}
 });
