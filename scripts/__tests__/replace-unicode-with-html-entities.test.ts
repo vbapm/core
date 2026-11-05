@@ -42,21 +42,31 @@ test("reports named-sequence and numeric substitutions at their original charact
 		"&ouml;": { codepoints: [246], characters: "ö" },
 		"&nesim;": { codepoints: [8770, 824], characters: String.fromCodePoint(0x2242, 0x338) }
 	};
-	const text = `Aö${entities["&nesim;"].characters} ${String.fromCodePoint(0xac00)}`;
+	const text = ` \t' Aö${entities["&nesim;"].characters} ${String.fromCodePoint(0xac00)}`;
 	const substitutions: Array<[string, string, number]> = [];
 	const handler = createNamedHtmlEntityInvalidCharHandler(entities, text, (...event) => {
 		substitutions.push(event);
 	});
 
-	expect(handler("ö", 1)).toBe("&ouml;");
-	expect(handler("≂", 2)).toBe("&nesim;");
-	expect(handler("̸", 3)).toBe("");
-	expect(handler("가", 4)).toBe("&#xac00;");
+	expect(handler("ö", 5)).toBe("&ouml;");
+	expect(handler("≂", 6)).toBe("&nesim;");
+	expect(handler("̸", 7)).toBe("");
+	expect(handler("가", 9)).toBe("&#xac00;");
 	expect(substitutions).toEqual([
-		["ö", "&ouml;", 1],
-		[entities["&nesim;"].characters, "&nesim;", 2],
-		["가", "&#xac00;", 4]
+		["ö", "&ouml;", 5],
+		[entities["&nesim;"].characters, "&nesim;", 6],
+		["가", "&#xac00;", 9]
 	]);
+});
+
+test("refuses to replace characters outside apostrophe comment lines", () => {
+	const entities = { "&ouml;": { codepoints: [246], characters: "ö" } };
+	const text = `Public Const Name = "Dörring"`;
+	const handler = createNamedHtmlEntityInvalidCharHandler(entities, text);
+
+	expect(() => handler("ö", text.indexOf("ö"))).toThrow(
+		/it is not inside an apostrophe comment, and replacing it could alter code behavior/
+	);
 });
 
 describe("replaceFileContents", () => {

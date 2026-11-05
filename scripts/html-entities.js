@@ -43,6 +43,7 @@ export function createNamedHtmlEntityInvalidCharHandler(entities, text, onSubsti
 
 	return (char, index) => {
 		if (skippedIndices.has(index)) return "";
+		assertApostropheComment(characters, char, index);
 
 		let node = entityTrie;
 		let matchedName;
@@ -72,6 +73,26 @@ export function createNamedHtmlEntityInvalidCharHandler(entities, text, onSubsti
 		onSubstitution?.(char, replacement, index);
 		return replacement;
 	};
+}
+
+function assertApostropheComment(characters, char, index) {
+	let lineStart = index;
+	while (lineStart > 0 && characters[lineStart - 1] !== "\n") lineStart--;
+
+	let firstNonWhitespace = lineStart;
+	while (
+		firstNonWhitespace < index &&
+		(characters[firstNonWhitespace] === " " || characters[firstNonWhitespace] === "\t")
+	) {
+		firstNonWhitespace++;
+	}
+
+	if (characters[firstNonWhitespace] !== "'") {
+		throw new Error(
+			`Refusing to replace non-ASCII character ${JSON.stringify(char)} at character ${index + 1}: ` +
+				"it is not inside an apostrophe comment, and replacing it could alter code behavior."
+		);
+	}
 }
 
 function buildEntityTrie(entities) {
