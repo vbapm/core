@@ -17,6 +17,7 @@ export interface ExportOptions {
 	addin?: string;
 	xmlOnly?: boolean;
 	vbaOnly?: boolean;
+	keepOpen?: boolean;
 	skipSheetNameNormalization?: boolean;
 	skipDxfIndexNormalization?: boolean;
 	background?: boolean;
@@ -85,6 +86,7 @@ export async function exportProject(options: ExportOptions = {}) {
 
 	const dependencies = await fetchDependencies(project);
 	let staging: string;
+	let succeeded = false;
 
 	try {
 		if (!options.completed) {
@@ -113,8 +115,16 @@ export async function exportProject(options: ExportOptions = {}) {
 			skipSheetNameNormalization: options.skipSheetNameNormalization,
 			skipDxfIndexNormalization: options.skipDxfIndexNormalization
 		});
+		succeeded = true;
 	} finally {
 		// @ts-ignore Variable is used before being assigned
-		if (staging) await remove(staging);
+		if (staging) {
+			const keepStagingOnError = /^(1|true|yes)$/i.test(process.env.VBAPM_KEEP_STAGING || "");
+			if (keepStagingOnError && !succeeded) {
+				console.warn(`Preserving export staging directory after failure: "${staging}"`);
+			} else {
+				await remove(staging);
+			}
+		}
 	}
 }

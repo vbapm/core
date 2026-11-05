@@ -13,6 +13,7 @@ const help = dedent`
     --xml-only      Only extract the target XML, skip VBA source extraction
 	--vba-only      Only extract the VBA source, skip target XML extraction
 	--background    Use a hidden Excel instance
+	--keep-open     Keep the target workbook open after extraction
 
   Additional options:
 	--skip-sheet-name-normalization   Skip sheet name normalization (keep sheetN.xml names)
@@ -29,6 +30,7 @@ export default async function (args: Args) {
 	const addin = <string | undefined>args.addin;
 	const xmlOnly = !!args["xml-only"];
 	const vbaOnly = !!args["vba-only"];
+	const keepOpen = !!args["keep-open"];
 	const skipSheetNameNormalization = !!args["skip-sheet-name-normalization"];
 	const skipDxfIndexNormalization = !!args["skip-dxf-index-normalization"];
 	const background =
@@ -40,6 +42,7 @@ export default async function (args: Args) {
 		addin,
 		xmlOnly,
 		vbaOnly,
+		keepOpen,
 		skipSheetNameNormalization,
 		skipDxfIndexNormalization,
 		background

@@ -7,7 +7,7 @@ import { Target } from "./manifest/target";
 import { Project } from "./project";
 import { copy, ensureDir, pathExists } from "./utils/fs";
 import { dirname, extname, join } from "./utils/path";
-import { run } from "./utils/run";
+import { RunError, run } from "./utils/run";
 
 export type Application = "excel";
 export type Addin = string;
@@ -18,6 +18,7 @@ export interface AddinOptions {
 	staging?: boolean;
 	background?: boolean;
 	metadataOnly?: boolean;
+	keepOpen?: boolean;
 }
 
 export const extensions: { [application: string]: string[] } = {
@@ -104,21 +105,36 @@ export async function exportTo(
 		file = staged;
 	}
 
-	await run(
-		application,
-		options.addin || addin,
-		"Build.ExportTo",
-		[
-			JSON.stringify({
-				file,
-				staging,
-				metadataOnly: options.metadataOnly ?? false,
-				// Respect [source] "include-empty-objects" flag (default: true)
-				includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
-			})
-		],
-		{ background: options.background }
-	);
+	try {
+		const result = await run(
+			application,
+			options.addin || addin,
+			"Build.ExportTo",
+			[
+				JSON.stringify({
+					file,
+					staging,
+					metadataOnly: options.metadataOnly ?? false,
+					keepOpen: options.keepOpen ?? false,
+					// Respect [source] "include-empty-objects" flag (default: true)
+					includeEmptyObjects: project.manifest.srcProperties?.["include-empty-objects"] ?? true
+				})
+			],
+			{ background: options.background, keepOpen: options.keepOpen }
+		);
+		logExportRetryWarnings(result.warnings);
+	} catch (error) {
+		if (error instanceof RunError) logExportRetryWarnings(error.result.warnings);
+		throw error;
+	}
+}
+
+function logExportRetryWarnings(warnings: string[]): void {
+	for (const warning of warnings) {
+		if (warning.includes("did not include Attribute VB_Name; retrying once.")) {
+			console.warn(`Warning: ${warning}`);
+		}
+	}
 }
 
 export async function validateExportTarget(

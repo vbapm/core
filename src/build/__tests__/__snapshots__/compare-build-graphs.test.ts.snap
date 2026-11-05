@@ -10,7 +10,7 @@ Object {
 ' (added)
 ",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/Added.bas",
         },
         "filename": "Added.bas",
         "name": "Added",
@@ -83,7 +83,7 @@ Object {
 ' (added)
 ",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/Added.bas",
         },
         "filename": "Added.bas",
         "name": "Added",
@@ -101,7 +101,7 @@ Object {
 ' - Logging
 ' -...",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/WebHelpers.bas",
         },
         "filename": "WebHelpers.bas",
         "name": "WebHelpers",
@@ -117,7 +117,7 @@ Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UserForm1
    ClientTop       =   465
    ClientWidth     = ...",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/UserForm1.frm",
         },
         "filename": "UserForm1.frm",
         "name": "UserForm1",
@@ -135,7 +135,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_E...",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/IWebAuthenticator.cls",
         },
         "filename": "IWebAuthenticator.cls",
         "name": "IWebAuthenticator",
@@ -153,7 +153,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed =...",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/WebClient.cls",
         },
         "filename": "WebClient.cls",
         "name": "WebClient",
@@ -171,7 +171,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed ...",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/WebRequest.cls",
         },
         "filename": "WebRequest.cls",
         "name": "WebRequest",
@@ -189,7 +189,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed...",
         "details": Object {
-          "path": undefined,
+          "path": ".vbapm/staging/standard-changes/export/WebResponse.cls",
         },
         "filename": "WebResponse.cls",
         "name": "WebResponse",

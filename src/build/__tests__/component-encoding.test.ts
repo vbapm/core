@@ -153,7 +153,8 @@ test("missing VB_Name error includes component path and a bounded code preview",
 		"x".repeat(220),
 		"End",
 		"Fifth line",
-		"Sixth line"
+		"Sixth line",
+		...Array.from({ length: 15 }, (_unused, index) => `Line ${index + 7}`)
 	].join("\n");
 	const component = new Component("form", code, Codepage.Unknown, {
 		path: "src/Forms/Broken.frm"
@@ -175,5 +176,7 @@ test("missing VB_Name error includes component path and a bounded code preview",
 	});
 	const message = (error as Error).message;
 	expect(message).toContain(`  3: ${"x".repeat(200)}...`);
-	expect(message).not.toContain("Sixth line");
+	expect(message).toContain("  6: Sixth line");
+	expect(message).toContain(" 20: Line 20");
+	expect(message).not.toContain("  21: Line 21");
 });

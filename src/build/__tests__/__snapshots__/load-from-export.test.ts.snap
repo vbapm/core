@@ -18,7 +18,7 @@ Object {
 ' @class JsonConverter
 ' @autho...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/JsonConverter.bas",
       },
       "filename": "JsonConverter.bas",
       "name": "JsonConverter",
@@ -35,7 +35,7 @@ Public Function Validate() As String
     If ThisWorkbook.VBProject.VBComponents.Count <> 8 Then
         Err...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/Validation.bas",
       },
       "filename": "Validation.bas",
       "name": "Validation",
@@ -53,7 +53,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = Fa...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/Class1.cls",
       },
       "filename": "Class1.cls",
       "name": "Class1",
@@ -71,7 +71,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed ...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/Dictionary.cls",
       },
       "filename": "Dictionary.cls",
       "name": "Dictionary",
@@ -89,7 +89,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = Tru...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/Sheet1.cls",
       },
       "filename": "Sheet1.cls",
       "name": "Sheet1",
@@ -107,7 +107,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = Tru...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/Sheet2.cls",
       },
       "filename": "Sheet2.cls",
       "name": "Sheet2",
@@ -125,7 +125,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = Tru...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/Sheet3.cls",
       },
       "filename": "Sheet3.cls",
       "name": "Sheet3",
@@ -143,7 +143,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/standard/export/ThisWorkbook.cls",
       },
       "filename": "ThisWorkbook.cls",
       "name": "ThisWorkbook",
@@ -185,7 +185,7 @@ Object {
 ' @class JsonConverter
 ' @autho...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/dev/export/JsonConverter.bas",
       },
       "filename": "JsonConverter.bas",
       "name": "JsonConverter",
@@ -196,7 +196,7 @@ Object {
       "code": "Attribute VB_Name = \\"TestModule\\"
 ",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/dev/export/TestModule.bas",
       },
       "filename": "TestModule.bas",
       "name": "TestModule",
@@ -207,7 +207,7 @@ Object {
       "code": "Attribute VB_Name = \\"Validation\\"
 ",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/dev/export/Validation.bas",
       },
       "filename": "Validation.bas",
       "name": "Validation",
@@ -225,7 +225,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed ...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/dev/export/Dictionary.cls",
       },
       "filename": "Dictionary.cls",
       "name": "Dictionary",
@@ -243,7 +243,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed =...",
       "details": Object {
-        "path": undefined,
+        "path": ".vbapm/staging/dev/export/TestClass.cls",
       },
       "filename": "TestClass.cls",
       "name": "TestClass",

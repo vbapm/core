@@ -30,11 +30,14 @@ Private Documents As Dictionary
 '
 ' @returns {Object} Document, Workbook, etc.
 ''
-Public Function GetDocument(Path As String) As Object
+Public Function GetDocument(Path As String, Optional KeepOpen As Boolean = False) As Object
     Path = FileSystem.NormalizePath(Path)
 
+    Dim Instance As Dictionary
     If Documents.Exists(Path) Then
-        Set GetDocument = Documents(Path)("Document")
+        Set Instance = Documents(Path)
+        If KeepOpen Then Instance("WasOpen") = True
+        Set GetDocument = Instance("Document")
         Exit Function
     End If
 
@@ -61,9 +64,9 @@ Public Function GetDocument(Path As String) As Object
         Exit Function
     End If
 
-    Dim Instance As New Dictionary
+    Set Instance = New Dictionary
     Instance("Type") = AppType
-    Instance("WasOpen") = WasOpen
+    Instance("WasOpen") = WasOpen Or KeepOpen
     Set Instance("Document") = Doc
     Set Documents(Path) = Instance
 

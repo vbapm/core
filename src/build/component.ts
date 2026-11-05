@@ -61,9 +61,10 @@ export class Component {
 	get name(): string {
 		const line = findLine(this.code, "Attribute VB_Name");
 		if (!line) {
-			const codeLines = this.code.split(BY_LINE, 6);
+			const previewLineLimit = 20;
+			const codeLines = this.code.split(BY_LINE, previewLineLimit + 1);
 			const codePreview = codeLines
-				.slice(0, 5)
+				.slice(0, previewLineLimit)
 				.map((sourceLine, index) => {
 					const previewLine =
 						sourceLine.length > 200 ? `${sourceLine.slice(0, 200)}...` : sourceLine;
@@ -78,7 +79,7 @@ export class Component {
 					`Source: ${this.details.path || "<in-memory component>"}`,
 					"Code preview:",
 					codePreview,
-					...(codeLines.length > 5 ? ["  ..."] : [])
+					...(codeLines.length > previewLineLimit ? ["  ..."] : [])
 				].join("\n")
 			);
 		}

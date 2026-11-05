@@ -130,11 +130,14 @@ Public Function ExportTo(Info As Variant) As String
     Dim Staging As String
     Dim Document As Object
     Dim App As New OfficeApplication
+    Dim KeepDocumentOpen As Boolean
 
     Output.Messages.Add "ExportTo"
 
     Set Values = JsonConverter.ParseJson(Info)
-    Set Document = App.GetDocument(Values("file"))
+    KeepDocumentOpen = False
+    If Values.Exists("keepOpen") Then KeepDocumentOpen = Values("keepOpen")
+    Set Document = App.GetDocument(Values("file"), KeepOpen:=KeepDocumentOpen)
     If Document Is Nothing Then
         ExportTo = Output.Result
         Exit Function
@@ -151,6 +154,7 @@ Public Function ExportTo(Info As Variant) As String
     ' Iterate through all components in document and export directly to staging
     Dim Component As VBComponent
     Dim Path As String
+    Dim ExportAttempt As Long
     If Not Values.Exists("metadataOnly") Then Values("metadataOnly") = False
     If Not Values("metadataOnly") Then
         For Each Component In Document.VBProject.VBComponents
@@ -174,7 +178,20 @@ Public Function ExportTo(Info As Variant) As String
                     ' Skip this blank document object
                 Else
                     Path = FileSystem.JoinPath(Staging, Component.Name & Extension)
-                    Installer.Export Document.VBProject, Component.Name, Path, Overwrite:=True
+                    For ExportAttempt = 1 To 2
+                        Installer.Export Document.VBProject, Component.Name, Path, Overwrite:=True
+                        If ExportContainsVBName(Path) Then Exit For
+
+                        If ExportAttempt = 1 Then
+                            Output.Warnings.Add "Export of component '" & Component.Name & _
+                                "' did not include Attribute VB_Name; retrying once."
+                            FileSystem.DeleteFile Path
+                        Else
+                            Err.Raise vbObjectError + 514, "Build.ExportTo", _
+                                "Export of component '" & Component.Name & _
+                                "' is missing Attribute VB_Name after retry. File: " & Path
+                        End If
+                    Next ExportAttempt
                 End If
             End If
         Next Component
@@ -297,6 +314,37 @@ ErrorHandling:
 
     Output.Errors.Add Err.Number & ": " & Err.Description
     ExportTo = Output.Result
+End Function
+
+Private Function ExportContainsVBName(Path As String) As Boolean
+    Dim FileNumber As Integer
+    Dim FileIsOpen As Boolean
+    Dim FileLine As String
+    Dim LineNumber As Long
+
+    On Error GoTo ErrorHandling
+
+    FileNumber = FreeFile
+    Open Path For Input As #FileNumber
+    FileIsOpen = True
+
+    For LineNumber = 1 To 20
+        If EOF(FileNumber) Then Exit For
+        Line Input #FileNumber, FileLine
+        If InStr(1, FileLine, "Attribute VB_Name", vbTextCompare) > 0 Then
+            ExportContainsVBName = True
+            Exit For
+        End If
+    Next LineNumber
+
+    Close #FileNumber
+    FileIsOpen = False
+    Exit Function
+
+ErrorHandling:
+    On Error Resume Next
+    If FileIsOpen Then Close #FileNumber
+    ExportContainsVBName = False
 End Function
 
 Private Function SafeQueryFileName(QueryName As String) As String

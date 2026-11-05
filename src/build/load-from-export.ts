@@ -64,7 +64,7 @@ export async function loadFromExport(staging: string): Promise<BuildGraph> {
 				);
 			}
 
-			return new Component(type, code, exportCodepage, { binary });
+			return new Component(type, code, exportCodepage, { binary, path: file });
 		},
 		{ progress: env.reporter.progress("Loading exported components") }
 	);

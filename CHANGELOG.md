@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `vba e` as a short alias for `vba extract`.
+- `vba extract --keep-open` to leave the target workbook open after extraction.
 - `vba extract` preserve stable Excel differential-format indexes during extraction and remap worksheet and table references. Use `--skip-dxf-index-normalization` to disable this normalization.
 - `vba extract` exports Power Query definitions as `.pq` files and registers their source mappings in `vbaproject.toml`.
 - `vba build` imports Power Query formulas from `.pq` source files, creating queries that are missing from the workbook and updating existing queries. `vba add <name>.pq` creates and registers a new Power Query source file.
 
 
 ### Fixed
+- `vba extract` retries component exports that omit `Attribute VB_Name` and reports the component path if the retry also fails.
 - `vba build` now rejects targets with missing or invalid worksheet relationships or worksheet parts before Excel encounters a cryptic save error.
 - Updated Renovate dependencies, including TypeScript 7, while preserving Jest and Rollup compatibility.
 

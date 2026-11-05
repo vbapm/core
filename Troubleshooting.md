@@ -1,5 +1,21 @@
 # Troubleshooting
 
+## Preserving extract staging files
+
+`vba extract` normally removes its temporary export directory, including after
+an error. To keep the staged VBA files for inspection after a failed extract,
+set `VBAPM_KEEP_STAGING` for that command:
+
+```powershell
+$env:VBAPM_KEEP_STAGING = "1"
+vba extract --vba-only
+$env:VBAPM_KEEP_STAGING = $null
+```
+
+The command prints the preserved directory path. Successful extracts still
+remove their staging directory as usual. The variable also works with a full
+`vba extract` run.
+
 ## XML
 
 ### Using vscode-xml
