@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vba extract` retries component exports that omit `Attribute VB_Name` and reports the component path if the retry also fails.
 - `vba build` now rejects targets with missing or invalid worksheet relationships or worksheet parts before Excel encounters a cryptic save error.
 - Updated Renovate dependencies, including TypeScript 7, while preserving Jest and Rollup compatibility.
+- Fix error caused by missing script when using `--background` option by @oleandor. ([#164])
 
 ## [0.11.0] - 2026-10-15
 
@@ -155,3 +156,4 @@ Note: The online registry remains the vba-blocks.com registry.
 [#62]: https://github.com/vbapm/core/pull/62
 [#64]: https://github.com/vbapm/core/pull/64
 [#98]: https://github.com/vbapm/core/pull/98
+[#164]: https://github.com/vbapm/core/pull/164
