@@ -3,6 +3,7 @@ import { greenBright, redBright, yellowBright } from "@timhall/ansi-colors";
 import { existsSync } from "fs";
 import meant from "meant";
 import mri, { Args } from "mri";
+import { resolve } from "node:path";
 import { version } from "../../package.json";
 import { env } from "../env";
 import { enableDebug } from "../debug";
@@ -136,9 +137,9 @@ async function main(): Promise<string | undefined> {
 
 	if (!command) {
 		if (args.version) {
-			console.log(version);
+			console.log(`${version}\n${runtimeInfo()}`);
 		} else {
-			console.log(help);
+			console.log(`${help}\n\n${runtimeInfo()}`);
 
 			if (updateAvailable()) {
 				env.reporter.log(Message.UpdateAvailable, updateAvailableMessage());
@@ -203,6 +204,16 @@ async function main(): Promise<string | undefined> {
 	}
 
 	return command;
+}
+
+function runtimeInfo(): string {
+	const executable = resolve(process.argv[1] || process.execPath);
+	const normalizedPath = executable.replace(/\\/g, "/").toLowerCase();
+	const installType = normalizedPath.includes("/node_modules/vbapm/")
+		? "Global Node Package"
+		: "CLI";
+
+	return `Install type: ${installType}\nExecutable: ${executable}`;
 }
 
 function warnIfDualInstall() {
