@@ -57,6 +57,57 @@ export async function openTarget(target: string): Promise<boolean> {
 	}
 }
 
+export async function checkTargetOpen(target: string): Promise<boolean> {
+	const scriptName = env.isWindows
+		? "check-open.ps1"
+		: process.platform === "darwin"
+			? "check-open.applescript"
+			: undefined;
+	if (!scriptName) return false;
+
+	const script = join(env.scripts, scriptName);
+	if (!(await pathExists(script))) {
+		throw new Error(`Excel open-check script not found at "${script}".`);
+	}
+
+	const command = env.isWindows ? "powershell.exe" : "osascript";
+	const args = env.isWindows
+		? ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Path", target]
+		: [script, target];
+
+	return new Promise((resolve, reject) => {
+		const child = spawn(command, args, {
+			windowsHide: true,
+			stdio: ["ignore", "pipe", "pipe"]
+		});
+
+		let stdout = "";
+		let stderr = "";
+		child.stdout?.on("data", data => {
+			stdout += data.toString();
+		});
+		child.stderr?.on("data", data => {
+			stderr += data.toString();
+		});
+		child.on("error", reject);
+		child.on("close", code => {
+			if (code !== 0) {
+				reject(new Error(stderr.trim() || `Excel open check exited with code ${code}.`));
+				return;
+			}
+
+			const result = stdout.trim().toLowerCase();
+			if (result === "true") {
+				resolve(true);
+			} else if (result === "false") {
+				resolve(false);
+			} else {
+				reject(new Error(`Unexpected Excel open-check result: "${stdout.trim()}".`));
+			}
+		});
+	});
+}
+
 function waitForProcess(childProcess: ReturnType<typeof spawn>): Promise<number | null> {
 	return new Promise((resolve, reject) => {
 		childProcess.once("error", reject);

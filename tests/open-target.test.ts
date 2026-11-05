@@ -13,9 +13,41 @@ await jest.unstable_mockModule("open", () => ({
 
 const { spawn } = await import("child_process");
 const { default: open } = await import("open");
-const { openTarget } = await import("../src/actions/open-target");
+const { env } = await import("../src/env");
+const { checkTargetOpen, openTarget } = await import("../src/actions/open-target");
 
 describe("openTarget", () => {
+	test.each([
+		["true", true],
+		["false", false]
+	])("checks whether the target is open and returns %s", async (result, expected) => {
+		const originalIsWindows = env.isWindows;
+		env.isWindows = true;
+		const checkProcess = Object.assign(new EventEmitter(), {
+			stdout: new EventEmitter(),
+			stderr: new EventEmitter()
+		});
+		(spawn as jest.Mock).mockImplementationOnce(() => {
+			setImmediate(() => {
+				checkProcess.stdout.emit("data", result);
+				checkProcess.emit("close", 0);
+			});
+			return checkProcess;
+		});
+
+		try {
+			await expect(checkTargetOpen("build/demo.xlsm")).resolves.toBe(expected);
+			expect(spawn).toHaveBeenCalledWith(
+				"powershell.exe",
+				expect.arrayContaining(["-File", expect.stringContaining("check-open.ps1")]),
+				expect.objectContaining({ windowsHide: true })
+			);
+			expect(open).not.toHaveBeenCalled();
+		} finally {
+			env.isWindows = originalIsWindows;
+		}
+	});
+
 	test("launches the target without waiting for the application to exit", async () => {
 		const launcher = Object.assign(new EventEmitter(), { ref: jest.fn() });
 		const readinessCheck = Object.assign(new EventEmitter(), {

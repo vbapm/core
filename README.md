@@ -359,6 +359,14 @@ Open a specific target type:
 vba open --target xlsm
 ```
 
+Check whether the built target is open in the visible Excel instance without opening it:
+
+```txt
+vba open --check
+```
+
+The command prints `true` when the target is open and `false` otherwise.
+
 ### `close`
 
 `vba close` closes the built target file that is currently open in Excel. By default changes are **discarded** — pass `--save` to keep them.
