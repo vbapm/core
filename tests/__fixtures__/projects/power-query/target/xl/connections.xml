@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<connections xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="xr16" xmlns:xr16="http://schemas.microsoft.com/office/spreadsheetml/2017/revision16">
+  <connection id="1" xr16:uid="{83132EAE-9926-4231-8DB6-6CF0A30393AA}" keepAlive="1" name="Query - Table 1" description="Connection to the 'Table 1' query in the workbook." type="5" refreshedVersion="8" background="1" saveData="1">
+    <dbPr connection="Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=&quot;Table 1&quot;;Extended Properties=&quot;&quot;" command="SELECT * FROM [Table 1]"/>
+  </connection>
+</connections>

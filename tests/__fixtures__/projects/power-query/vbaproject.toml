@@ -1,0 +1,13 @@
+[project]
+name = "PQ-Demo"
+version = "0.0.0"
+authors = []
+license = "UNLICENSED"
+target = "xlsm"
+
+[source.files]
+Sheet1 = "src/Sheet1.cls"
+Sheet2 = "src/Sheet2.cls"
+ThisWorkbook = "src/ThisWorkbook.cls"
+Module1 = "src/Module1.bas"
+PowerQueries = "src/pq/*.pq"

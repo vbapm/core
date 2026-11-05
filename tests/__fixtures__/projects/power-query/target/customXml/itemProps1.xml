@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ds:datastoreItem ds:itemID="{58A83122-4B66-4B07-A0DA-AA4A72FFE6CC}" xmlns:ds="http://schemas.openxmlformats.org/officeDocument/2006/customXml">
+  <ds:schemaRefs>
+    <ds:schemaRef ds:uri="http://schemas.microsoft.com/DataMashup"/>
+  </ds:schemaRefs>
+</ds:datastoreItem>
