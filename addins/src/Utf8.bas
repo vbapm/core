@@ -28,6 +28,44 @@ Attribute VB_Name = "Utf8"
 Option Explicit
 Option Base 0
 
+Public Function ReadUtf8File(ByVal filePath As String) As String
+    Dim encoded() As Byte
+    Dim fileNumber As Integer
+    Dim fileIsOpen As Boolean
+    Dim byteCount As Long
+    Dim savedErrorNumber As Long
+    Dim savedErrorDescription As String
+
+    On Error GoTo ErrorHandling
+
+    fileNumber = FreeFile
+    Open filePath For Binary Access Read As #fileNumber
+    fileIsOpen = True
+    byteCount = LOF(fileNumber)
+    If byteCount = 0 Then
+        Close #fileNumber
+        fileIsOpen = False
+        ReadUtf8File = ""
+        Exit Function
+    End If
+
+    ReDim encoded(0 To byteCount - 1)
+    Get #fileNumber, 1, encoded
+    Close #fileNumber
+    fileIsOpen = False
+
+    ReadUtf8File = DecodeUTF8(encoded)
+    Exit Function
+
+ErrorHandling:
+    savedErrorNumber = Err.Number
+    savedErrorDescription = Err.Description
+    On Error Resume Next
+    If fileIsOpen Then Close #fileNumber
+    On Error GoTo 0
+    Err.Raise savedErrorNumber, "Utf8.ReadUtf8File", savedErrorDescription
+End Function
+
 Public Function WriteUtf8File(ByVal filePath As String, ByVal text As String) As Boolean
     Dim encoded() As Byte
     Dim fileNumber As Integer
@@ -62,6 +100,78 @@ ErrorHandling:
     If fileIsOpen Then Close #fileNumber
     On Error GoTo 0
     Err.Raise savedErrorNumber, "Utf8.WriteUtf8File", savedErrorDescription
+End Function
+
+Private Function DecodeUTF8(ByRef utf8() As Byte) As String
+    Dim byteCount As Long
+    Dim inputPosition As Long
+    Dim outputPosition As Long
+    Dim firstByte As Long
+    Dim secondByte As Long
+    Dim thirdByte As Long
+    Dim fourthByte As Long
+    Dim codepoint As Long
+    Dim outputText As String
+
+    byteCount = UBound(utf8) + 1
+    outputText = String$(byteCount, vbNullChar)
+    If byteCount >= 3 Then
+        If utf8(0) = &HEF And utf8(1) = &HBB And utf8(2) = &HBF Then inputPosition = 3
+    End If
+    outputPosition = 1
+
+    Do While inputPosition < byteCount
+        firstByte = CLng(utf8(inputPosition))
+
+        If firstByte < &H80& Then
+            codepoint = firstByte
+            inputPosition = inputPosition + 1
+        ElseIf firstByte >= &HC2& And firstByte <= &HDF& Then
+            If inputPosition + 1 >= byteCount Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            secondByte = CLng(utf8(inputPosition + 1))
+            If (secondByte And &HC0&) <> &H80& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            codepoint = ((firstByte And &H1F&) * &H40&) Or (secondByte And &H3F&)
+            inputPosition = inputPosition + 2
+        ElseIf firstByte >= &HE0& And firstByte <= &HEF& Then
+            If inputPosition + 2 >= byteCount Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            secondByte = CLng(utf8(inputPosition + 1))
+            thirdByte = CLng(utf8(inputPosition + 2))
+            If (secondByte And &HC0&) <> &H80& Or (thirdByte And &HC0&) <> &H80& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            If firstByte = &HE0& And secondByte < &HA0& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            If firstByte = &HED& And secondByte >= &HA0& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            codepoint = ((firstByte And &HF&) * &H1000&) Or ((secondByte And &H3F&) * &H40&) Or (thirdByte And &H3F&)
+            inputPosition = inputPosition + 3
+        ElseIf firstByte >= &HF0& And firstByte <= &HF4& Then
+            If inputPosition + 3 >= byteCount Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            secondByte = CLng(utf8(inputPosition + 1))
+            thirdByte = CLng(utf8(inputPosition + 2))
+            fourthByte = CLng(utf8(inputPosition + 3))
+            If (secondByte And &HC0&) <> &H80& Or (thirdByte And &HC0&) <> &H80& Or (fourthByte And &HC0&) <> &H80& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            If firstByte = &HF0& And secondByte < &H90& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            If firstByte = &HF4& And secondByte > &H8F& Then Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+            codepoint = ((firstByte And &H7&) * &H40000) Or ((secondByte And &H3F&) * &H1000&) Or ((thirdByte And &H3F&) * &H40&) Or (fourthByte And &H3F&)
+            inputPosition = inputPosition + 4
+        Else
+            Err.Raise 5, "Utf8.DecodeUTF8", "Invalid UTF-8 sequence."
+        End If
+
+        If codepoint <= &HFFFF& Then
+            Mid$(outputText, outputPosition, 1) = UnicodeCharacter(codepoint)
+            outputPosition = outputPosition + 1
+        Else
+            codepoint = codepoint - &H10000
+            Mid$(outputText, outputPosition, 1) = UnicodeCharacter(&HD800& + (codepoint \ &H400&))
+            Mid$(outputText, outputPosition + 1, 1) = UnicodeCharacter(&HDC00& + (codepoint And &H3FF&))
+            outputPosition = outputPosition + 2
+        End If
+    Loop
+
+    DecodeUTF8 = Left$(outputText, outputPosition - 1)
+End Function
+
+Private Function UnicodeCharacter(ByVal codeUnit As Long) As String
+    If codeUnit > &H7FFF& Then codeUnit = codeUnit - &H10000
+    UnicodeCharacter = ChrW$(codeUnit)
 End Function
 
 Private Sub EncodeUTF8(ByRef utf16leStr As String, ByRef utf8() As Byte, _

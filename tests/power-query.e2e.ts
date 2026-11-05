@@ -57,6 +57,24 @@ describe("Power Query build", () => {
 		});
 	});
 
+	test("updates with large Unicode Power Query formulas through staged files", async () => {
+		await setup(powerQuery, "power-query-large-payload", async cwd => {
+			await execute(cwd, "build");
+
+			const queryValue = "café😀".repeat(150);
+			const formula = `let Source = "${queryValue}" in Source`;
+
+			for (let index = 1; index <= 40; index++) {
+				await writeFile(join(cwd, "src", "pq", `LongQuery${index}.pq`), formula, "utf8");
+			}
+
+			await execute(cwd, "update");
+			await execute(cwd, "extract --target xlsm");
+
+			await expectMashupMatchesSource(cwd, 41);
+		});
+	});
+
 	test("creates a workbook query from a source added with vba add", async () => {
 		await setup(powerQuery, "power-query-add", async cwd => {
 			await execute(cwd, "add NewQuery.pq");
