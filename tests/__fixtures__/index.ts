@@ -17,6 +17,7 @@ export const unresolvable = join(projects, "unresolvable");
 export const single = join(projects, "single");
 export const targetless = join(projects, "targetless");
 export const withDrawing = join(projects, "with-drawing");
+export const orphanedSheet = join(projects, "orphaned-sheet");
 export const wildcard = join(projects, "wildcard");
 export const conflict = join(projects, "conflict");
 export const nameMismatch = join(projects, "name-mismatch");

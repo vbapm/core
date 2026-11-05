@@ -10,6 +10,7 @@ import { join } from "../utils/path";
 import { isRunError } from "../utils/run";
 import { zip } from "../utils/zip";
 import { ProjectInfo } from "./project-info";
+import { validateTarget } from "./validate-target";
 
 export interface BuildOptions {
 	/**
@@ -98,6 +99,8 @@ export async function createTarget(project: Project, target: Target): Promise<st
 			`Target "${target.name}" not found at "${target.path}".`
 		);
 	}
+
+	await validateTarget(target, target.path);
 
 	const file = join(project.paths.staging, target.filename);
 
