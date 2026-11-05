@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `vbapm` package is now ESM-only. CommonJS consumers must replace `require("vbapm")` with an ESM `import`.
 
 ### Added
-- `vba open --check` to print whether the built target is open in the visible Excel instance.
+- `vba open --check` to print whether the built target is open in the visible Excel instance ([#171](https://github.com/vbapm/core/pull/171)).
 - `vba e` as a short alias for `vba extract`.
 - `vba extract --keep-open` to leave the target workbook open after extraction.
 - `vba extract` preserve stable Excel differential-format indexes during extraction and remap worksheet and table references. Use `--skip-dxf-index-normalization` to disable this normalization.
