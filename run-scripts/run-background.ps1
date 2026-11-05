@@ -371,7 +371,9 @@ class Excel {
 		$excelPid = 0
 		try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
 		$this.Pid = $excelPid
-		Write-InstanceLog "created Excel instance excelPid=$excelPid mode=background"
+		if (Get-Command Write-InstanceLog -ErrorAction SilentlyContinue) {
+			Write-InstanceLog "created Excel instance excelPid=$excelPid mode=background"
+		}
 		Set-ActiveExcelInstance -App $this.App
 	}
 
@@ -452,7 +454,9 @@ class Excel {
 		if (-not $this.ExcelWasOpen -and -not $KeepOpen -and $null -ne $this.App) {
 			$excelPid = 0
 			try { $excelPid = Get-ExcelProcessId -ExcelApp $this.App } catch { $excelPid = 0 }
-			Write-InstanceLog "quitting Excel instance excelPid=$excelPid"
+			if (Get-Command Write-InstanceLog -ErrorAction SilentlyContinue) {
+				Write-InstanceLog "quitting Excel instance excelPid=$excelPid"
+			}
 			$this.App.Quit()
 			[System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.App) | Out-Null
 			$this.App = $null

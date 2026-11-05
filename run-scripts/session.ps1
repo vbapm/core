@@ -872,7 +872,12 @@ function Start-WarmSessionServer {
 
 while ($true) {
 	$line = [Console]::In.ReadLine()
-	if ($null -eq $line) { Write-InstanceLog 'persistent session stdin reached EOF'; break }
+	if ($null -eq $line) {
+		if (Get-Command Write-InstanceLog -ErrorAction SilentlyContinue) {
+			Write-InstanceLog 'persistent session stdin reached EOF'
+		}
+		break
+	}
 	if ($line.Trim().Length -eq 0) { continue }
 	$state = Invoke-ScriptRequestLine -Line $line -Respond { param($id, $json) Write-ScriptResponse $id $json }
 	if ($state -eq 'quit') { break }
