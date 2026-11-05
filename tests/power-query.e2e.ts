@@ -71,6 +71,14 @@ describe("Power Query build", () => {
 			await execute(cwd, "update");
 			await execute(cwd, "extract --target xlsm");
 
+			for (let index = 1; index <= 40; index++) {
+				const extractedFormula = await readFile(
+					join(cwd, "src", "pq", `LongQuery${index}.pq`),
+					"utf8"
+				);
+				expect(extractedFormula).toBe(formula);
+			}
+
 			await expectMashupMatchesSource(cwd, 41);
 		});
 	});
