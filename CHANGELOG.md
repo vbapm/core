@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vba e` as a short alias for `vba extract`.
 - `vba extract` preserve stable Excel differential-format indexes during extraction and remap worksheet and table references. Use `--skip-dxf-index-normalization` to disable this normalization.
 - `vba extract` exports Power Query definitions as `.pq` files and registers their source mappings in `vbaproject.toml`.
+- `vba build` imports Power Query formulas from `.pq` source files, creating queries that are missing from the workbook and updating existing queries. `vba add <name>.pq` creates and registers a new Power Query source file.
 
 
 ### Fixed
