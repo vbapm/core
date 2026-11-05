@@ -46,7 +46,7 @@ exports[`export modes export with --vba-only skips XML extraction 2`] = `
 Resolving dependencies
 Fetching dependencies
 
-[2/3] Exporting src from \\"empty.xlsm\\"
+[2/3] Extracting src from \\"empty.xlsm\\"
 
 [3/3] Updating project
 Loading exported components

@@ -49,7 +49,7 @@ exports[`export export to empty project 2`] = `
 Resolving dependencies
 Fetching dependencies
 
-[2/3] Exporting src from \\"empty.xlsm\\"
+[2/3] Extracting src from \\"empty.xlsm\\"
 
 [3/3] Updating project
 Loading exported components
@@ -104,7 +104,7 @@ exports[`export export to project with dependency 2`] = `
 Resolving dependencies
 Fetching dependencies
 
-[2/3] Exporting src from \\"json.xlsm\\"
+[2/3] Extracting src from \\"json.xlsm\\"
 
 [3/3] Updating project
 Loading exported components
