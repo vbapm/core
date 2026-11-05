@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Fixed
+- `vba build` now rejects targets with missing or invalid worksheet relationships or worksheet parts before Excel encounters a cryptic save error.
 - Updated Renovate dependencies, including TypeScript 7, while preserving Jest and Rollup compatibility.
 
 ## [0.11.0] - 2026-10-15
