@@ -64,7 +64,7 @@ export async function checkTargetOpen(target: string): Promise<string> {
 		: process.platform === "darwin"
 			? "check-open.applescript"
 			: undefined;
-	if (!scriptName) return formatOpenCheckReport(target, []);
+	if (!scriptName) return formatOpenCheckReport(target, [], []);
 
 	const script = join(env.scripts, scriptName);
 	if (!(await pathExists(script))) {
@@ -98,11 +98,18 @@ export async function checkTargetOpen(target: string): Promise<string> {
 			}
 
 			try {
-				const result = JSON.parse(stdout.trim()) as { instances?: OpenCheckInstance[] };
+				const result = JSON.parse(stdout.trim()) as {
+					instances?: OpenCheckInstance[];
+					uninspected_excel_process_ids?: number[];
+				};
 				if (!Array.isArray(result.instances)) {
 					throw new Error("Open-check result is missing its instances array.");
 				}
-				void formatOpenCheckReport(target, result.instances).then(resolve, reject);
+				void formatOpenCheckReport(
+					target,
+					result.instances,
+					result.uninspected_excel_process_ids ?? []
+				).then(resolve, reject);
 			} catch (error) {
 				reject(
 					new Error(
@@ -128,7 +135,8 @@ interface OpenCheckInstance {
 
 async function formatOpenCheckReport(
 	target: string,
-	instances: OpenCheckInstance[]
+	instances: OpenCheckInstance[],
+	uninspectedExcelProcessIds: number[]
 ): Promise<string> {
 	const sameName = target.split(/[\\/]/).pop() ?? target;
 	const reportInstances = instances.map(instance => ({
@@ -155,7 +163,9 @@ async function formatOpenCheckReport(
 			name: sameName,
 			open: instances.some(instance => instance.same_path),
 			same_name_elsewhere: instances.some(instance => !instance.same_path),
-			match_count: instances.length
+			match_count: instances.length,
+			all_excel_processes_inspected: uninspectedExcelProcessIds.length === 0,
+			uninspected_excel_process_ids: uninspectedExcelProcessIds
 		},
 		instances: reportInstances
 	});

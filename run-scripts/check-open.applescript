@@ -69,5 +69,5 @@ on run argv
 	set AppleScript's text item delimiters to ","
 	set recordsJSON to instanceRecords as text
 	set AppleScript's text item delimiters to ""
-	return "{" & quote & "instances" & quote & ":[" & recordsJSON & "]}"
+	return "{" & quote & "instances" & quote & ":[" & recordsJSON & "]," & quote & "uninspected_excel_process_ids" & quote & ":[]}"
 end run

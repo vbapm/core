@@ -113,9 +113,12 @@ function Add-ReportMatch {
 
 $reportMatches = @{}
 $seenApplications = @{}
+$inspectedProcessIds = @{}
 foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 	$app = $null
 	$appIsCandidate = $false
+	$processId = 0
+	$processInspectionFailed = $false
 	try {
 		try {
 			if ([string]$candidate.Name -eq 'Microsoft Excel') {
@@ -159,12 +162,14 @@ foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 					Add-ReportMatch -CandidatePath ([string]$workbook.FullName) -Source 'workbook' -ProcessId $processId -WindowHandle $windowHandle -Visible $visible -ReadOnly $readOnly
 				} catch {
 					# Skip workbook entries that cannot be inspected.
+					$processInspectionFailed = $true
 				} finally {
 					try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbook) | Out-Null } catch {}
 				}
 			}
 		} catch {
 			# Continue with other ROT entries if the workbook collection is unavailable.
+			$processInspectionFailed = $true
 		}
 
 		try {
@@ -192,16 +197,22 @@ foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 					}
 				} catch {
 					# Skip add-in entries that cannot be inspected.
+					$processInspectionFailed = $true
 				} finally {
 					try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($addin) | Out-Null } catch {}
 				}
 			}
 		} catch {
 			# Some Excel instances do not expose the add-ins collection.
+			$processInspectionFailed = $true
 		}
 	} catch {
 		# Skip inaccessible ROT entries and continue checking other instances.
+		$processInspectionFailed = $true
 	} finally {
+		if ($processId -gt 0 -and -not $processInspectionFailed) {
+			$inspectedProcessIds[$processId] = $true
+		}
 		if ($app -and -not $appIsCandidate) {
 			try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($app) | Out-Null } catch {}
 		}
@@ -211,7 +222,16 @@ foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 	}
 }
 
+$uninspectedProcessIds = @()
+foreach ($excelProcess in @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue)) {
+	$excelProcessId = [int]$excelProcess.Id
+	if (-not $inspectedProcessIds.ContainsKey($excelProcessId)) {
+		$uninspectedProcessIds += $excelProcessId
+	}
+}
+
 $report = [pscustomobject]@{
 	instances = @($reportMatches.Values | Sort-Object process_id, path)
+	uninspected_excel_process_ids = @($uninspectedProcessIds | Sort-Object)
 }
 ConvertTo-Json -InputObject $report -Depth 6 -Compress

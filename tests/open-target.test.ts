@@ -22,6 +22,7 @@ describe("openTarget", () => {
 		const originalIsWindows = env.isWindows;
 		env.isWindows = true;
 		const report = JSON.stringify({
+			uninspected_excel_process_ids: [],
 			instances: [
 				{
 					path: "build/demo.xlsm",
@@ -67,7 +68,9 @@ describe("openTarget", () => {
 				name: "demo.xlsm",
 				open: true,
 				same_name_elsewhere: true,
-				match_count: 2
+				match_count: 2,
+				all_excel_processes_inspected: true,
+				uninspected_excel_process_ids: []
 			});
 			expect(parsed.instances).toEqual([
 				expect.objectContaining({
@@ -104,7 +107,7 @@ describe("openTarget", () => {
 		}
 	});
 
-	test("returns a TOML report with no instances when there are no matches", async () => {
+	test("marks the report incomplete when an Excel process cannot be inspected", async () => {
 		const originalIsWindows = env.isWindows;
 		env.isWindows = true;
 		const checkProcess = Object.assign(new EventEmitter(), {
@@ -113,7 +116,10 @@ describe("openTarget", () => {
 		});
 		(spawn as jest.Mock).mockImplementationOnce(() => {
 			setImmediate(() => {
-				checkProcess.stdout.emit("data", JSON.stringify({ instances: [] }));
+				checkProcess.stdout.emit(
+					"data",
+					JSON.stringify({ instances: [], uninspected_excel_process_ids: [456] })
+				);
 				checkProcess.emit("close", 0);
 			});
 			return checkProcess;
@@ -126,7 +132,9 @@ describe("openTarget", () => {
 				name: "demo.xlsm",
 				open: false,
 				same_name_elsewhere: false,
-				match_count: 0
+				match_count: 0,
+				all_excel_processes_inspected: false,
+				uninspected_excel_process_ids: [456]
 			});
 			expect(parsed.instances).toEqual([]);
 		} finally {
