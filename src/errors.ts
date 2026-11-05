@@ -49,6 +49,7 @@ export enum ErrorCode {
 	TargetNotFound = "target-not-found",
 	TargetIsOpen = "target-is-open",
 	TargetCreateFailed = "target-create-failed",
+	TargetInvalid = "target-invalid",
 	TargetImportFailed = "target-import-failed",
 	TargetRestoreFailed = "target-restore-failed",
 	TargetAddNoType = "target-add-no-type",
