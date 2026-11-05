@@ -7,6 +7,7 @@ import { loadProject } from "../project";
 import { getTarget } from "../targets";
 import { pathExists } from "../utils/fs";
 import { join } from "../utils/path";
+import { convert as convertToToml } from "../utils/toml";
 
 const EXCEL_OPEN_TIMEOUT_SECONDS = 30;
 const EXCEL_OPEN_POLL_MILLISECONDS = 250;
@@ -57,13 +58,13 @@ export async function openTarget(target: string): Promise<boolean> {
 	}
 }
 
-export async function checkTargetOpen(target: string): Promise<boolean> {
+export async function checkTargetOpen(target: string): Promise<string> {
 	const scriptName = env.isWindows
 		? "check-open.ps1"
 		: process.platform === "darwin"
 			? "check-open.applescript"
 			: undefined;
-	if (!scriptName) return false;
+	if (!scriptName) return formatOpenCheckReport(target, []);
 
 	const script = join(env.scripts, scriptName);
 	if (!(await pathExists(script))) {
@@ -96,15 +97,67 @@ export async function checkTargetOpen(target: string): Promise<boolean> {
 				return;
 			}
 
-			const result = stdout.trim().toLowerCase();
-			if (result === "true") {
-				resolve(true);
-			} else if (result === "false") {
-				resolve(false);
-			} else {
-				reject(new Error(`Unexpected Excel open-check result: "${stdout.trim()}".`));
+			try {
+				const result = JSON.parse(stdout.trim()) as { instances?: OpenCheckInstance[] };
+				if (!Array.isArray(result.instances)) {
+					throw new Error("Open-check result is missing its instances array.");
+				}
+				void formatOpenCheckReport(target, result.instances).then(resolve, reject);
+			} catch (error) {
+				reject(
+					new Error(
+						`Unexpected Excel open-check result: ${error instanceof Error ? error.message : String(error)}`
+					)
+				);
 			}
 		});
+	});
+}
+
+interface OpenCheckInstance {
+	path: string;
+	same_path: boolean;
+	source: string;
+	instance_name?: string;
+	visible: boolean;
+	process_id?: number | null;
+	window_handle?: number | null;
+	read_only?: boolean | null;
+	write_lock_held?: boolean | null;
+}
+
+async function formatOpenCheckReport(
+	target: string,
+	instances: OpenCheckInstance[]
+): Promise<string> {
+	const sameName = target.split(/[\\/]/).pop() ?? target;
+	const reportInstances = instances.map(instance => ({
+		file_path: instance.path,
+		match: instance.same_path ? "exact_path" : "same_name_different_location",
+		source: instance.source,
+		...(instance.instance_name ? { instance_name: instance.instance_name } : {}),
+		visible: instance.visible,
+		...(instance.process_id != null ? { process_id: instance.process_id } : {}),
+		...(instance.window_handle != null ? { window_handle: instance.window_handle } : {}),
+		...(instance.read_only != null
+			? {
+					read_only: instance.read_only,
+					editable: !instance.read_only,
+					access: instance.read_only ? "read_only" : "read_write",
+					write_lock_held: instance.write_lock_held ?? !instance.read_only
+				}
+			: { access: "unknown" })
+	}));
+
+	return convertToToml({
+		target: {
+			path: target,
+			name: sameName,
+			open: instances.some(instance => instance.same_path),
+			same_name_elsewhere: instances.some(instance => !instance.same_path),
+			match_count: instances.length
+		},
+		instances: reportInstances
 	});
 }
 

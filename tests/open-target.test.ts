@@ -15,12 +15,96 @@ const { spawn } = await import("child_process");
 const { default: open } = await import("open");
 const { env } = await import("../src/env");
 const { checkTargetOpen, openTarget } = await import("../src/actions/open-target");
+const { parse: parseToml } = await import("../src/utils/toml");
 
 describe("openTarget", () => {
-	test.each([
-		["true", true],
-		["false", false]
-	])("checks whether the target is open and returns %s", async (result, expected) => {
+	test("returns a TOML report for exact and same-name workbook matches", async () => {
+		const originalIsWindows = env.isWindows;
+		env.isWindows = true;
+		const report = JSON.stringify({
+			instances: [
+				{
+					path: "build/demo.xlsm",
+					same_path: true,
+					source: "workbook",
+					instance_name: "Microsoft Excel",
+					visible: true,
+					process_id: 123,
+					window_handle: 456,
+					read_only: false,
+					write_lock_held: true
+				},
+				{
+					path: "C:/other/demo.xlsm",
+					same_path: false,
+					source: "workbook",
+					instance_name: "Microsoft Excel",
+					visible: false,
+					process_id: 789,
+					window_handle: 101,
+					read_only: true,
+					write_lock_held: false
+				}
+			]
+		});
+		const checkProcess = Object.assign(new EventEmitter(), {
+			stdout: new EventEmitter(),
+			stderr: new EventEmitter()
+		});
+		(spawn as jest.Mock).mockImplementationOnce(() => {
+			setImmediate(() => {
+				checkProcess.stdout.emit("data", report);
+				checkProcess.emit("close", 0);
+			});
+			return checkProcess;
+		});
+
+		try {
+			const output = await checkTargetOpen("build/demo.xlsm");
+			const parsed = await parseToml(output);
+			expect(parsed.target).toEqual({
+				path: "build/demo.xlsm",
+				name: "demo.xlsm",
+				open: true,
+				same_name_elsewhere: true,
+				match_count: 2
+			});
+			expect(parsed.instances).toEqual([
+				expect.objectContaining({
+					file_path: "build/demo.xlsm",
+					match: "exact_path",
+					instance_name: "Microsoft Excel",
+					process_id: 123,
+					visible: true,
+					read_only: false,
+					editable: true,
+					access: "read_write",
+					write_lock_held: true
+				}),
+				expect.objectContaining({
+					file_path: "C:/other/demo.xlsm",
+					match: "same_name_different_location",
+					instance_name: "Microsoft Excel",
+					process_id: 789,
+					visible: false,
+					read_only: true,
+					editable: false,
+					access: "read_only",
+					write_lock_held: false
+				})
+			]);
+			expect(spawn).toHaveBeenCalledWith(
+				"powershell.exe",
+				expect.arrayContaining(["-File", expect.stringContaining("check-open.ps1")]),
+				expect.objectContaining({ windowsHide: true })
+			);
+			expect(open).not.toHaveBeenCalled();
+		} finally {
+			env.isWindows = originalIsWindows;
+		}
+	});
+
+	test("returns a TOML report with no instances when there are no matches", async () => {
 		const originalIsWindows = env.isWindows;
 		env.isWindows = true;
 		const checkProcess = Object.assign(new EventEmitter(), {
@@ -29,20 +113,22 @@ describe("openTarget", () => {
 		});
 		(spawn as jest.Mock).mockImplementationOnce(() => {
 			setImmediate(() => {
-				checkProcess.stdout.emit("data", result);
+				checkProcess.stdout.emit("data", JSON.stringify({ instances: [] }));
 				checkProcess.emit("close", 0);
 			});
 			return checkProcess;
 		});
 
 		try {
-			await expect(checkTargetOpen("build/demo.xlsm")).resolves.toBe(expected);
-			expect(spawn).toHaveBeenCalledWith(
-				"powershell.exe",
-				expect.arrayContaining(["-File", expect.stringContaining("check-open.ps1")]),
-				expect.objectContaining({ windowsHide: true })
-			);
-			expect(open).not.toHaveBeenCalled();
+			const parsed = await parseToml(await checkTargetOpen("build/demo.xlsm"));
+			expect(parsed.target).toEqual({
+				path: "build/demo.xlsm",
+				name: "demo.xlsm",
+				open: false,
+				same_name_elsewhere: false,
+				match_count: 0
+			});
+			expect(parsed.instances).toEqual([]);
 		} finally {
 			env.isWindows = originalIsWindows;
 		}

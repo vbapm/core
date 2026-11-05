@@ -59,76 +59,59 @@ public static class CheckOpenRotHelper {
 "@
 }
 
-function Test-TargetPath {
-	param([string]$CandidatePath)
+function Add-ReportMatch {
+	param(
+		[Parameter(Mandatory)][string]$CandidatePath,
+		[Parameter(Mandatory)][string]$Source,
+		[Parameter(Mandatory)][int]$ProcessId,
+		[Parameter(Mandatory)][long]$WindowHandle,
+		[Parameter(Mandatory)][bool]$Visible,
+		[AllowNull()][Nullable[bool]]$ReadOnly
+	)
+
 	try {
 		$candidateFullPath = [System.IO.Path]::GetFullPath($CandidatePath)
-		return [string]::Equals(
-			$candidateFullPath,
-			$fullPath,
-			[System.StringComparison]::OrdinalIgnoreCase
-		)
 	} catch {
-		return $false
+		return
 	}
+	if ([System.IO.Path]::GetFileName($candidateFullPath) -ine $targetName) { return }
+
+	$normalizedPath = $candidateFullPath -replace '/', '\'
+	$instanceKey = if ($ProcessId -gt 0) { "pid:$ProcessId" } else { "hwnd:$WindowHandle" }
+	$key = "$instanceKey|$($normalizedPath.ToLowerInvariant())"
+	if ($reportMatches.ContainsKey($key)) {
+		$existing = $reportMatches[$key]
+		if ($existing.source -notlike "*$Source*") {
+			$existing.source = "$($existing.source), $Source"
+		}
+		if ($null -ne $ReadOnly -and $null -eq $existing.read_only) {
+			$existing.read_only = [bool]$ReadOnly
+			$existing.editable = -not [bool]$ReadOnly
+			$existing.write_lock_held = -not [bool]$ReadOnly
+		}
+		return
+	}
+
+	$record = [ordered]@{
+		path         = $candidateFullPath
+		same_path    = [string]::Equals($candidateFullPath, $fullPath, [System.StringComparison]::OrdinalIgnoreCase)
+		source       = $Source
+		instance_name = 'Microsoft Excel'
+		visible      = $Visible
+	}
+	if ($ProcessId -gt 0) { $record.process_id = $ProcessId }
+	if ($WindowHandle -gt 0) { $record.window_handle = $WindowHandle }
+	if ($null -ne $ReadOnly) {
+		$record.read_only = [bool]$ReadOnly
+		$record.editable = -not [bool]$ReadOnly
+		$record.write_lock_held = -not [bool]$ReadOnly
+	}
+
+	$match = [pscustomobject]$record
+	$reportMatches[$key] = $match
 }
 
-function Test-VisibleExcelTarget {
-	param([Parameter(Mandatory)][object]$Application)
-
-	try {
-		if (-not [bool]$Application.Visible) { return $false }
-	} catch {
-		return $false
-	}
-
-	# Item lookup can find a workbook loaded as an add-in even when collection
-	# enumeration does not expose it.
-	$workbook = $null
-	try {
-		$workbook = $Application.Workbooks.Item([System.IO.Path]::GetFileName($fullPath))
-		if (Test-TargetPath ([string]$workbook.FullName)) { return $true }
-	} catch {
-		# Fall back to enumerating the workbook collection.
-	} finally {
-		if ($workbook) {
-			try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbook) | Out-Null } catch {}
-		}
-	}
-
-	try {
-		foreach ($workbook in $Application.Workbooks) {
-			try {
-				if (Test-TargetPath ([string]$workbook.FullName)) { return $true }
-			} catch {
-				# Skip workbooks without a comparable file path.
-			} finally {
-				try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbook) | Out-Null } catch {}
-			}
-		}
-	} catch {
-		# The instance may have closed while being inspected.
-	}
-
-	try {
-		foreach ($addin in $Application.AddIns) {
-			try {
-				if ([bool]$addin.Installed -and (Test-TargetPath ([string]$addin.FullName))) {
-					return $true
-				}
-			} catch {
-				# Skip add-ins without a comparable file path.
-			} finally {
-				try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($addin) | Out-Null } catch {}
-			}
-		}
-	} catch {
-		# The instance may have closed while being inspected.
-	}
-
-	return $false
-}
-
+$reportMatches = @{}
 $seenApplications = @{}
 foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 	$app = $null
@@ -140,16 +123,81 @@ foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 				$appIsCandidate = $true
 			}
 		} catch {}
-		if ($null -eq $app) { $app = $candidate.Application }
+		if ($null -eq $app) {
+			try { $app = $candidate.Application } catch { $app = $null }
+		}
 		if ($null -eq $app -or [string]$app.Name -ne 'Microsoft Excel') { continue }
 
-		try { $key = [string]$app.Hwnd } catch { $key = [string]$app.GetHashCode() }
-		if ($seenApplications.ContainsKey($key)) { continue }
-		$seenApplications[$key] = $true
+		$windowHandle = 0L
+		try { $windowHandle = [long]$app.Hwnd } catch {}
+		$appKey = if ($windowHandle -gt 0) { "hwnd:$windowHandle" } else { "app:$($app.GetHashCode())" }
+		if ($seenApplications.ContainsKey($appKey)) { continue }
+		$seenApplications[$appKey] = $true
 
-		if (Test-VisibleExcelTarget $app) {
-			Write-Output 'true'
-			exit 0
+		$processId = [CheckOpenRotHelper]::GetProcessId($windowHandle)
+		$visible = [bool]$app.Visible
+
+		$workbook = $null
+		try {
+			$workbook = $app.Workbooks.Item($targetName)
+			$readOnly = $null
+			try { $readOnly = [bool]$workbook.ReadOnly } catch {}
+			Add-ReportMatch -CandidatePath ([string]$workbook.FullName) -Source 'workbook' -ProcessId $processId -WindowHandle $windowHandle -Visible $visible -ReadOnly $readOnly
+		} catch {
+			# The workbook may not be open in this instance.
+		} finally {
+			if ($workbook) {
+				try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbook) | Out-Null } catch {}
+			}
+		}
+
+		try {
+			foreach ($workbook in $app.Workbooks) {
+				try {
+					$readOnly = $null
+					try { $readOnly = [bool]$workbook.ReadOnly } catch {}
+					Add-ReportMatch -CandidatePath ([string]$workbook.FullName) -Source 'workbook' -ProcessId $processId -WindowHandle $windowHandle -Visible $visible -ReadOnly $readOnly
+				} catch {
+					# Skip workbook entries that cannot be inspected.
+				} finally {
+					try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($workbook) | Out-Null } catch {}
+				}
+			}
+		} catch {
+			# Continue with other ROT entries if the workbook collection is unavailable.
+		}
+
+		try {
+			foreach ($addin in $app.AddIns) {
+				try {
+					if ([bool]$addin.Installed) {
+						$addinPath = [string]$addin.FullName
+						$addinReadOnly = $null
+						$addinWorkbook = $null
+						try {
+							$addinWorkbook = $app.Workbooks.Item([System.IO.Path]::GetFileName($addinPath))
+							if (-not [string]::Equals([System.IO.Path]::GetFullPath([string]$addinWorkbook.FullName), [System.IO.Path]::GetFullPath($addinPath), [System.StringComparison]::OrdinalIgnoreCase)) {
+								[System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($addinWorkbook) | Out-Null
+								$addinWorkbook = $null
+							}
+							if ($addinWorkbook) { $addinReadOnly = [bool]$addinWorkbook.ReadOnly }
+						} catch {
+							# Add-in may not be available as a workbook object.
+						} finally {
+							if ($addinWorkbook) {
+								try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($addinWorkbook) | Out-Null } catch {}
+							}
+						}
+						Add-ReportMatch -CandidatePath $addinPath -Source 'addin' -ProcessId $processId -WindowHandle $windowHandle -Visible $visible -ReadOnly $addinReadOnly
+					}
+				} catch {
+					# Skip add-in entries that cannot be inspected.
+				} finally {
+					try { [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($addin) | Out-Null } catch {}
+				}
+			}
+		} catch {
+			# Some Excel instances do not expose the add-ins collection.
 		}
 	} catch {
 		# Skip inaccessible ROT entries and continue checking other instances.
@@ -163,4 +211,7 @@ foreach ($candidate in @([CheckOpenRotHelper]::GetRunningObjects())) {
 	}
 }
 
-Write-Output 'false'
+$report = [pscustomobject]@{
+	instances = @($reportMatches.Values | Sort-Object process_id, path)
+}
+ConvertTo-Json -InputObject $report -Depth 6 -Compress

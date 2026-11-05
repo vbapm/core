@@ -2,13 +2,13 @@ import { Args } from "mri";
 import { checkTargetOpen, getTargetPath, openTarget } from "../actions/open-target";
 
 const help = [
-	"Open the current built target file or check whether it is open.",
+	"Open the current built target file or report matching files in Excel.",
 	"",
 	"Usage: vbapm open [options]",
 	"",
 	"Options:",
 	"  --target=TYPE   Use built target of type TYPE",
-	"  --check         Print whether the target is open in visible Excel"
+	"  --check         Print a TOML report of open Excel instances"
 ].join("\n");
 
 export default async function (args: Args) {

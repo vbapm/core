@@ -359,13 +359,45 @@ Open a specific target type:
 vba open --target xlsm
 ```
 
-Check whether the built target is open in the visible Excel instance without opening it:
+Inspect all reachable Excel instances without opening the target:
 
 ```txt
 vba open --check
 ```
 
-The command prints `true` when the target is open and `false` otherwise.
+The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's name, process ID when available, visibility, and workbook access state. `read_only = false` and `write_lock_held = true` indicate Excel has the file open for editing. An empty `[[instances]]` list means Excel has no matching open files.
+
+```toml
+[target]
+path = "build/demo.xlsm"
+name = "demo.xlsm"
+open = true
+same_name_elsewhere = true
+match_count = 2
+
+[[instances]]
+file_path = "build/demo.xlsm"
+match = "exact_path"
+source = "workbook"
+instance_name = "Microsoft Excel"
+process_id = 1234
+visible = true
+read_only = false
+editable = true
+access = "read_write"
+write_lock_held = true
+
+[[instances]]
+file_path = "C:/other/demo.xlsm"
+match = "same_name_different_location"
+source = "workbook"
+process_id = 5678
+visible = false
+read_only = true
+editable = false
+access = "read_only"
+write_lock_held = false
+```
 
 ### `close`
 
