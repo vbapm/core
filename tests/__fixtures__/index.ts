@@ -21,6 +21,7 @@ export const wildcard = join(projects, "wildcard");
 export const conflict = join(projects, "conflict");
 export const nameMismatch = join(projects, "name-mismatch");
 export const peerHost = join(projects, "peer-host");
+export const powerQuery = join(projects, "power-query");
 
 export const staging = join(cache, "staging");
 export const standardImport = join(staging, "standard", "import");

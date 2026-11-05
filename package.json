@@ -29,7 +29,7 @@
         "README.md"
     ],
     "engines": {
-        "node": ">=18.14.0"
+        "node": ">=22.0.0"
     },
     "packageManager": "pnpm@12.16.1",
     "scripts": {
@@ -82,7 +82,7 @@
         "editorconfig": "^3.0.0",
         "env-paths": "^4.0.0",
         "fs-extra": "^11",
-        "iconv-lite": "^0.7.2",
+        "iconv-lite": "1.0.0-alpha.4",
         "isomorphic-git": "^1.37.1",
         "jschardet": "^4.0.0",
         "logic-solver": "^2",

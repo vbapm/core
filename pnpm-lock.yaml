@@ -203,8 +203,8 @@ importers:
         specifier: ^11
         version: 11.4.1
       iconv-lite:
-        specifier: ^0.7.2
-        version: 0.7.3
+        specifier: 1.0.0-alpha.4
+        version: 1.0.0-alpha.4
       isomorphic-git:
         specifier: ^1.37.1
         version: 1.43.2
@@ -2083,9 +2083,9 @@ packages:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
 
-  iconv-lite@0.7.3:
-    resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
-    engines: {node: '>=0.10.0'}
+  iconv-lite@1.0.0-alpha.4:
+    resolution: {integrity: sha512-I2ebhymGRELPJY4PL6XrjMyyq4Hbr622hr0nR4seMCT736vOFkuNSSXb+Po3dEmS/7IA4wYBjUWExiM+Vz/+0Q==}
+    engines: {node: '>=22'}
 
   ieee754@1.1.13:
     resolution: {integrity: sha512-4vf7I2LYV/HaWerSo3XmlMkp5eZ83i+/CDluXi/IGTs/O1sejBNhTtnxzmRZfvOUqj7lZjqHkeTvpgSFDlWZTg==}
@@ -2856,9 +2856,6 @@ packages:
   safe-regex-test@1.1.0:
     resolution: {integrity: sha512-x/+Cz4YrimQxQccJf5mKEbIa1NzeCRNI5Ecl/ekmlYaampdNLPalVyIcCZNNH3MvmqBugV5TMYZXv0ljslUlaw==}
     engines: {node: '>= 0.4'}
-
-  safer-buffer@2.1.2:
-    resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
   sanitize-filename@1.6.4:
     resolution: {integrity: sha512-9ZyI08PsvdQl2r/bBIGubpVdR3RR9sY6RDiWFPreA21C/EFlQhmgo20UZlNjZMMZNubusLhAQozkA0Od5J21Eg==}
@@ -4854,9 +4851,7 @@ snapshots:
 
   human-signals@2.1.0: {}
 
-  iconv-lite@0.7.3:
-    dependencies:
-      safer-buffer: 2.1.2
+  iconv-lite@1.0.0-alpha.4: {}
 
   ieee754@1.1.13: {}
 
@@ -5784,8 +5779,6 @@ snapshots:
       call-bound: 1.0.4
       es-errors: 1.3.0
       is-regex: 1.2.1
-
-  safer-buffer@2.1.2: {}
 
   sanitize-filename@1.6.4:
     dependencies:

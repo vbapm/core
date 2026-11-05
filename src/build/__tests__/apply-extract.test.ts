@@ -1,3 +1,6 @@
+import { mkdtemp, mkdir, rm, writeFile as writeDiskFile } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import { wildcard, standardChangesExport } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import {
@@ -20,6 +23,30 @@ beforeEach(() => {
 afterEach(reset);
 
 describe("resolveSourceFiles", () => {
+	test("filters Power Query files matched by broad source wildcards", async () => {
+		const { project } = await setup(wildcard);
+		const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-extract-"));
+		const sourceDirectory = join(root, "src");
+
+		try {
+			await mkdir(sourceDirectory, { recursive: true });
+			await writeDiskFile(
+				join(sourceDirectory, "Module.bas"),
+				'Attribute VB_Name = "Module"\n',
+				"utf8"
+			);
+			await writeDiskFile(join(sourceDirectory, "Query.pq"), "not a VBA component", "utf8");
+			project.paths.dir = root;
+			project.manifest.src = [{ name: "AllSources", path: "src/**/*" }];
+
+			const sources = await resolveSourceFiles(project);
+
+			expect([...sources.values()].map(entry => entry.component.name)).toEqual(["Module"]);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	test("resolves wildcard entries to concrete file paths", async () => {
 		const { project } = await setup(wildcard);
 

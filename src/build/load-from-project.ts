@@ -6,12 +6,14 @@ import { CliError, ErrorCode } from "../errors";
 import { Message } from "../messages";
 import { Manifest, resolveSrcFolder, resolveSrcSubfolders } from "../manifest";
 import { Reference } from "../manifest/reference";
+import { isPowerQueryPath, isPowerQuerySource } from "../manifest/source";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
 import { readFile } from "../utils/fs";
 import { join, relative } from "../utils/path";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
+import { loadPowerQueries } from "./load-power-queries";
 import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
 import { byComponentTypeThenName, Component } from "./component";
 
@@ -39,6 +41,8 @@ export async function loadFromProject(
 	// Load components and references from project and dependencies
 	for (const manifest of manifests) {
 		for (const source of manifest.src) {
+			if (isPowerQuerySource(source)) continue;
+
 			// Resolve encoding: per-source override > project-level > Unknown
 			const declaredLabel = source.encoding ?? manifest.srcProperties?.encoding;
 			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
@@ -53,6 +57,8 @@ export async function loadFromProject(
 					: source.path;
 				const matched = walk(baseDir, { globs: [pattern], directories: false });
 				for (const file of matched) {
+					if (isPowerQueryPath(file)) continue;
+
 					const absPath = join(baseDir, file);
 					loadingComponents.push(
 						Component.load(absPath, codepage, {}).then(component => {
@@ -93,6 +99,8 @@ export async function loadFromProject(
 
 	if (!options.release) {
 		for (const source of project.manifest.devSrc) {
+			if (isPowerQuerySource(source)) continue;
+
 			if (source.path.includes("*")) {
 				const baseDir = project.paths.dir;
 				const normalizedSourcePath = source.path.replace(/\\/g, "/");
@@ -102,6 +110,8 @@ export async function loadFromProject(
 					: source.path;
 				const matched = walk(baseDir, { globs: [pattern], directories: false });
 				for (const file of matched) {
+					if (isPowerQueryPath(file)) continue;
+
 					const absPath = join(baseDir, file);
 					loadingComponents.push(
 						Component.load(absPath, Codepage.Unknown, { binary_path: source.binary })
@@ -123,6 +133,7 @@ export async function loadFromProject(
 	}
 
 	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
+	const powerQueries = await loadPowerQueries(project, options);
 
 	// Validate that non-wildcard [source.files] keys match their file's Attribute VB_Name
 	validateSrcNames(project, components);
@@ -131,7 +142,8 @@ export async function loadFromProject(
 		name: project.manifest.codename || "VBAProject",
 		components,
 		references,
-		fromDependencies
+		fromDependencies,
+		...(powerQueries.length > 0 ? { powerQueries } : {})
 	};
 
 	await validateEncoding(project, graph);

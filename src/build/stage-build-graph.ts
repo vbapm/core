@@ -2,13 +2,12 @@ import { writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
 import * as iconv from "iconv-lite";
+import { env } from "../env";
+import { createNamedHtmlEntityHandler } from "./named-html-entities";
 import { BuildGraph, ImportGraph } from "./build-graph";
-import {
-	Codepage,
-	codepageToLabel,
-	encodeForCodepage,
-	getSystemCodepage
-} from "./encoding-sniffer";
+import { Codepage, codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
+
+const debug = env.debug("vbapm:build.encoding");
 
 export async function stageBuildGraph(
 	graph: BuildGraph,
@@ -24,17 +23,27 @@ export async function stageBuildGraph(
 	const components = await parallel(graph.components, async component => {
 		const path = join(staging, component.filename);
 
-		// Determine source encoding (from TOML declaration or system codepage)
-		const sourceLabel = component.details.sourceEncoding ?? targetLabel;
-
-		// Encode component code to the target encoding.
-		// If source differs from target, iconv transcodes automatically.
-		let code: string | Buffer = component.code;
-		if (sourceLabel.toLowerCase() !== targetLabel.toLowerCase()) {
-			code = iconv.encode(component.code, targetLabel);
-		} else {
-			code = encodeForCodepage(component.code, targetCp);
+		const encoded =
+			targetCp === Codepage.Ascii
+				? iconv.encode(component.code, targetLabel, {
+						invalidCharHandler: createNamedHtmlEntityHandler(
+							component.code,
+							(original, replacement, index) => {
+								debug(
+									'🔄️ Replaced "%s" with "%s" in %s at character %d',
+									original,
+									replacement,
+									component.details.path ?? component.filename,
+									index + 1
+								);
+							}
+						)
+					})
+				: iconv.encode(component.code, targetLabel);
+		if (!encoded) {
+			throw new Error(`Encoding component "${component.name}" was cancelled`);
 		}
+		const code = Buffer.from(encoded);
 
 		await writeFile(path, code);
 
@@ -53,6 +62,7 @@ export async function stageBuildGraph(
 	return {
 		name: graph.name,
 		components,
-		references: graph.references
+		references: graph.references,
+		...(graph.powerQueries ? { powerQueries: graph.powerQueries } : {})
 	};
 }

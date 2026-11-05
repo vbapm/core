@@ -1,10 +1,11 @@
-import { complex, dir, standardImport } from "../../../tests/__fixtures__";
+import { complex, dir, empty, standardImport } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { pathExists, readFile, ensureDir } from "../../utils/fs";
 import { join, relative } from "../../utils/path";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import iconv from "iconv-lite";
 import { ImportGraph } from "../build-graph";
+import { Component } from "../component";
 import { Codepage } from "../encoding-sniffer";
 import { loadFromProject } from "../load-from-project";
 import { stageBuildGraph } from "../stage-build-graph";
@@ -23,6 +24,16 @@ test("should stage BuildGraph", async () => {
 	for (const source of import_graph.components) {
 		expect(await pathExists(source.path)).toEqual(true);
 	}
+});
+
+test("preserves Power Query formulas when staging the import graph", async () => {
+	const { project, dependencies } = await setup(empty);
+	const graph = await loadFromProject(project, dependencies);
+	graph.powerQueries = [{ name: "Query", formula: "let Source = 1 in Source" }];
+
+	const importGraph = await stageBuildGraph(graph, standardImport);
+
+	expect(importGraph.powerQueries).toEqual(graph.powerQueries);
 });
 
 function normalizeImportGraph(
@@ -87,4 +98,36 @@ Module1 = "src/Module1.bas"
 
 	// Cleanup
 	rmSync(fixtureDir, { recursive: true, force: true });
+});
+
+test("uses named HTML entities, then hex references for unmapped characters in ASCII targets", async () => {
+	const stagingDir = join(dir, "projects", "ascii-encoding-stage");
+	await ensureDir(stagingDir);
+
+	const component = new Component(
+		"module",
+		`Attribute VB_Name = "AsciiModule"\n' Café ${String.fromCodePoint(0x2242, 0x338)} ${String.fromCodePoint(0xac00)} ${String.fromCodePoint(0x1f600)}\n`,
+		Codepage.Unknown,
+		{ sourceEncoding: "utf-8" }
+	);
+	const graph = {
+		name: "ascii-encoding-test",
+		components: [component],
+		references: [],
+		fromDependencies: { components: new Map(), references: new Map() }
+	};
+
+	try {
+		const importGraph = await stageBuildGraph(graph, stagingDir, Codepage.Ascii);
+		const output = await readFile(importGraph.components[0].path);
+		const encodedText = output.toString("ascii");
+
+		expect(encodedText).toContain("Caf&eacute;");
+		expect(encodedText).toContain("&nesim;");
+		expect(encodedText).toContain("&#xac00;");
+		expect(encodedText).toContain("&#x1f600;");
+		expect(output.every(byte => byte <= 0x7f)).toBe(true);
+	} finally {
+		rmSync(stagingDir, { recursive: true, force: true });
+	}
 });

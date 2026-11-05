@@ -6,15 +6,12 @@ import { Source } from "../manifest/source";
 import { ensureDir, pathExists, writeFile } from "../utils/fs";
 import { basename, dirname, extname, join } from "../utils/path";
 
-const extensionToType: { [extension: string]: "module" | "class" } = {
-	".bas": "module",
-	".cls": "class"
-};
-
 const typeToExtension: { [type: string]: ".bas" | ".cls" } = {
 	module: ".bas",
 	class: ".cls"
 };
+const SUPPORTED_EXTENSIONS = [".bas", ".cls", ".pq"] as const;
+type SourceExtension = (typeof SUPPORTED_EXTENSIONS)[number];
 
 // VBA component names can contain Unicode letters (as supported by the local Code Page), numbers, and underscores, but must start with a letter or underscore
 // The rule below is more permissive since we don't check if the letters are valid in the local Code Page, but it should be sufficient to prevent invalid names in most cases.
@@ -59,7 +56,7 @@ export async function addSource(options: AddSourceOptions): Promise<AddSourceRes
 	if (!componentName) {
 		throw new CliError(ErrorCode.AddInvalidName, `Invalid source name "${name}".`);
 	}
-	if (!VBA_COMPONENT_NAME.test(componentName)) {
+	if (extension !== ".pq" && !VBA_COMPONENT_NAME.test(componentName)) {
 		throw new CliError(
 			ErrorCode.AddInvalidName,
 			`Invalid VBA component name "${componentName}". Use Unicode letters, numbers, and underscores only, and do not start with a number.`
@@ -101,14 +98,14 @@ export async function addSource(options: AddSourceOptions): Promise<AddSourceRes
 	return { path, isNew: !fileExists };
 }
 
-function getExtension(name: string, type?: string): ".bas" | ".cls" {
+function getExtension(name: string, type?: string): SourceExtension {
 	const fromName = extname(name).toLowerCase();
 	const fromType = type && typeToExtension[type.toLowerCase()];
 
-	if (fromName && !(fromName in extensionToType)) {
+	if (fromName && !SUPPORTED_EXTENSIONS.includes(fromName as SourceExtension)) {
 		throw new CliError(
 			ErrorCode.AddUnsupportedType,
-			`Unsupported source extension "${fromName}". Supported extensions are .bas and .cls.`
+			`Unsupported source extension "${fromName}". Supported extensions are .bas, .cls, and .pq.`
 		);
 	}
 
@@ -126,13 +123,17 @@ function getExtension(name: string, type?: string): ".bas" | ".cls" {
 		);
 	}
 
-	if (fromName) return <".bas" | ".cls">fromName;
+	if (fromName) return <SourceExtension>fromName;
 	if (fromType) return fromType;
 
 	return ".bas";
 }
 
-function template(name: string, extension: ".bas" | ".cls"): string {
+function template(name: string, extension: SourceExtension): string {
+	if (extension === ".pq") {
+		return "let\n    Source = null\nin\n    Source\n";
+	}
+
 	if (extension === ".cls") {
 		return (
 			dedent`

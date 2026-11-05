@@ -1,7 +1,7 @@
 import dedent from "@timhall/dedent";
 import { manifestOk } from "../errors";
 import { isString } from "../utils/is";
-import { join, normalize, relative } from "../utils/path";
+import { extname, join, normalize, relative } from "../utils/path";
 
 /*
   # Source
@@ -16,6 +16,14 @@ export interface Source {
 	path: string;
 	binary?: string;
 	encoding?: string;
+}
+
+export function isPowerQuerySource(source: Source): boolean {
+	return isPowerQueryPath(source.path);
+}
+
+export function isPowerQueryPath(path: string): boolean {
+	return extname(path).toLowerCase() === ".pq";
 }
 
 const EXAMPLE = `Example vbaproject.toml:

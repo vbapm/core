@@ -255,6 +255,11 @@ describe("codepageToLabel", () => {
 // ── labelToCodepage ──────────────────────────────────────────────
 
 describe("labelToCodepage", () => {
+	test("ascii → Ascii", () => {
+		expect(labelToCodepage("ascii")).toBe(Codepage.Ascii);
+		expect(labelToCodepage("us-ascii")).toBe(Codepage.Ascii);
+	});
+
 	test("windows-1252 → Windows1252", () => {
 		expect(labelToCodepage("windows-1252")).toBe(Codepage.Windows1252);
 	});

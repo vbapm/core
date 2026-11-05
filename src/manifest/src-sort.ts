@@ -1,16 +1,17 @@
 import { extname } from "../utils/path";
-import { Source } from "./source";
+import { isPowerQuerySource, Source } from "./source";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-/** Maps VBA component types to subdirectories under `src/`. */
+/** Maps source groups to subdirectories under `src/`. */
 export interface SrcSubfolders {
 	Modules?: string;
 	Forms?: string;
 	Classes?: string;
 	Objects?: string;
+	PowerQueries?: string;
 }
 
 /** Parsed form of the optional `[source]` TOML section. */
@@ -82,6 +83,8 @@ export interface SrcStructure {
  * source entries alone — no `[source]` needed.
  */
 export function detectSrcStructure(src: Source[]): SrcStructure {
+	src = src.filter(source => !isPowerQuerySource(source));
+
 	// ---- empty src ----
 	if (src.length === 0) {
 		return {
@@ -186,6 +189,9 @@ export function parseSrcProperties(raw: any): SrcProperties | undefined {
 		if (typeof raw.subfolders.Forms === "string") sf.Forms = raw.subfolders.Forms;
 		if (typeof raw.subfolders.Classes === "string") sf.Classes = raw.subfolders.Classes;
 		if (typeof raw.subfolders.Objects === "string") sf.Objects = raw.subfolders.Objects;
+		if (typeof raw.subfolders.PowerQueries === "string") {
+			sf.PowerQueries = raw.subfolders.PowerQueries;
+		}
 		if (Object.keys(sf).length > 0) props.subfolders = sf;
 	}
 

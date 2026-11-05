@@ -1,0 +1,73 @@
+name: Update WHATWG HTML entities
+
+on:
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-entities:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Download and validate WHATWG data
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            https://html.spec.whatwg.org/entities.json \
+            --output scripts/data/html-entities.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const entities = JSON.parse(readFileSync("scripts/data/html-entities.json", "utf8"));
+          if (entities["&ouml;"]?.codepoints?.[0] !== 246) {
+            throw new Error("The WHATWG data does not contain the expected &ouml; mapping.");
+          }
+          NODE
+
+      - name: Create or update data PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B automation/update-whatwg-html-entities
+          git add scripts/data/html-entities.json
+
+          if git diff --cached --quiet; then
+            echo "WHATWG HTML entity data is already current."
+            exit 0
+          fi
+
+          git commit -m "chore: update WHATWG HTML entity data"
+          git push --force origin HEAD:automation/update-whatwg-html-entities
+
+          pr_number=$(gh pr list \
+            --head automation/update-whatwg-html-entities \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [[ -n "$pr_number" ]]; then
+            gh pr edit "$pr_number" \
+              --title "chore: update WHATWG HTML entity data" \
+              --body "Refresh scripts/data/html-entities.json from https://html.spec.whatwg.org/entities.json."
+          else
+            gh pr create \
+              --head automation/update-whatwg-html-entities \
+              --base main \
+              --title "chore: update WHATWG HTML entity data" \
+              --body "Refresh scripts/data/html-entities.json from https://html.spec.whatwg.org/entities.json."
+          fi

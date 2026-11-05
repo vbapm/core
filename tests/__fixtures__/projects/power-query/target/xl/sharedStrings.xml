@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="26" uniqueCount="26">
+  <si>
+    <t>Column1</t>
+  </si>
+  <si>
+    <t>Column2</t>
+  </si>
+  <si>
+    <t>Meta-Wiki</t>
+  </si>
+  <si>
+    <t>Community coordination &amp; documentation</t>
+  </si>
+  <si>
+    <t>MediaWiki</t>
+  </si>
+  <si>
+    <t>Free &amp; open wiki software</t>
+  </si>
+  <si>
+    <t>Wikisource</t>
+  </si>
+  <si>
+    <t>Free content library</t>
+  </si>
+  <si>
+    <t>Wiktionary</t>
+  </si>
+  <si>
+    <t>Free dictionary</t>
+  </si>
+  <si>
+    <t>Wikifunctions</t>
+  </si>
+  <si>
+    <t>Free function library</t>
+  </si>
+  <si>
+    <t>Wikidata</t>
+  </si>
+  <si>
+    <t>Free knowledge base</t>
+  </si>
+  <si>
+    <t>Wikiversity</t>
+  </si>
+  <si>
+    <t>Free learning resources</t>
+  </si>
+  <si>
+    <t>Commons</t>
+  </si>
+  <si>
+    <t>Free media collection</t>
+  </si>
+  <si>
+    <t>Wikiquote</t>
+  </si>
+  <si>
+    <t>Free quote compendium</t>
+  </si>
+  <si>
+    <t>Wikispecies</t>
+  </si>
+  <si>
+    <t>Free species directory</t>
+  </si>
+  <si>
+    <t>Wikibooks</t>
+  </si>
+  <si>
+    <t>Free textbooks</t>
+  </si>
+  <si>
+    <t>Wikivoyage</t>
+  </si>
+  <si>
+    <t>Free travel guide</t>
+  </si>
+</sst>

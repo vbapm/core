@@ -71,6 +71,32 @@ Public Function ImportGraph(Graph As Variant) As String
         End If
     Next Ref
 
+    If Values.Exists("powerQueries") Then
+        Dim PowerQueryInfo As Dictionary
+        Dim ExistingQuery As Object
+        Dim QueryName As String
+        Dim QueryFormula As String
+
+        For Each PowerQueryInfo In Values("powerQueries")
+            QueryName = CStr(PowerQueryInfo("name"))
+            QueryFormula = CStr(PowerQueryInfo("formula"))
+            Set ExistingQuery = Nothing
+
+            On Error Resume Next
+            Set ExistingQuery = Document.Queries.Item(QueryName)
+            Err.Clear
+            On Error GoTo ErrorHandling
+
+            If ExistingQuery Is Nothing Then
+                Set ExistingQuery = Document.Queries.Add(QueryName, QueryFormula)
+                Output.Messages.Add "power-query-added: " & QueryName
+            ElseIf NormalizeQueryFormula(CStr(ExistingQuery.Formula)) <> NormalizeQueryFormula(QueryFormula) Then
+                ExistingQuery.Formula = QueryFormula
+                Output.Messages.Add "power-query: " & QueryName
+            End If
+        Next PowerQueryInfo
+    End If
+
     Document.Save
 
     ' Restore the previously active code pane (best-effort, non-fatal)
@@ -84,6 +110,10 @@ ErrorHandling:
 
     Output.Errors.Add Err.Number & ": " & Err.Description
     ImportGraph = Output.Result
+End Function
+
+Private Function NormalizeQueryFormula(ByVal Formula As String) As String
+    NormalizeQueryFormula = Replace(Replace(Formula, vbCrLf, vbLf), vbCr, vbLf)
 End Function
 
 ''
@@ -148,6 +178,27 @@ Public Function ExportTo(Info As Variant) As String
                 End If
             End If
         Next Component
+
+        Dim QueryFolder As String
+        Dim QueryPath As String
+        Dim QueryName As String
+        Dim QueryFormula As String
+        Dim Pquery As Object
+
+        QueryFolder = FileSystem.JoinPath(Staging, "pq")
+        If VBA.Dir(QueryFolder, vbDirectory) = "" Then VBA.MkDir QueryFolder
+
+        For Each Pquery In Document.Queries
+            QueryName = SafeQueryFileName(CStr(Pquery.Name))
+            QueryPath = FileSystem.JoinPath(QueryFolder, QueryName & ".pq")
+            If FileSystem.FileExists(QueryPath) Then
+                Err.Raise vbObjectError + 513, "Build.ExportTo", _
+                    "Power Query names map to the same filename: " & QueryName
+            End If
+
+            QueryFormula = CStr(Pquery.Formula)
+            Utf8.WriteUtf8File QueryPath, QueryFormula
+        Next Pquery
     End If
 
     ' For "indirect" values (VBA project name and references)
@@ -237,6 +288,67 @@ ErrorHandling:
 
     Output.Errors.Add Err.Number & ": " & Err.Description
     ExportTo = Output.Result
+End Function
+
+Private Function SafeQueryFileName(QueryName As String) As String
+    Dim i As Long
+    Dim Character As String
+
+    SafeQueryFileName = QueryName
+    For i = 1 To Len(QueryName)
+        Character = Mid$(QueryName, i, 1)
+        If (AscW(Character) >= 0 And AscW(Character) < 32) Or _
+            InStr(1, "\/:*?""<>|", Character, vbBinaryCompare) > 0 Then
+            Mid$(SafeQueryFileName, i, 1) = "_"
+        End If
+    Next i
+
+    Do While Len(SafeQueryFileName) > 0 And _
+        (Right$(SafeQueryFileName, 1) = "." Or Right$(SafeQueryFileName, 1) = " ")
+        SafeQueryFileName = Left$(SafeQueryFileName, Len(SafeQueryFileName) - 1)
+    Loop
+
+    If SafeQueryFileName = "" Then SafeQueryFileName = "Query"
+    If IsReservedWindowsDeviceName(SafeQueryFileName) Then _
+        SafeQueryFileName = "_" & SafeQueryFileName
+End Function
+
+Private Function IsReservedWindowsDeviceName(FileName As String) As Boolean
+    Dim BaseName As String
+    Dim DotPosition As Long
+    Dim i As Long
+
+    DotPosition = InStr(1, FileName, ".", vbBinaryCompare)
+    If DotPosition > 0 Then
+        BaseName = Left$(FileName, DotPosition - 1)
+    Else
+        BaseName = FileName
+    End If
+
+    Do While Len(BaseName) > 0 And _
+        (Right$(BaseName, 1) = "." Or Right$(BaseName, 1) = " ")
+        BaseName = Left$(BaseName, Len(BaseName) - 1)
+    Loop
+
+    BaseName = UCase$(BaseName)
+    Select Case BaseName
+        Case "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"
+            IsReservedWindowsDeviceName = True
+            Exit Function
+    End Select
+
+    For i = 1 To 9
+        If BaseName = "COM" & CStr(i) Or BaseName = "LPT" & CStr(i) Then
+            IsReservedWindowsDeviceName = True
+            Exit Function
+        End If
+    Next i
+
+    If BaseName = "COM" & ChrW(&HB2) Or BaseName = "COM" & ChrW(&HB3) Or _
+        BaseName = "COM" & ChrW(&HB9) Or BaseName = "LPT" & ChrW(&HB2) Or _
+        BaseName = "LPT" & ChrW(&HB3) Or BaseName = "LPT" & ChrW(&HB9) Then
+        IsReservedWindowsDeviceName = True
+    End If
 End Function
 
 ''
