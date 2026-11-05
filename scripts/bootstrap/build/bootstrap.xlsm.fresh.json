@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "algorithm": "sha256",
-  "fingerprint": "sha256-32a805a547e54bfcab3147d53478cbfbbfe761c46c4a47504e2e1a21db8f937c",
+  "fingerprint": "sha256-42b2fa4024498c6491745dcf922201c614f05d7db7a95ba59c7adbaf2f95143b",
   "inputs": [
     "addins/src/Build.bas",
     "addins/src/DebugLog.bas",
@@ -29,7 +29,7 @@
     "addins/vbaproject.lock",
     "addins/vbaproject.toml",
     "lib/.build-mode",
-    "lib/add-source-COL2mJJe.js",
+    "lib/add-source-CAtQNQbV.js",
     "lib/build-project-DYhlp69r.js",
     "lib/build-target-BdDw2cE_.js",
     "lib/check-saved-xmWkheUs.js",
@@ -64,7 +64,7 @@
     "lib/to-buffer-CbmBiAvQ.js",
     "lib/toml-patch-Blpc98cY.js",
     "lib/update-project-uwkYUNQ2.js",
-    "lib/vbapm-add-CmFiXwBu.js",
+    "lib/vbapm-add-B1o-FEOP.js",
     "lib/vbapm-build-efvoUY2O.js",
     "lib/vbapm-close-CI5Wn6-U.js",
     "lib/vbapm-config-CKfqBU-L.js",

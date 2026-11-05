@@ -19,13 +19,13 @@ afterAll(async () => {
 	await closePersistentSession();
 });
 
-async function expectMashupMatchesSource(cwd: string) {
+async function expectMashupMatchesSource(cwd: string, queryCount = 1) {
 	const { stdout } = await execFileAsync(process.execPath, [
 		checkMashupScript,
 		join(cwd, "target"),
-		join(cwd, "src", "pq")
+		join(cwd, "src")
 	]);
-	expect(stdout).toContain("Power Query check passed: 1 formulas match.");
+	expect(stdout).toContain(`Power Query check passed: ${queryCount} formulas match.`);
 }
 
 describe("Power Query build", () => {
@@ -57,13 +57,23 @@ describe("Power Query build", () => {
 		});
 	});
 
-	test("fails when a source query is absent from the template workbook", async () => {
-		await setup(powerQuery, "power-query-missing", async cwd => {
-			await writeFile(join(cwd, "src", "pq", "Missing.pq"), "let Source = 1 in Source", "utf8");
+	test("creates a workbook query from a source added with vba add", async () => {
+		await setup(powerQuery, "power-query-add", async cwd => {
+			await execute(cwd, "add NewQuery.pq");
+			const formula = [
+				"let",
+				'    Source = #table({"Value"}, {{"added-query"}})',
+				"in",
+				"    Source"
+			].join("\n");
+			await writeFile(join(cwd, "src", "NewQuery.pq"), formula, "utf8");
 
-			await expect(execute(cwd, "build")).rejects.toThrow(
-				/Power Query does not exist in the target workbook: Missing/i
-			);
+			await execute(cwd, "build");
+			await execute(cwd, "extract --target xlsm");
+
+			const extractedFormula = await readFile(join(cwd, "src", "NewQuery.pq"), "utf8");
+			expect(extractedFormula).toContain('"added-query"');
+			await expectMashupMatchesSource(cwd, 2);
 		});
 	});
 });

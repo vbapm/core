@@ -470,6 +470,9 @@ async function executeInProcess(
 async function dispatchCommand(cmdName: string, args: any): Promise<void> {
 	let command: (args: any) => Promise<void>;
 	switch (cmdName) {
+		case "add":
+			command = (await import("../../src/bin/vbapm-add")).default;
+			break;
 		case "build":
 			command = (await import("../../src/bin/vbapm-build")).default;
 			break;

@@ -88,11 +88,9 @@ Public Function ImportGraph(Graph As Variant) As String
             On Error GoTo ErrorHandling
 
             If ExistingQuery Is Nothing Then
-                Err.Raise vbObjectError + 514, "Build.ImportGraph", _
-                    "Power Query does not exist in the target workbook: " & QueryName
-            End If
-
-            If NormalizeQueryFormula(CStr(ExistingQuery.Formula)) <> NormalizeQueryFormula(QueryFormula) Then
+                Set ExistingQuery = Document.Queries.Add(QueryName, QueryFormula)
+                Output.Messages.Add "power-query-added: " & QueryName
+            ElseIf NormalizeQueryFormula(CStr(ExistingQuery.Formula)) <> NormalizeQueryFormula(QueryFormula) Then
                 ExistingQuery.Formula = QueryFormula
                 Output.Messages.Add "power-query: " & QueryName
             End If
