@@ -5,6 +5,7 @@ import { complex, dev, empty, nameMismatch } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { env } from "../../env";
 import { loadFromProject } from "../load-from-project";
+import { loadPowerQueries } from "../load-power-queries";
 import { normalizeBuildGraph } from "../__helpers__/build-graph";
 
 afterAll(reset);
@@ -81,6 +82,32 @@ test("loads project Power Queries separately from VBA components", async () => {
 				{ name: "Nested", formula: "let B = 2 in B" }
 			])
 		);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("does not load a wildcard query already covered by an individual mapping", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-overlap-"));
+	const queryPath = join(root, "src", "pq", "Stored.pq");
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			src: [
+				{ name: "CustomQuery", path: queryPath },
+				{ name: "PowerQueries", path: join(root, "src", "pq", "*.pq") }
+			],
+			devSrc: []
+		}
+	} as unknown as import("../../project").Project;
+
+	try {
+		await mkdir(join(root, "src", "pq"), { recursive: true });
+		await writeFile(queryPath, "let Source = 1 in Source", "utf8");
+
+		await expect(loadPowerQueries(project)).resolves.toEqual([
+			{ name: "CustomQuery", formula: "let Source = 1 in Source" }
+		]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

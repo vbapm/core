@@ -77,3 +77,27 @@ describe("Power Query build", () => {
 		});
 	});
 });
+
+test("preserves a reserved query name when extraction sanitizes its filename", async () => {
+	await setup(powerQuery, "power-query-reserved-name", async cwd => {
+		const manifestPath = join(cwd, "vbaproject.toml");
+		const manifest = await readFile(manifestPath, "utf8");
+		await writeFile(
+			manifestPath,
+			manifest.replace(
+				'PowerQueries = "src/pq/*.pq"',
+				'NUL = "src/pq/_NUL.pq"\nPowerQueries = "src/pq/*.pq"'
+			),
+			"utf8"
+		);
+		await writeFile(join(cwd, "src", "pq", "_NUL.pq"), "let Source = 42 in Source", "utf8");
+
+		await execute(cwd, "build");
+		await execute(cwd, "extract --target xlsm");
+
+		expect(await readFile(join(cwd, "src", "pq", "_NUL.pq"), "utf8")).toContain("Source = 42");
+		const extractedManifest = await readFile(manifestPath, "utf8");
+		expect(extractedManifest).toContain('NUL = "src/pq/_NUL.pq"');
+		await expectMashupMatchesSource(cwd, 2);
+	});
+});

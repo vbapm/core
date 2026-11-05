@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import walk from "walk-sync";
-import { basename, extname, join, relative } from "../utils/path";
+import { basename, extname, join, relative, resolve } from "../utils/path";
 import { Project } from "../project";
 import { isPowerQueryPath, isPowerQuerySource, Source } from "../manifest/source";
 import { PowerQuery } from "./build-graph";
@@ -15,9 +15,14 @@ export async function loadPowerQueries(
 	].filter(isPowerQuerySource);
 	const queries: PowerQuery[] = [];
 	const names = new Set<string>();
+	const individualPaths = new Set(
+		sources.filter(source => !source.path.includes("*")).map(source => normalizePath(source.path))
+	);
 
 	for (const source of sources) {
 		for (const file of resolvePowerQueryFiles(project, source)) {
+			if (source.path.includes("*") && individualPaths.has(normalizePath(file))) continue;
+
 			const name = source.path.includes("*") ? basename(file, extname(file)) : source.name;
 			const normalizedName = name.toLocaleLowerCase("en-US");
 			if (names.has(normalizedName)) {
@@ -31,6 +36,11 @@ export async function loadPowerQueries(
 	}
 
 	return queries;
+}
+
+function normalizePath(path: string): string {
+	const resolved = resolve(path);
+	return process.platform === "win32" ? resolved.toLocaleLowerCase("en-US") : resolved;
 }
 
 function resolvePowerQueryFiles(project: Project, source: Source): string[] {

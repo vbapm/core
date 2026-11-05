@@ -184,9 +184,12 @@ Public Function ExportTo(Info As Variant) As String
         Dim QueryName As String
         Dim QueryFormula As String
         Dim Pquery As Object
+        Dim PowerQueryInfos As Collection
+        Dim QueryInfo As Dictionary
 
         QueryFolder = FileSystem.JoinPath(Staging, "pq")
         If VBA.Dir(QueryFolder, vbDirectory) = "" Then VBA.MkDir QueryFolder
+        Set PowerQueryInfos = New Collection
 
         For Each Pquery In Document.Queries
             QueryName = SafeQueryFileName(CStr(Pquery.Name))
@@ -198,6 +201,11 @@ Public Function ExportTo(Info As Variant) As String
 
             QueryFormula = CStr(Pquery.Formula)
             Utf8.WriteUtf8File QueryPath, QueryFormula
+
+            Set QueryInfo = New Dictionary
+            QueryInfo("name") = CStr(Pquery.Name)
+            QueryInfo("file") = QueryName & ".pq"
+            PowerQueryInfos.Add QueryInfo
         Next Pquery
     End If
 
@@ -208,6 +216,7 @@ Public Function ExportTo(Info As Variant) As String
     Project("name") = Document.VBProject.Name
     Set Project("references") = New Collection
     Set Project("components") = New Collection
+    If Not Values("metadataOnly") Then Set Project("powerQueries") = PowerQueryInfos
 
     Dim CompInfo As Dictionary
     Dim CompType As String

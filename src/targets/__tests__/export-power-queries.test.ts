@@ -4,6 +4,7 @@ import { join } from "path";
 import { resolveSourceFiles } from "../../build/apply-extract";
 import { writeFile as writeManifestFile } from "../../utils/fs";
 import { Project } from "../../project";
+import { loadPowerQueries } from "../../build/load-power-queries";
 import { exportPowerQueries } from "../export-power-queries";
 
 test("syncs Power Query files under the configured source folder", async () => {
@@ -108,7 +109,19 @@ test("uses the fallback folder without adding a manifest group when subfolders a
 	const fallbackQueries = join(root, "src", "pq");
 	const project = {
 		paths: { dir: root },
-		manifest: { src: [], srcProperties: undefined }
+		manifest: {
+			type: "project",
+			name: "power-query-test",
+			version: "0.0.0",
+			metadata: { authors: [] },
+			src: [],
+			devSrc: [],
+			dependencies: [],
+			references: [],
+			devDependencies: [],
+			devReferences: [],
+			srcProperties: undefined
+		}
 	} as unknown as Project;
 
 	try {
@@ -118,7 +131,9 @@ test("uses the fallback folder without adding a manifest group when subfolders a
 		await exportPowerQueries(project, staging);
 
 		expect(await readdir(fallbackQueries)).toEqual(["Query.pq"]);
-		expect(project.manifest.src).toEqual([]);
+		expect(project.manifest.src).toEqual([
+			{ name: "Query", path: join(fallbackQueries, "Query.pq") }
+		]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
@@ -207,10 +222,19 @@ test("writes an explicitly mapped query and preserves unrelated query files", as
 	const project = {
 		paths: { dir: root },
 		manifest: {
+			type: "project",
+			name: "power-query-test",
+			version: "0.0.0",
+			metadata: { authors: [] },
 			src: [
 				{ name: "Query", path: mappedPath },
 				{ name: "Removed", path: staleMappedPath }
 			],
+			devSrc: [],
+			dependencies: [],
+			references: [],
+			devDependencies: [],
+			devReferences: [],
 			srcProperties: { subfolders: { PowerQueries: "queries" } }
 		}
 	} as unknown as Project;
@@ -227,9 +251,131 @@ test("writes an explicitly mapped query and preserves unrelated query files", as
 		expect(await readFile(mappedPath, "utf8")).toBe("updated query");
 		expect(await readFile(unrelatedPath, "utf8")).toBe("keep this query");
 		await expect(readFile(staleMappedPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+		expect(project.manifest.src).toEqual([{ name: "Query", path: mappedPath }]);
+		expect(writeManifestFile).toHaveBeenCalled();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("updates dev Power Query sources and preserves dev queries absent from the workbook", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-dev-"));
+	const staging = join(root, "staging");
+	const stagedQueries = join(staging, "pq");
+	const devQueries = join(root, "dev-src", "pq");
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			src: [],
+			devSrc: [{ name: "DevQueries", path: join(devQueries, "*.pq") }],
+			srcProperties: undefined
+		}
+	} as unknown as Project;
+
+	try {
+		await mkdir(stagedQueries, { recursive: true });
+		await mkdir(devQueries, { recursive: true });
+		await writeFile(join(stagedQueries, "DevQuery.pq"), "updated dev query", "utf8");
+		await writeFile(join(devQueries, "DevQuery.pq"), "old dev query", "utf8");
+		await writeFile(join(devQueries, "DevOnly.pq"), "keep dev query", "utf8");
+
+		await exportPowerQueries(project, staging);
+
+		expect(await readFile(join(devQueries, "DevQuery.pq"), "utf8")).toBe("updated dev query");
+		expect(await readFile(join(devQueries, "DevOnly.pq"), "utf8")).toBe("keep dev query");
+		expect(project.manifest.src).toEqual([]);
+		expect(project.manifest.devSrc).toEqual([
+			{ name: "DevQueries", path: join(devQueries, "*.pq") }
+		]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("preserves the original query name when the staged filename is sanitized", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-name-"));
+	const staging = join(root, "staging");
+	const stagedQueries = join(staging, "pq");
+	const queryFolder = join(root, "src", "pq");
+	const queryPath = join(queryFolder, "_NUL.pq");
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			type: "project",
+			name: "power-query-test",
+			version: "0.0.0",
+			metadata: { authors: [] },
+			src: [{ name: "PowerQueries", path: join(queryFolder, "*.pq") }],
+			devSrc: [],
+			dependencies: [],
+			references: [],
+			devDependencies: [],
+			devReferences: [],
+			srcProperties: undefined
+		}
+	} as unknown as Project;
+
+	try {
+		await mkdir(stagedQueries, { recursive: true });
+		await mkdir(queryFolder, { recursive: true });
+		await writeFile(join(stagedQueries, "_NUL.pq"), "updated reserved-name query", "utf8");
+		await writeFile(
+			join(staging, "project.json"),
+			JSON.stringify({
+				powerQueries: [{ name: "NUL", file: "_NUL.pq" }]
+			})
+		);
+		await writeFile(queryPath, "old query", "utf8");
+
+		await exportPowerQueries(project, staging);
+
+		expect(await readFile(queryPath, "utf8")).toBe("updated reserved-name query");
+		await expect(loadPowerQueries(project)).resolves.toEqual([
+			{ name: "NUL", formula: "updated reserved-name query" }
+		]);
 		expect(project.manifest.src).toEqual([
-			{ name: "Query", path: mappedPath },
-			{ name: "Removed", path: staleMappedPath }
+			{ name: "PowerQueries", path: join(queryFolder, "*.pq") },
+			{ name: "NUL", path: queryPath }
+		]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("registers a query when an existing wildcard does not match its filename", async () => {
+	const root = await mkdtemp(join(tmpdir(), "vbapm-power-query-pattern-"));
+	const staging = join(root, "staging");
+	const stagedQueries = join(staging, "pq");
+	const queryDirectory = join(root, "src", "pq");
+	const project = {
+		paths: { dir: root },
+		manifest: {
+			type: "project",
+			name: "power-query-test",
+			version: "0.0.0",
+			metadata: { authors: [] },
+			src: [{ name: "SalesQueries", path: join(queryDirectory, "Sales*.pq") }],
+			devSrc: [],
+			dependencies: [],
+			references: [],
+			devDependencies: [],
+			devReferences: [],
+			srcProperties: undefined
+		}
+	} as unknown as Project;
+
+	try {
+		await mkdir(stagedQueries, { recursive: true });
+		await writeFile(join(stagedQueries, "Inventory.pq"), "inventory query", "utf8");
+
+		await exportPowerQueries(project, staging);
+
+		expect(project.manifest.src).toEqual([
+			{ name: "SalesQueries", path: join(queryDirectory, "Sales*.pq") },
+			{ name: "Inventory", path: join(queryDirectory, "Inventory.pq") }
+		]);
+		await expect(loadPowerQueries(project)).resolves.toEqual([
+			{ name: "Inventory", formula: "inventory query" }
 		]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
