@@ -62,6 +62,7 @@ export async function stageBuildGraph(
 	return {
 		name: graph.name,
 		components,
-		references: graph.references
+		references: graph.references,
+		...(graph.powerQueries ? { powerQueries: graph.powerQueries } : {})
 	};
 }

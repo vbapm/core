@@ -45,7 +45,7 @@ export async function importGraph(
 	options: AddinOptions = {}
 ): Promise<void> {
 	const { application, addin } = getTargetInfo(project, target);
-	const { name, components, references } = graph;
+	const { name, components, references, powerQueries = [] } = graph;
 
 	// Resolve peer (VBA project) reference paths to absolute before sending to
 	// the addin. The manifest stores them relative (when nearby) or absolute;
@@ -73,7 +73,8 @@ export async function importGraph(
 				file,
 				name,
 				src: components,
-				references: resolvedReferences
+				references: resolvedReferences,
+				powerQueries
 			})
 		],
 		{ keepOpen: options.open, background: options.background }

@@ -12,10 +12,17 @@ export interface BuildGraph {
 	components: Component[];
 	references: Reference[];
 	fromDependencies: FromDependences;
+	powerQueries?: PowerQuery[];
+}
+
+export interface PowerQuery {
+	name: string;
+	formula: string;
 }
 
 export interface ImportGraph {
 	name: string;
 	components: (Source & { type: ComponentType })[];
 	references: Reference[];
+	powerQueries?: PowerQuery[];
 }

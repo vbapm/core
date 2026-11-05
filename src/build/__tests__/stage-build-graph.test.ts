@@ -1,4 +1,4 @@
-import { complex, dir, standardImport } from "../../../tests/__fixtures__";
+import { complex, dir, empty, standardImport } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { pathExists, readFile, ensureDir } from "../../utils/fs";
 import { join, relative } from "../../utils/path";
@@ -24,6 +24,16 @@ test("should stage BuildGraph", async () => {
 	for (const source of import_graph.components) {
 		expect(await pathExists(source.path)).toEqual(true);
 	}
+});
+
+test("preserves Power Query formulas when staging the import graph", async () => {
+	const { project, dependencies } = await setup(empty);
+	const graph = await loadFromProject(project, dependencies);
+	graph.powerQueries = [{ name: "Query", formula: "let Source = 1 in Source" }];
+
+	const importGraph = await stageBuildGraph(graph, standardImport);
+
+	expect(importGraph.powerQueries).toEqual(graph.powerQueries);
 });
 
 function normalizeImportGraph(

@@ -71,6 +71,34 @@ Public Function ImportGraph(Graph As Variant) As String
         End If
     Next Ref
 
+    If Values.Exists("powerQueries") Then
+        Dim PowerQueryInfo As Dictionary
+        Dim ExistingQuery As Object
+        Dim QueryName As String
+        Dim QueryFormula As String
+
+        For Each PowerQueryInfo In Values("powerQueries")
+            QueryName = CStr(PowerQueryInfo("name"))
+            QueryFormula = CStr(PowerQueryInfo("formula"))
+            Set ExistingQuery = Nothing
+
+            On Error Resume Next
+            Set ExistingQuery = Document.Queries.Item(QueryName)
+            Err.Clear
+            On Error GoTo ErrorHandling
+
+            If ExistingQuery Is Nothing Then
+                Err.Raise vbObjectError + 514, "Build.ImportGraph", _
+                    "Power Query does not exist in the target workbook: " & QueryName
+            End If
+
+            If NormalizeQueryFormula(CStr(ExistingQuery.Formula)) <> NormalizeQueryFormula(QueryFormula) Then
+                ExistingQuery.Formula = QueryFormula
+                Output.Messages.Add "power-query: " & QueryName
+            End If
+        Next PowerQueryInfo
+    End If
+
     Document.Save
 
     ' Restore the previously active code pane (best-effort, non-fatal)
@@ -84,6 +112,10 @@ ErrorHandling:
 
     Output.Errors.Add Err.Number & ": " & Err.Description
     ImportGraph = Output.Result
+End Function
+
+Private Function NormalizeQueryFormula(ByVal Formula As String) As String
+    NormalizeQueryFormula = Replace(Replace(Formula, vbCrLf, vbLf), vbCr, vbLf)
 End Function
 
 ''

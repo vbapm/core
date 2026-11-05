@@ -13,6 +13,7 @@ import { readFile } from "../utils/fs";
 import { join, relative } from "../utils/path";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
+import { loadPowerQueries } from "./load-power-queries";
 import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
 import { byComponentTypeThenName, Component } from "./component";
 
@@ -132,6 +133,7 @@ export async function loadFromProject(
 	}
 
 	const components = (await Promise.all(loadingComponents)).sort(byComponentTypeThenName);
+	const powerQueries = await loadPowerQueries(project, options);
 
 	// Validate that non-wildcard [source.files] keys match their file's Attribute VB_Name
 	validateSrcNames(project, components);
@@ -140,7 +142,8 @@ export async function loadFromProject(
 		name: project.manifest.codename || "VBAProject",
 		components,
 		references,
-		fromDependencies
+		fromDependencies,
+		...(powerQueries.length > 0 ? { powerQueries } : {})
 	};
 
 	await validateEncoding(project, graph);
