@@ -7,14 +7,14 @@ import { resolveBackgroundMode } from "../config";
 const help = dedent`
   (deprecated) Use "vbapm extract" instead.
 
-  Export built project, including src, references, and target.
+  Extract built project, including src, references, and target.
 
   Usage: vbapm export
 
   Options:
-    --target=TYPE   Export target of type TYPE
-    --xml-only      Only extract the target XML, skip VBA source export
-	--vba-only      Only export the VBA source, skip target XML extraction
+    --target=TYPE   Extract target of type TYPE
+    --xml-only      Only extract the target XML, skip VBA source extraction
+	--vba-only      Only extract the VBA source, skip target XML extraction
 	--background    Use a hidden Excel instance
 
   Debugging options:

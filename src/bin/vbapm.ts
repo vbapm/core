@@ -113,12 +113,12 @@ main()
 		}
 
 		// Work around Node.js v23+ libuv assertion crash on Windows
-		// (nodejs/node#56645). The export command, especially to an
+		// (nodejs/node#56645). The extract command, especially to an
 		// empty project, can complete before V8's wasm task runner
 		// has drained its pending delayed tasks. Calling
 		// process.exit(0) fires while the handle is still closing:
 		//   ASSERT(!(handle->flags & UV_HANDLE_CLOSING))
-		// On the export path we omit process.exit entirely, letting
+		// On the extract path we omit process.exit entirely, letting
 		// the event loop drain naturally so no pending task is
 		// interrupted. All other commands exit immediately via
 		// process.exit(0) as before.

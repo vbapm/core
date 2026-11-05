@@ -41,7 +41,7 @@ export async function exportProject(options: ExportOptions = {}) {
 			ErrorCode.ExportNoTarget,
 			dedent`
         No default target found for project,
-        use --target TYPE to export from a specific target.
+        use --target TYPE to extract from a specific target.
       `
 		);
 	}
@@ -72,7 +72,7 @@ export async function exportProject(options: ExportOptions = {}) {
 		);
 	}
 
-	// Warn if the workbook is open in Excel with unsaved changes — the exported XML
+	// Warn if the workbook is open in Excel with unsaved changes — the extracted XML
 	// will only reflect the last saved state of the file on disk.
 	if (!options.vbaOnly) {
 		const saved = await isTargetSaved(target, project);
@@ -97,7 +97,7 @@ export async function exportProject(options: ExportOptions = {}) {
 				if (!options.xmlOnly) {
 					env.reporter.log(
 						Message.ExportToStaging,
-						`\n[2/3] Exporting src from "${target.filename}"`
+						`\n[2/3] Extracting src from "${target.filename}"`
 					);
 				}
 				await exportTo(project, target, staging, { ...options, metadataOnly: options.xmlOnly });
