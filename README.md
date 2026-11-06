@@ -359,6 +359,46 @@ Open a specific target type:
 vba open --target xlsm
 ```
 
+Inspect all reachable Excel instances without opening the target:
+
+```txt
+vba open --check
+```
+
+Open or check a specific Excel file instead of the current project's built target. For `--check`, an absolute path checks that exact location; a filename or relative path searches open workbooks by filename only, reports `match = "filename_only"`, and omits `target.path`:
+
+```txt
+vba open --file "test_fake_addin.xlsm"
+vba open --check --file "test_fake_addin.xlsm"
+```
+
+The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's process ID when available, visibility, and workbook access. `access = "read_write"` indicates Excel has the file open for editing; `access = "unknown"` means Excel's access state could not be determined. An empty `[[instances]]` list means no matching files were found in inspected instances. If `uninspected_excel_process_ids` is present, those Excel processes could not be queried, so the absence is inconclusive.
+
+```toml
+[target]
+path = "build/demo.xlsm"
+name = "demo.xlsm"
+open = true
+same_name_elsewhere = true
+match_count = 2
+
+[[instances]]
+file_path = "build/demo.xlsm"
+match = "exact_path"
+source = "workbook"
+process_id = 1234
+visible = true
+access = "read_write"
+
+[[instances]]
+file_path = "C:/other/demo.xlsm"
+match = "same_name_different_location"
+source = "workbook"
+process_id = 5678
+visible = false
+access = "read_only"
+```
+
 ### `close`
 
 `vba close` closes the built target file that is currently open in Excel. By default changes are **discarded** — pass `--save` to keep them.

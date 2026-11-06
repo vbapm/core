@@ -6,7 +6,7 @@ import {
 } from "path";
 import sanitizeFilename from "sanitize-filename";
 
-export { basename, dirname, extname } from "path";
+export { basename, dirname, extname, isAbsolute } from "path";
 
 const WINDOWS_REGEX = /\\/g;
 const LEADING_SLASH = "./";
