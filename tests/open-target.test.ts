@@ -127,9 +127,7 @@ describe("openTarget", () => {
 				name: "demo.xlsm",
 				open: true,
 				same_name_elsewhere: true,
-				match_count: 2,
-				all_excel_processes_inspected: true,
-				uninspected_excel_process_ids: []
+				match_count: 2
 			});
 			expect(parsed.instances).toEqual([
 				{
@@ -188,7 +186,6 @@ describe("openTarget", () => {
 				open: false,
 				same_name_elsewhere: false,
 				match_count: 0,
-				all_excel_processes_inspected: false,
 				uninspected_excel_process_ids: [456]
 			});
 			expect(parsed.instances).toEqual([]);

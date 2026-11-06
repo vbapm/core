@@ -372,7 +372,7 @@ vba open --file "test_fake_addin.xlsm"
 vba open --check --file "test_fake_addin.xlsm"
 ```
 
-The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's process ID when available, visibility, and workbook access. `access = "read_write"` indicates Excel has the file open for editing; `access = "unknown"` means Excel's access state could not be determined. An empty `[[instances]]` list means no matching files were found in inspected instances. If `all_excel_processes_inspected` is false, check `uninspected_excel_process_ids`; those Excel processes could not be queried, so the absence is inconclusive.
+The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's process ID when available, visibility, and workbook access. `access = "read_write"` indicates Excel has the file open for editing; `access = "unknown"` means Excel's access state could not be determined. An empty `[[instances]]` list means no matching files were found in inspected instances. If `uninspected_excel_process_ids` is present, those Excel processes could not be queried, so the absence is inconclusive.
 
 ```toml
 [target]
@@ -381,8 +381,6 @@ name = "demo.xlsm"
 open = true
 same_name_elsewhere = true
 match_count = 2
-all_excel_processes_inspected = true
-uninspected_excel_process_ids = []
 
 [[instances]]
 file_path = "build/demo.xlsm"

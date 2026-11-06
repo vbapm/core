@@ -154,8 +154,9 @@ async function formatOpenCheckReport(
 			open: instances.some(instance => instance.same_path),
 			same_name_elsewhere: instances.some(instance => !instance.same_path),
 			match_count: instances.length,
-			all_excel_processes_inspected: uninspectedExcelProcessIds.length === 0,
-			uninspected_excel_process_ids: uninspectedExcelProcessIds
+			...(uninspectedExcelProcessIds.length > 0
+				? { uninspected_excel_process_ids: uninspectedExcelProcessIds }
+				: {})
 		},
 		instances: reportInstances
 	});
