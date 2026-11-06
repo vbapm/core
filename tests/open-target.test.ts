@@ -28,23 +28,19 @@ describe("openTarget", () => {
 					path: "build/demo.xlsm",
 					same_path: true,
 					source: "workbook",
-					instance_name: "Microsoft Excel",
 					visible: true,
 					process_id: 123,
 					window_handle: 456,
-					read_only: false,
-					write_lock_held: true
+					access: "read_write"
 				},
 				{
 					path: "C:/other/demo.xlsm",
 					same_path: false,
 					source: "workbook",
-					instance_name: "Microsoft Excel",
 					visible: false,
 					process_id: 789,
 					window_handle: 101,
-					read_only: true,
-					write_lock_held: false
+					access: "read_only"
 				}
 			]
 		});
@@ -73,28 +69,24 @@ describe("openTarget", () => {
 				uninspected_excel_process_ids: []
 			});
 			expect(parsed.instances).toEqual([
-				expect.objectContaining({
+				{
 					file_path: "build/demo.xlsm",
 					match: "exact_path",
-					instance_name: "Microsoft Excel",
+					source: "workbook",
 					process_id: 123,
+					window_handle: 456,
 					visible: true,
-					read_only: false,
-					editable: true,
-					access: "read_write",
-					write_lock_held: true
-				}),
-				expect.objectContaining({
+					access: "read_write"
+				},
+				{
 					file_path: "C:/other/demo.xlsm",
 					match: "same_name_different_location",
-					instance_name: "Microsoft Excel",
+					source: "workbook",
 					process_id: 789,
+					window_handle: 101,
 					visible: false,
-					read_only: true,
-					editable: false,
-					access: "read_only",
-					write_lock_held: false
-				})
+					access: "read_only"
+				}
 			]);
 			expect(spawn).toHaveBeenCalledWith(
 				"powershell.exe",

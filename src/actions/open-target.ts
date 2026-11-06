@@ -125,12 +125,10 @@ interface OpenCheckInstance {
 	path: string;
 	same_path: boolean;
 	source: string;
-	instance_name?: string;
 	visible: boolean;
 	process_id?: number | null;
 	window_handle?: number | null;
-	read_only?: boolean | null;
-	write_lock_held?: boolean | null;
+	access?: "read_only" | "read_write" | "unknown";
 }
 
 async function formatOpenCheckReport(
@@ -143,18 +141,10 @@ async function formatOpenCheckReport(
 		file_path: instance.path,
 		match: instance.same_path ? "exact_path" : "same_name_different_location",
 		source: instance.source,
-		...(instance.instance_name ? { instance_name: instance.instance_name } : {}),
 		visible: instance.visible,
 		...(instance.process_id != null ? { process_id: instance.process_id } : {}),
 		...(instance.window_handle != null ? { window_handle: instance.window_handle } : {}),
-		...(instance.read_only != null
-			? {
-					read_only: instance.read_only,
-					editable: !instance.read_only,
-					access: instance.read_only ? "read_only" : "read_write",
-					write_lock_held: instance.write_lock_held ?? !instance.read_only
-				}
-			: { access: "unknown" })
+		access: instance.access ?? "unknown"
 	}));
 
 	return convertToToml({

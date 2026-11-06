@@ -365,7 +365,7 @@ Inspect all reachable Excel instances without opening the target:
 vba open --check
 ```
 
-The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's name, process ID when available, visibility, and workbook access state. `read_only = false` and `write_lock_held = true` indicate Excel has the file open for editing. An empty `[[instances]]` list means no matching files were found in inspected instances. If `all_excel_processes_inspected` is false, check `uninspected_excel_process_ids`; those Excel processes could not be queried, so the absence is inconclusive.
+The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's process ID when available, visibility, and workbook access. `access = "read_write"` indicates Excel has the file open for editing; `access = "unknown"` means Excel's access state could not be determined. An empty `[[instances]]` list means no matching files were found in inspected instances. If `all_excel_processes_inspected` is false, check `uninspected_excel_process_ids`; those Excel processes could not be queried, so the absence is inconclusive.
 
 ```toml
 [target]
@@ -381,13 +381,9 @@ uninspected_excel_process_ids = []
 file_path = "build/demo.xlsm"
 match = "exact_path"
 source = "workbook"
-instance_name = "Microsoft Excel"
 process_id = 1234
 visible = true
-read_only = false
-editable = true
 access = "read_write"
-write_lock_held = true
 
 [[instances]]
 file_path = "C:/other/demo.xlsm"
@@ -395,10 +391,7 @@ match = "same_name_different_location"
 source = "workbook"
 process_id = 5678
 visible = false
-read_only = true
-editable = false
 access = "read_only"
-write_lock_held = false
 ```
 
 ### `close`

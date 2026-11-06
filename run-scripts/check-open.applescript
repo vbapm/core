@@ -40,11 +40,13 @@ on run argv
 							set readOnlyValue to read only of workbookReference
 						end try
 
-						set readOnlyJSON to "null"
-						set writeLockJSON to "null"
+						set accessJSON to quote & "unknown" & quote
 						if readOnlyValue is not missing value then
-							set readOnlyJSON to my jsonBoolean(readOnlyValue)
-							set writeLockJSON to my jsonBoolean(not readOnlyValue)
+							if readOnlyValue then
+								set accessJSON to quote & "read_only" & quote
+							else
+								set accessJSON to quote & "read_write" & quote
+							end if
 						end if
 
 						set isSamePath to false
@@ -55,10 +57,9 @@ on run argv
 						set recordJSON to "{" & quote & "path" & quote & ":" & quote & my jsonEscape(workbookPath) & quote
 						set recordJSON to recordJSON & "," & quote & "same_path" & quote & ":" & my jsonBoolean(isSamePath)
 						set recordJSON to recordJSON & "," & quote & "source" & quote & ":" & quote & "workbook" & quote
-						set recordJSON to recordJSON & "," & quote & "instance_name" & quote & ":" & quote & "Microsoft Excel" & quote
 						set recordJSON to recordJSON & "," & quote & "visible" & quote & ":" & my jsonBoolean(excelVisible)
-						set recordJSON to recordJSON & "," & quote & "read_only" & quote & ":" & readOnlyJSON
-						set recordJSON to recordJSON & "," & quote & "write_lock_held" & quote & ":" & writeLockJSON & "}"
+						set recordJSON to recordJSON & "," & quote & "access" & quote & ":" & accessJSON
+						set recordJSON to recordJSON & "}"
 						set end of instanceRecords to recordJSON
 					end if
 				end try

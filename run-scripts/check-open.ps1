@@ -5,7 +5,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $fullPath = [System.IO.Path]::GetFullPath($Path)
+$targetName = [System.IO.Path]::GetFileName($fullPath)
 
 if (-not ('CheckOpenRotHelper' -as [type])) {
 	Add-Type -TypeDefinition @"
@@ -20,6 +22,16 @@ public static class CheckOpenRotHelper {
 
     [DllImport("ole32.dll")]
     private static extern int CreateBindCtx(uint reserved, out IBindCtx ctx);
+
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern uint GetWindowThreadProcessId(IntPtr windowHandle, out uint processId);
+
+	public static int GetProcessId(long windowHandle) {
+		if (windowHandle == 0) return 0;
+		uint processId;
+		GetWindowThreadProcessId(new IntPtr(windowHandle), out processId);
+		return (int)processId;
+	}
 
     public static List<object> GetRunningObjects() {
         var result = new List<object>();
@@ -84,10 +96,8 @@ function Add-ReportMatch {
 		if ($existing.source -notlike "*$Source*") {
 			$existing.source = "$($existing.source), $Source"
 		}
-		if ($null -ne $ReadOnly -and $null -eq $existing.read_only) {
-			$existing.read_only = [bool]$ReadOnly
-			$existing.editable = -not [bool]$ReadOnly
-			$existing.write_lock_held = -not [bool]$ReadOnly
+		if ($null -ne $ReadOnly -and $existing.access -eq 'unknown') {
+			$existing.access = if ($ReadOnly) { 'read_only' } else { 'read_write' }
 		}
 		return
 	}
@@ -96,15 +106,14 @@ function Add-ReportMatch {
 		path         = $candidateFullPath
 		same_path    = [string]::Equals($candidateFullPath, $fullPath, [System.StringComparison]::OrdinalIgnoreCase)
 		source       = $Source
-		instance_name = 'Microsoft Excel'
 		visible      = $Visible
 	}
 	if ($ProcessId -gt 0) { $record.process_id = $ProcessId }
 	if ($WindowHandle -gt 0) { $record.window_handle = $WindowHandle }
 	if ($null -ne $ReadOnly) {
-		$record.read_only = [bool]$ReadOnly
-		$record.editable = -not [bool]$ReadOnly
-		$record.write_lock_held = -not [bool]$ReadOnly
+		$record.access = if ($ReadOnly) { 'read_only' } else { 'read_write' }
+	} else {
+		$record.access = 'unknown'
 	}
 
 	$match = [pscustomobject]$record
