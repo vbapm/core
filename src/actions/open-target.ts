@@ -1,6 +1,7 @@
 import dedent from "@timhall/dedent";
 import { spawn } from "child_process";
 import open from "open";
+import { StringDecoder } from "string_decoder";
 import { env } from "../env";
 import { CliError, ErrorCode } from "../errors";
 import { loadProject } from "../project";
@@ -93,14 +94,18 @@ export async function checkTargetOpen(target: string, filenameOnly = false): Pro
 
 		let stdout = "";
 		let stderr = "";
+		const stdoutDecoder = new StringDecoder("utf8");
+		const stderrDecoder = new StringDecoder("utf8");
 		child.stdout?.on("data", data => {
-			stdout += data.toString();
+			stdout += stdoutDecoder.write(data);
 		});
 		child.stderr?.on("data", data => {
-			stderr += data.toString();
+			stderr += stderrDecoder.write(data);
 		});
 		child.on("error", reject);
 		child.on("close", code => {
+			stdout += stdoutDecoder.end();
+			stderr += stderrDecoder.end();
 			if (code !== 0) {
 				reject(new Error(stderr.trim() || `Excel open check exited with code ${code}.`));
 				return;

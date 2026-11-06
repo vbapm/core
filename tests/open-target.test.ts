@@ -184,6 +184,46 @@ describe("openTarget", () => {
 		}
 	});
 
+	test("preserves UTF-8 characters split across stdout chunks", async () => {
+		const originalIsWindows = env.isWindows;
+		env.isWindows = true;
+		const report = Buffer.from(
+			JSON.stringify({
+				instances: [
+					{
+						path: "D:/archive/café.xlsm",
+						same_path: false,
+						source: "workbook",
+						visible: true,
+						access: "read_write"
+					}
+				],
+				uninspected_excel_process_ids: []
+			}),
+			"utf8"
+		);
+		const accentIndex = report.indexOf(Buffer.from("é")) + 1;
+		const checkProcess = Object.assign(new EventEmitter(), {
+			stdout: new EventEmitter(),
+			stderr: new EventEmitter()
+		});
+		(spawn as jest.Mock).mockImplementationOnce(() => {
+			setImmediate(() => {
+				checkProcess.stdout.emit("data", report.subarray(0, accentIndex));
+				checkProcess.stdout.emit("data", report.subarray(accentIndex));
+				checkProcess.emit("close", 0);
+			});
+			return checkProcess;
+		});
+
+		try {
+			const parsed = await parseToml(await checkTargetOpen("C:/project/café.xlsm"));
+			expect(parsed.instances[0].file_path).toBe("D:/archive/café.xlsm");
+		} finally {
+			env.isWindows = originalIsWindows;
+		}
+	});
+
 	test("marks the report incomplete when an Excel process cannot be inspected", async () => {
 		const originalIsWindows = env.isWindows;
 		env.isWindows = true;
