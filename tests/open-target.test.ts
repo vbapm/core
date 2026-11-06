@@ -32,7 +32,19 @@ describe("openTarget", () => {
 			setImmediate(() => {
 				checkProcess.stdout.emit(
 					"data",
-					JSON.stringify({ instances: [], uninspected_excel_process_ids: [] })
+					JSON.stringify({
+						instances: [
+							{
+								path: "D:/archive/test_fake_addin.xlsm",
+								same_path: null,
+								source: "workbook",
+								visible: true,
+								process_id: 123,
+								access: "read_write"
+							}
+						],
+						uninspected_excel_process_ids: []
+					})
 				);
 				checkProcess.emit("close", 0);
 			});
@@ -44,9 +56,21 @@ describe("openTarget", () => {
 			await openCommand({ file: "test_fake_addin.xlsm", check: true } as unknown as Args);
 			expect(spawn).toHaveBeenCalledWith(
 				"powershell.exe",
-				expect.arrayContaining(["-Path", resolve("test_fake_addin.xlsm")]),
+				expect.arrayContaining(["-Path", "test_fake_addin.xlsm", "-NameOnly"]),
 				expect.objectContaining({ windowsHide: true })
 			);
+			const parsed = await parseToml(log.mock.calls[0][0] as string);
+			expect(parsed.target).toEqual({ name: "test_fake_addin.xlsm", open: true, match_count: 1 });
+			expect(parsed.instances).toEqual([
+				{
+					file_path: "D:/archive/test_fake_addin.xlsm",
+					match: "filename_only",
+					source: "workbook",
+					process_id: 123,
+					visible: true,
+					access: "read_write"
+				}
+			]);
 		} finally {
 			log.mockRestore();
 			env.isWindows = originalIsWindows;

@@ -24,7 +24,10 @@ end jsonBoolean
 
 on run argv
 	set targetPath to item 1 of argv
-	set targetName to name of (info for (POSIX file targetPath)) as text
+	set filenameOnly to false
+	if (count of argv) > 1 then set filenameOnly to ((item 2 of argv) is "filename-only")
+	set targetName to targetPath
+	if not filenameOnly then set targetName to name of (info for (POSIX file targetPath)) as text
 	set instanceRecords to {}
 
 	if application "Microsoft Excel" is running then
@@ -49,13 +52,17 @@ on run argv
 							end if
 						end if
 
-						set isSamePath to false
-						considering case
-							set isSamePath to workbookPath is targetPath
-						end considering
+						set samePathJSON to "null"
+						if not filenameOnly then
+							set isSamePath to false
+							considering case
+								set isSamePath to workbookPath is targetPath
+							end considering
+							set samePathJSON to my jsonBoolean(isSamePath)
+						end if
 
 						set recordJSON to "{" & quote & "path" & quote & ":" & quote & my jsonEscape(workbookPath) & quote
-						set recordJSON to recordJSON & "," & quote & "same_path" & quote & ":" & my jsonBoolean(isSamePath)
+						set recordJSON to recordJSON & "," & quote & "same_path" & quote & ":" & samePathJSON
 						set recordJSON to recordJSON & "," & quote & "source" & quote & ":" & quote & "workbook" & quote
 						set recordJSON to recordJSON & "," & quote & "visible" & quote & ":" & my jsonBoolean(excelVisible)
 						set recordJSON to recordJSON & "," & quote & "access" & quote & ":" & accessJSON

@@ -58,13 +58,13 @@ export async function openTarget(target: string): Promise<boolean> {
 	}
 }
 
-export async function checkTargetOpen(target: string): Promise<string> {
+export async function checkTargetOpen(target: string, filenameOnly = false): Promise<string> {
 	const scriptName = env.isWindows
 		? "check-open.ps1"
 		: process.platform === "darwin"
 			? "check-open.applescript"
 			: undefined;
-	if (!scriptName) return formatOpenCheckReport(target, [], []);
+	if (!scriptName) return formatOpenCheckReport(target, [], [], filenameOnly);
 
 	const script = join(env.scripts, scriptName);
 	if (!(await pathExists(script))) {
@@ -73,8 +73,17 @@ export async function checkTargetOpen(target: string): Promise<string> {
 
 	const command = env.isWindows ? "powershell.exe" : "osascript";
 	const args = env.isWindows
-		? ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Path", target]
-		: [script, target];
+		? [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				script,
+				"-Path",
+				target,
+				...(filenameOnly ? ["-NameOnly"] : [])
+			]
+		: [script, target, ...(filenameOnly ? ["filename-only"] : [])];
 
 	return new Promise((resolve, reject) => {
 		const child = spawn(command, args, {
@@ -108,7 +117,8 @@ export async function checkTargetOpen(target: string): Promise<string> {
 				void formatOpenCheckReport(
 					target,
 					result.instances,
-					result.uninspected_excel_process_ids ?? []
+					result.uninspected_excel_process_ids ?? [],
+					filenameOnly
 				).then(resolve, reject);
 			} catch (error) {
 				reject(
@@ -123,7 +133,7 @@ export async function checkTargetOpen(target: string): Promise<string> {
 
 interface OpenCheckInstance {
 	path: string;
-	same_path: boolean;
+	same_path: boolean | null;
 	source: string;
 	visible: boolean;
 	process_id?: number | null;
@@ -134,12 +144,17 @@ interface OpenCheckInstance {
 async function formatOpenCheckReport(
 	target: string,
 	instances: OpenCheckInstance[],
-	uninspectedExcelProcessIds: number[]
+	uninspectedExcelProcessIds: number[],
+	filenameOnly: boolean
 ): Promise<string> {
-	const sameName = target.split(/[\\/]/).pop() ?? target;
+	const sameName = filenameOnly ? target : (target.split(/[\\/]/).pop() ?? target);
 	const reportInstances = instances.map(instance => ({
 		file_path: instance.path,
-		match: instance.same_path ? "exact_path" : "same_name_different_location",
+		match: filenameOnly
+			? "filename_only"
+			: instance.same_path
+				? "exact_path"
+				: "same_name_different_location",
 		source: instance.source,
 		visible: instance.visible,
 		...(instance.process_id != null ? { process_id: instance.process_id } : {}),
@@ -149,10 +164,12 @@ async function formatOpenCheckReport(
 
 	return convertToToml({
 		target: {
-			path: target,
+			...(filenameOnly ? {} : { path: target }),
 			name: sameName,
-			open: instances.some(instance => instance.same_path),
-			same_name_elsewhere: instances.some(instance => !instance.same_path),
+			open: filenameOnly ? instances.length > 0 : instances.some(instance => instance.same_path),
+			...(filenameOnly
+				? {}
+				: { same_name_elsewhere: instances.some(instance => !instance.same_path) }),
 			match_count: instances.length,
 			...(uninspectedExcelProcessIds.length > 0
 				? { uninspected_excel_process_ids: uninspectedExcelProcessIds }

@@ -365,7 +365,7 @@ Inspect all reachable Excel instances without opening the target:
 vba open --check
 ```
 
-Open or check a specific Excel file instead of the current project's built target. Relative paths are resolved from the current directory:
+Open or check a specific Excel file instead of the current project's built target. For `--check`, an absolute path checks that exact location; a filename or relative path searches open workbooks by filename only, reports `match = "filename_only"`, and omits `target.path`:
 
 ```txt
 vba open --file "test_fake_addin.xlsm"

@@ -1,6 +1,6 @@
 import { Args } from "mri";
 import { checkTargetOpen, getTargetPath, openTarget } from "../actions/open-target";
-import { resolve } from "../utils/path";
+import { basename, isAbsolute, resolve } from "../utils/path";
 
 const help = [
 	"Open an Excel file or the current built target, or report matching files in Excel.",
@@ -9,7 +9,7 @@ const help = [
 	"",
 	"Options:",
 	"  --target=TYPE   Use built target of type TYPE",
-	"  --file=PATH     Open or check this Excel file instead of a built target",
+	"  --file=PATH     Open this file; with --check, non-absolute paths match by filename",
 	"  --check         Print a TOML report of open Excel instances"
 ].join("\n");
 
@@ -25,9 +25,15 @@ export default async function (args: Args) {
 		throw new Error("--file requires a path.");
 	}
 
-	const path = file === undefined ? await getTargetPath(target) : resolve(file);
+	const filenameOnly = args.check === true && file !== undefined && !isAbsolute(file);
+	const path =
+		file === undefined
+			? await getTargetPath(target)
+			: filenameOnly
+				? basename(file)
+				: resolve(file);
 	if (args.check) {
-		console.log(await checkTargetOpen(path));
+		console.log(await checkTargetOpen(path, filenameOnly));
 		return;
 	}
 

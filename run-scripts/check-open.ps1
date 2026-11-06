@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
 	[Parameter(Mandatory)]
-	[string]$Path
+	[string]$Path,
+	[switch]$NameOnly
 )
 
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-$fullPath = [System.IO.Path]::GetFullPath($Path)
-$targetName = [System.IO.Path]::GetFileName($fullPath)
+$fullPath = if ($NameOnly) { $null } else { [System.IO.Path]::GetFullPath($Path) }
+$targetName = [System.IO.Path]::GetFileName($Path)
 
 if (-not ('CheckOpenRotHelper' -as [type])) {
 	Add-Type -TypeDefinition @"
@@ -104,7 +105,7 @@ function Add-ReportMatch {
 
 	$record = [ordered]@{
 		path         = $candidateFullPath
-		same_path    = [string]::Equals($candidateFullPath, $fullPath, [System.StringComparison]::OrdinalIgnoreCase)
+		same_path    = if ($NameOnly) { $null } else { [string]::Equals($candidateFullPath, $fullPath, [System.StringComparison]::OrdinalIgnoreCase) }
 		source       = $Source
 		visible      = $Visible
 	}
