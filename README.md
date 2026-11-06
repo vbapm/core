@@ -365,6 +365,13 @@ Inspect all reachable Excel instances without opening the target:
 vba open --check
 ```
 
+Open or check a specific Excel file instead of the current project's built target. Relative paths are resolved from the current directory:
+
+```txt
+vba open --file "test_fake_addin.xlsm"
+vba open --check --file "test_fake_addin.xlsm"
+```
+
 The command prints a TOML report. It lists exact-path matches and other open files with the same name, along with each instance's process ID when available, visibility, and workbook access. `access = "read_write"` indicates Excel has the file open for editing; `access = "unknown"` means Excel's access state could not be determined. An empty `[[instances]]` list means no matching files were found in inspected instances. If `all_excel_processes_inspected` is false, check `uninspected_excel_process_ids`; those Excel processes could not be queried, so the absence is inconclusive.
 
 ```toml

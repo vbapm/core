@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { jest } from "@jest/globals";
+import type { Args } from "mri";
 
 await jest.unstable_mockModule("child_process", () => ({
 	execFile: jest.fn(),
@@ -15,9 +16,71 @@ const { spawn } = await import("child_process");
 const { default: open } = await import("open");
 const { env } = await import("../src/env");
 const { checkTargetOpen, openTarget } = await import("../src/actions/open-target");
+const { default: openCommand } = await import("../src/bin/vbapm-open");
+const { resolve } = await import("../src/utils/path");
 const { parse: parseToml } = await import("../src/utils/toml");
 
 describe("openTarget", () => {
+	test("checks a file argument without resolving a project target", async () => {
+		const originalIsWindows = env.isWindows;
+		env.isWindows = true;
+		const checkProcess = Object.assign(new EventEmitter(), {
+			stdout: new EventEmitter(),
+			stderr: new EventEmitter()
+		});
+		(spawn as jest.Mock).mockImplementationOnce(() => {
+			setImmediate(() => {
+				checkProcess.stdout.emit(
+					"data",
+					JSON.stringify({ instances: [], uninspected_excel_process_ids: [] })
+				);
+				checkProcess.emit("close", 0);
+			});
+			return checkProcess;
+		});
+		const log = jest.spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			await openCommand({ file: "test_fake_addin.xlsm", check: true } as unknown as Args);
+			expect(spawn).toHaveBeenCalledWith(
+				"powershell.exe",
+				expect.arrayContaining(["-Path", resolve("test_fake_addin.xlsm")]),
+				expect.objectContaining({ windowsHide: true })
+			);
+		} finally {
+			log.mockRestore();
+			env.isWindows = originalIsWindows;
+		}
+	});
+
+	test("opens a file argument without resolving a project target", async () => {
+		const originalIsWindows = env.isWindows;
+		env.isWindows = true;
+		const launcher = Object.assign(new EventEmitter(), { ref: jest.fn() });
+		const readinessCheck = Object.assign(new EventEmitter(), {
+			stdout: new EventEmitter(),
+			stderr: new EventEmitter()
+		});
+		(open as jest.Mock).mockImplementationOnce(async () => {
+			setImmediate(() => launcher.emit("close", 0));
+			return launcher;
+		});
+		(spawn as jest.Mock).mockImplementationOnce(() => {
+			setImmediate(() => readinessCheck.emit("close", 0));
+			return readinessCheck;
+		});
+		const log = jest.spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			await openCommand({ file: "test_fake_addin.xlsm" } as unknown as Args);
+			expect(open).toHaveBeenCalledWith(resolve("test_fake_addin.xlsm"), { wait: false });
+		} finally {
+			(open as jest.Mock).mockClear();
+			log.mockRestore();
+			env.isWindows = originalIsWindows;
+		}
+	});
+
 	test("returns a TOML report for exact and same-name workbook matches", async () => {
 		const originalIsWindows = env.isWindows;
 		env.isWindows = true;
