@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Fixed
+- `vba build` and `vba update` now pass Power Query formulas to Excel through staged UTF-8 files, avoiding command-line length failures with large query sets.
 - `vba extract` retries component exports that omit `Attribute VB_Name` and reports the component path if the retry also fails.
 - `vba build` now rejects targets with missing or invalid worksheet relationships or worksheet parts before Excel encounters a cryptic save error.
 - Updated Renovate dependencies, including TypeScript 7, while preserving Jest and Rollup compatibility.

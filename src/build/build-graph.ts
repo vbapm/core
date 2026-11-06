@@ -20,9 +20,14 @@ export interface PowerQuery {
 	formula: string;
 }
 
+export interface ImportPowerQuery {
+	name: string;
+	path: string;
+}
+
 export interface ImportGraph {
 	name: string;
 	components: (Source & { type: ComponentType })[];
 	references: Reference[];
-	powerQueries?: PowerQuery[];
+	powerQueries?: ImportPowerQuery[];
 }

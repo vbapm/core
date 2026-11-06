@@ -26,14 +26,17 @@ test("should stage BuildGraph", async () => {
 	}
 });
 
-test("preserves Power Query formulas when staging the import graph", async () => {
+test("stages Power Query formulas as UTF-8 files", async () => {
 	const { project, dependencies } = await setup(empty);
 	const graph = await loadFromProject(project, dependencies);
-	graph.powerQueries = [{ name: "Query", formula: "let Source = 1 in Source" }];
+	graph.powerQueries = [{ name: "Query", formula: 'let Source = "café" in Source' }];
 
 	const importGraph = await stageBuildGraph(graph, standardImport);
+	const stagedQuery = importGraph.powerQueries?.[0];
 
-	expect(importGraph.powerQueries).toEqual(graph.powerQueries);
+	expect(stagedQuery).toEqual({ name: "Query", path: expect.any(String) });
+	expect(await pathExists(stagedQuery!.path)).toBe(true);
+	expect(await readFile(stagedQuery!.path, "utf8")).toBe(graph.powerQueries[0].formula);
 });
 
 function normalizeImportGraph(

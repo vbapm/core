@@ -1,4 +1,4 @@
-import { writeFile } from "../utils/fs";
+import { ensureDir, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
 import * as iconv from "iconv-lite";
@@ -58,11 +58,22 @@ export async function stageBuildGraph(
 
 		return { name: component.name, path, type: component.type };
 	});
+	const powerQueriesDirectory = join(staging, "power-queries");
+	if (graph.powerQueries?.length) await ensureDir(powerQueriesDirectory);
+	const powerQueries = graph.powerQueries
+		? await Promise.all(
+				graph.powerQueries.map(async (query, index) => {
+					const path = join(powerQueriesDirectory, `query-${index + 1}.pq`);
+					await writeFile(path, Buffer.from(query.formula, "utf8"));
+					return { name: query.name, path };
+				})
+			)
+		: undefined;
 
 	return {
 		name: graph.name,
 		components,
 		references: graph.references,
-		...(graph.powerQueries ? { powerQueries: graph.powerQueries } : {})
+		...(powerQueries ? { powerQueries } : {})
 	};
 }

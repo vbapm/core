@@ -79,7 +79,7 @@ Public Function ImportGraph(Graph As Variant) As String
 
         For Each PowerQueryInfo In Values("powerQueries")
             QueryName = CStr(PowerQueryInfo("name"))
-            QueryFormula = CStr(PowerQueryInfo("formula"))
+            QueryFormula = Utf8.ReadUtf8File(CStr(PowerQueryInfo("path")))
             Set ExistingQuery = Nothing
 
             On Error Resume Next
