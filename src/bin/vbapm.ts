@@ -2,7 +2,7 @@ import dedent from "@timhall/dedent";
 import { greenBright, redBright, yellowBright } from "@timhall/ansi-colors";
 import { existsSync } from "fs";
 import meant from "meant";
-import mri, { Args } from "mri";
+import { Args } from "mri";
 import { resolve } from "node:path";
 import { version } from "../../package.json";
 import { env } from "../env";
@@ -12,6 +12,7 @@ import { checkForUpdate, checkDualInstall, updateAvailable, updateVersion } from
 import { Message } from "../messages";
 import { isRunError, closePowerShellSession } from "../utils/run";
 import { joinCommas } from "../utils/text";
+import { parseCliArgs } from "./parse-args";
 
 Error.stackTraceLimit = Infinity;
 
@@ -36,12 +37,7 @@ const commands: { [name: string]: () => Promise<Command> } = {
 	manifest: async () => (await import("./vbapm-manifest")).default
 };
 
-const args = mri(process.argv.slice(2), {
-	alias: {
-		v: "version",
-		h: "help"
-	}
-});
+const args = parseCliArgs(process.argv.slice(2));
 
 if (args.debug) {
 	let debug = args.debug;
