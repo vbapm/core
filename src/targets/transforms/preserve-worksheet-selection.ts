@@ -1,7 +1,7 @@
 import walk from "walk-sync";
 import { Element } from "xml-js";
 import { convertXml, findElementByName, formatXmlBuffer, parseXml } from "../../utils/xml";
-import { readFile, writeFile } from "../../utils/fs";
+import { pathExists, readFile, writeFile } from "../../utils/fs";
 import { join } from "../../utils/path";
 
 interface SelectionAttributes {
@@ -72,6 +72,7 @@ function readWorksheetData(data: Buffer): WorksheetData | undefined {
 
 export async function readPreviousWorksheetData(root: string): Promise<PreviousWorksheetData> {
 	const previous = new Map<string, WorksheetData>();
+	if (!(await pathExists(root))) return previous;
 
 	for (const path of worksheetPaths(root)) {
 		const worksheet = readWorksheetData(await readFile(join(root, path)));

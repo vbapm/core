@@ -67,4 +67,10 @@ describe("preserveWorksheetSelections", () => {
 		const selection = findElementByName(sheetView?.elements, "selection");
 		expect(selection?.attributes).toMatchObject({ activeCell: "A1", sqref: "A1" });
 	});
+
+	test("returns an empty baseline when the previous target directory is missing", async () => {
+		await expect(readPreviousWorksheetData(join(tmp, "missing-target"))).resolves.toEqual(
+			new Map()
+		);
+	});
 });
