@@ -2,7 +2,7 @@
  * End-to-end tests for `vba export`.
  */
 
-import { copy, pathExists, readFile, writeFile } from "fs-extra";
+import { copy, pathExists, readFile, remove, writeFile } from "fs-extra";
 import { join } from "path";
 import { empty, json, standard } from "./__fixtures__";
 import { execute as runCommand, readdir, setup, stripWarnings, tmp } from "./__helpers__/execute";
@@ -18,6 +18,17 @@ function execute(cwd: string, command: string) {
 }
 
 describe("export", () => {
+	timedTest("extract creates a missing target directory", async () => {
+		await setup(standard, "extract-missing-target", async cwd => {
+			await execute(cwd, "build");
+			await remove(join(cwd, "targets/xlsm"));
+
+			await execute(cwd, "extract --target xlsm --background");
+
+			await expect(pathExists(join(cwd, "targets/xlsm/xl/workbook.xml"))).resolves.toBe(true);
+		});
+	});
+
 	timedTest("export to empty project", async () => {
 		await setup(empty, "export-empty", async cwd => {
 			await setup(standard, "export-standard", async built => {
