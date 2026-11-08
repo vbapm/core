@@ -17,7 +17,7 @@ describe("config", () => {
 			await copy(join(process.cwd(), "bin"), binDir);
 			await copy(join(process.cwd(), "lib"), join(installDir, "lib"));
 
-			await execute(cwd, "config --global background true", { binDir });
+			await execute(cwd, "config --global background true", { binDir, forceSubprocess: true });
 
 			const configFile = join(binDir, "vbapm.toml");
 			expect(await pathExists(configFile)).toBe(true);

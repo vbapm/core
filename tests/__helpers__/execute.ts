@@ -316,7 +316,7 @@ function getVbaBin(binDir?: string): string {
 export async function execute(
 	cwd: string,
 	command: string,
-	options?: { binDir?: string }
+	options?: { binDir?: string; forceSubprocess?: boolean }
 ): Promise<{ stdout: string; stderr: string }> {
 	// `open` shells out to the ESM-only `open` package which Jest can't transform;
 	// always spawn the real CLI for it.
@@ -325,7 +325,11 @@ export async function execute(
 	// Opt-in: run the command in-process (skip cmd.exe → vba.cmd → node.exe),
 	// importing the action functions directly. Shares the Jest process's module
 	// state (and, if a persistent session is active, the same Excel instance).
-	if (/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") && !isOpen) {
+	if (
+		/^(1|true|yes)$/i.test(process.env.E2E_IN_PROCESS || "") &&
+		!isOpen &&
+		!options?.forceSubprocess
+	) {
 		return executeInProcess(cwd, command);
 	}
 
