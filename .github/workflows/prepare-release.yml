@@ -14,7 +14,7 @@ on:
             - patch
             - no-bump
       remove_suffix:
-        description: 'Remove pre-release suffix (e.g. -alpha)'
+        description: 'Remove the current pre-release suffix'
         required: false
         default: false
         type: boolean
@@ -48,7 +48,6 @@ jobs:
         id: current_version
         run: |
           current=$(jq -r '.version' package.json)
-          # Extract base version and suffix separately
           base="${current%%-*}"
           if [[ "$current" == *-* ]]; then
             suffix="${current#*-}"
@@ -56,55 +55,70 @@ jobs:
             suffix=""
           fi
           echo "Current version: $current (base=$base, suffix=$suffix)"
+          echo "current=$current" >> $GITHUB_OUTPUT
           echo "base=$base" >> $GITHUB_OUTPUT
           echo "suffix=$suffix" >> $GITHUB_OUTPUT
 
       - name: Calculate next version
         id: next_version
+        env:
+          CURRENT_VERSION: ${{ steps.current_version.outputs.current }}
+          VERSION_BUMP: ${{ inputs.version_bump }}
+          CURRENT_SUFFIX: ${{ steps.current_version.outputs.suffix }}
+          REMOVE_SUFFIX: ${{ inputs.remove_suffix }}
         run: |
-            IFS='.' read -r major minor patch <<< "${{ steps.current_version.outputs.base }}"
-            if [[ "${{ github.event.inputs.version_bump }}" == "no-bump" ]]; then
-              new_version="${{ steps.current_version.outputs.base }}"
-              suffix="${{ steps.current_version.outputs.suffix }}"
-              if [[ -n "$suffix" && "${{ github.event.inputs.remove_suffix }}" != "true" ]]; then
-                new_version="$new_version-$suffix"
-              fi
+          base="${CURRENT_VERSION%%-*}"
+          IFS='.' read -r major minor patch <<< "$base"
+          case "$VERSION_BUMP" in
+            no-bump)
+              new_base="$base"
               echo "No version bump selected."
-            else
-              case "${{ github.event.inputs.version_bump }}" in
-                major)
-                  ((major+=1)); minor=0; patch=0;;
-                minor)
-                  ((minor+=1)); patch=0;;
-                patch)
-                  ((patch+=1));;
-              esac
-              new_version="$major.$minor.$patch"
-              suffix="${{ steps.current_version.outputs.suffix }}"
-              if [[ -n "$suffix" && "${{ github.event.inputs.remove_suffix }}" != "true" ]]; then
-                new_version="$new_version-$suffix"
-              fi
-              echo "Next version: $new_version"
-            fi
-            echo "version=$new_version" >> $GITHUB_OUTPUT
-            echo "tag=v$new_version" >> $GITHUB_OUTPUT
+              ;;
+            major)
+              ((major+=1)); minor=0; patch=0
+              new_base="$major.$minor.$patch"
+              ;;
+            minor)
+              ((minor+=1)); patch=0
+              new_base="$major.$minor.$patch"
+              ;;
+            patch)
+              ((patch+=1))
+              new_base="$major.$minor.$patch"
+              ;;
+            *)
+              echo "Unsupported version bump: $VERSION_BUMP" >&2
+              exit 1
+              ;;
+          esac
+
+          new_version="$new_base"
+          if [[ -n "$CURRENT_SUFFIX" && "$REMOVE_SUFFIX" != "true" ]]; then
+            new_version="$new_version-$CURRENT_SUFFIX"
+          fi
+
+          changed=false
+          if [[ "$new_version" != "$CURRENT_VERSION" ]]; then
+            changed=true
+          fi
+          echo "Next version: $new_version"
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$new_version" >> "$GITHUB_OUTPUT"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
 
       - name: Update package.json
+        if: steps.next_version.outputs.changed == 'true'
         run: |
-            if [[ "${{ github.event.inputs.version_bump }}" != "no-bump" ]]; then
-              NEW_VERSION="${{ steps.next_version.outputs.version }}"
-              jq --indent 4 --arg v "$NEW_VERSION" '.version = $v' package.json > package.json.tmp
-              mv package.json.tmp package.json
-            else
-              echo "Skipping package.json update (no-bump selected)"
-            fi
+          NEW_VERSION="${{ steps.next_version.outputs.version }}"
+          jq --indent 4 --arg v "$NEW_VERSION" '.version = $v' package.json > package.json.tmp
+          mv package.json.tmp package.json
 
       - name: Update pnpm-lock.yaml
-        if: github.event.inputs.version_bump != 'no-bump'
+        if: steps.next_version.outputs.changed == 'true'
         run: pnpm install --lockfile-only
 
       - name: Update CHANGELOG.md
-        if: github.event.inputs.version_bump != 'no-bump'
+        if: steps.next_version.outputs.changed == 'true'
         run: |
           today=$(date +%Y-%m-%d)
           version="${{ steps.next_version.outputs.version }}"
@@ -139,17 +153,16 @@ jobs:
       - name: Commit changes
         id: commit
         run: |
-            if [[ "${{ github.event.inputs.version_bump }}" != "no-bump" ]]; then
-              git config user.name "github-actions"
-              git config user.email "github-actions@github.com"
-              git add package.json pnpm-lock.yaml CHANGELOG.md
-              git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }}"
-              git push origin ${{ github.ref_name }}
-              echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-            else
-              echo "Skipping commit (no-bump selected)"
-              echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-            fi
+          if [[ "${{ steps.next_version.outputs.changed }}" == "true" ]]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git add package.json pnpm-lock.yaml CHANGELOG.md
+            git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }}"
+            git push origin ${{ github.ref_name }}
+          else
+            echo "Version unchanged; skipping commit."
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Create Draft Release
         id: create_draft_release
@@ -159,6 +172,7 @@ jobs:
           target_commitish: ${{ steps.commit.outputs.sha }}
           body_path: release-notes.md
           draft: true
+          prerelease: ${{ contains(steps.next_version.outputs.version, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -206,6 +220,7 @@ jobs:
             dist/vbapm-win.zip
             dist/vbapm-mac.tar.gz
           draft: true
+          prerelease: ${{ contains(needs.prepare-release.outputs.version, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
