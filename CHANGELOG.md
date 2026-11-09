@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Fixed
+- `vba config --global <key> <value>` now saves the requested setting instead of consuming the key as an option value. ([#166](https://github.com/vbapm/core/issues/166))
 - `vba extract` now handles a missing target directory by treating the previous worksheet-selection baseline as empty. ([#165](https://github.com/vbapm/core/issues/165))
 - `vba build` and `vba update` now pass Power Query formulas to Excel through staged UTF-8 files, avoiding command-line length failures with large query sets.
 - `vba extract` retries component exports that omit `Attribute VB_Name` and reports the component path if the retry also fails.
