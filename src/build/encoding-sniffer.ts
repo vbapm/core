@@ -109,6 +109,8 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 	LABEL_TO_CODEPAGE[short] = Number(cp) as Codepage;
 }
 LABEL_TO_CODEPAGE["utf8"] = Codepage.UTF8;
+LABEL_TO_CODEPAGE["utf-8-bom"] = Codepage.UTF8;
+LABEL_TO_CODEPAGE["utf8-bom"] = Codepage.UTF8;
 LABEL_TO_CODEPAGE["us-ascii"] = Codepage.Ascii;
 // jschardet may return "SHIFT_JIS" for Windows-932 content
 LABEL_TO_CODEPAGE["shift_jis"] = Codepage.Windows932;

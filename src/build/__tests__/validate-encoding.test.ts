@@ -2,7 +2,7 @@ import { loadFromProject } from "../load-from-project";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { dir } from "../../../tests/__fixtures__";
 import { join } from "../../utils/path";
-import { writeFileSync, mkdirSync, rmSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from "fs";
 
 afterEach(reset);
 
@@ -44,7 +44,7 @@ Module1 = "src/Module1.bas"
 		expect(graph.components[0].code).toContain("Hello");
 	});
 
-	test("non-ASCII without encoding → fails with suggestion", async () => {
+	test("non-ASCII without encoding → fails with jschardet suggestion", async () => {
 		const toml = `\
 [package]
 name = "non-ascii-no-enc"
@@ -52,21 +52,20 @@ version = "1.0.0"
 authors = ["Test"]
 
 [src]
-Module1 = "src/Module1.bas"
+JapaneseExample = "src/Module1.bas"
 `;
 
 		const srcPath = join(fixtureDir, "src", "Module1.bas");
 		const manifestPath = join(fixtureDir, "vbaproject.toml");
-
-		// French accented characters
-		const srcContent =
-			'Attribute VB_Name = "Module1"\n\' Déjà vu – naïve façade\nPublic Sub Hello()\n  MsgBox "é"  \' café\nEnd Sub\n';
+		const srcContent = readFileSync(
+			join(dir, "multilingual", "cp932", "src", "JapaneseExample.bas")
+		);
 		writeFileSync(srcPath, srcContent);
 		writeFileSync(manifestPath, toml);
 
 		const { project, dependencies } = await setup(fixtureDir);
 		await expect(loadFromProject(project, dependencies)).rejects.toThrow(
-			/Non-ASCII characters detected/
+			/Suggested change:\s+\[source\]\s+encoding = "cp932"[\s\S]+Detection by jschardet/
 		);
 	});
 
@@ -124,5 +123,64 @@ Module1 = { path = "src/Module1.bas", encoding = "cp932" }
 		const graph = await loadFromProject(project, dependencies);
 		expect(graph.components.length).toBe(1);
 		expect(graph.components[0].details.sourceEncoding).toBe("cp932");
+	});
+
+	test("wildcard encoding overrides project-level encoding", async () => {
+		const toml = `\
+[package]
+name = "wildcard-encoding"
+version = "1.0.0"
+authors = ["Test"]
+
+[source]
+encoding = "cp1252"
+
+[src]
+JapaneseExample = { path = "src/**/*.bas", encoding = "cp932" }
+`;
+
+		const srcPath = join(fixtureDir, "src", "Module1.bas");
+		const manifestPath = join(fixtureDir, "vbaproject.toml");
+		const srcContent = readFileSync(
+			join(dir, "multilingual", "cp932", "src", "JapaneseExample.bas")
+		);
+		writeFileSync(srcPath, srcContent);
+		writeFileSync(manifestPath, toml);
+
+		const { project, dependencies } = await setup(fixtureDir);
+		const graph = await loadFromProject(project, dependencies);
+		expect(graph.components).toHaveLength(1);
+		expect(graph.components[0].details.sourceEncoding).toBe("cp932");
+		expect(graph.components[0].code).toContain("日本語");
+	});
+
+	test("exact source encoding takes priority over a matching wildcard", async () => {
+		const toml = `\
+[package]
+name = "exact-encoding"
+version = "1.0.0"
+authors = ["Test"]
+
+[source]
+encoding = "cp1252"
+
+[src]
+JapaneseExample = { path = "src/Module1.bas", encoding = "cp932" }
+Modules = { path = "src/**/*.bas", encoding = "cp1251" }
+`;
+
+		const srcPath = join(fixtureDir, "src", "Module1.bas");
+		const manifestPath = join(fixtureDir, "vbaproject.toml");
+		const srcContent = readFileSync(
+			join(dir, "multilingual", "cp932", "src", "JapaneseExample.bas")
+		);
+		writeFileSync(srcPath, srcContent);
+		writeFileSync(manifestPath, toml);
+
+		const { project, dependencies } = await setup(fixtureDir);
+		const graph = await loadFromProject(project, dependencies);
+		expect(graph.components).toHaveLength(1);
+		expect(graph.components[0].details.sourceEncoding).toBe("cp932");
+		expect(graph.components[0].code).toContain("日本語");
 	});
 });

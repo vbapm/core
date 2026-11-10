@@ -652,7 +652,7 @@ subfolders = { Modules = "Modules", Forms = "Forms", Classes = "Classes" }
 |---|---|---|
 | `folder` | `"src"` | Base directory for all source files (relative to project root). New components extracted from a workbook are placed under this directory. |
 | `subfolders` | — | Organises source files into type-based subdirectories: `.bas` → `Modules/`, `.frm` → `Forms/`, `.cls` → `Classes/`. `Objects` maps document modules (`ThisWorkbook`, sheets) to a subfolder. |
-| `encoding` | — | Default encoding for source files (e.g. `"cp1252"`, `"utf-8"`). Can be overridden per-source in `[source.files]`. |
+| `encoding` | — | Default encoding for source files (e.g. `"cp1252"`, `"utf-8"`, `"utf-8-bom"`). Can be overridden per-source in `[source.files]`. |
 | `sort` | — | Enforce ordering in the `[source.files]` section. Options: `by-types` (group by component type), `alphabetical` (sort by name). |
 | `include-empty-objects` | `true` | When `false`, blank document objects (ThisWorkbook, sheet modules) are skipped during export. |
 

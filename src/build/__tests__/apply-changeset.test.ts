@@ -1,8 +1,10 @@
 import { complex, standardChangesExport, wildcard } from "../../../tests/__fixtures__";
 import { reset, setup } from "../../../tests/__helpers__/project";
 import { normalizeManifest } from "../../__helpers__/manifest";
-import { applyChangeset } from "../apply-changeset";
+import { applyChangeset, writeComponent } from "../apply-changeset";
 import { compareBuildGraphs } from "../compare-build-graphs";
+import { Component } from "../component";
+import { Codepage } from "../encoding-sniffer";
 import { loadFromExport } from "../load-from-export";
 import { loadFromProject } from "../load-from-project";
 import { writeFile, remove } from "../../utils/fs";
@@ -61,4 +63,23 @@ test("should write new files to subfolders without adding individual entries whe
 	// Manifest should keep only the 4 wildcard entries — no individual
 	// entries for components already covered by wildcard patterns
 	expect(normalizeManifest(project.manifest)).toMatchSnapshot();
+});
+
+test("writes a UTF-8 BOM for source encoding utf-8-bom", async () => {
+	const path = "src/Module.bas";
+	const code = 'Attribute VB_Name = "Module"\r\n\' café\r\n';
+	const component = new Component("module", code, Codepage.Unknown, {
+		sourceEncoding: "utf-8-bom"
+	});
+
+	await writeComponent(path, component);
+
+	const writeCalls = (writeFile as jest.Mock).mock.calls;
+	const writeCall = writeCalls[writeCalls.length - 1];
+	const bytes = writeCall?.[1];
+	if (!Buffer.isBuffer(bytes))
+		throw new Error("Expected UTF-8 BOM output to be written as a Buffer");
+
+	expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+	expect(bytes.subarray(3).toString("utf8")).toBe(code);
 });

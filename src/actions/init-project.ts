@@ -98,7 +98,7 @@ export async function initProject(options: InitOptions) {
 	const project = await init(name, dir, {
 		type: asPackage ? "package" : "project"
 	});
-	project.manifest.srcProperties = { encoding: "utf-8" };
+	project.manifest.srcProperties = { encoding: "utf-8-bom" };
 
 	// When importing from a workbook at the project root, default build-dir to "."
 	// so the built file is written alongside the source workbook

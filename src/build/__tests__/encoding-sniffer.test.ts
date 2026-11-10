@@ -260,6 +260,10 @@ describe("labelToCodepage", () => {
 		expect(labelToCodepage("UTF8")).toBe(Codepage.UTF8);
 	});
 
+	test("utf-8-bom → UTF8", () => {
+		expect(labelToCodepage("utf-8-bom")).toBe(Codepage.UTF8);
+	});
+
 	test("cp65001 (case-insensitive) → UTF8", () => {
 		expect(labelToCodepage("cp65001")).toBe(Codepage.UTF8);
 		expect(labelToCodepage("CP65001")).toBe(Codepage.UTF8);

@@ -94,6 +94,18 @@ test("loads per-source encoding", () => {
 	expect(manifest.src[0].encoding).toBe("cp932");
 });
 
+test("formats per-source encoding", () => {
+	const value = {
+		...BASE_MANIFEST,
+		src: {
+			A: { path: "src/a.bas", encoding: "cp932" }
+		}
+	};
+
+	const formatted: any = formatManifest(parseManifest(value, FIXTURES), FIXTURES);
+	expect(formatted.source.files.A).toEqual({ path: "src/a.bas", encoding: "cp932" });
+});
+
 test("loads valid [dev-src]", () => {
 	const value = {
 		...BASE_MANIFEST,
