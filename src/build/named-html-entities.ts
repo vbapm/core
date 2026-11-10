@@ -22,9 +22,17 @@ const namedHtmlEntities = new Map(
 );
 
 const htmlEntityPattern = /&(?:#(?:[xX][\da-fA-F]+|\d+)|[A-Za-z][A-Za-z\d]*);/g;
+const htmlEntityWithEscapePattern =
+	/&amp;(?=(?:#(?:[xX][\da-fA-F]+|\d+)|[A-Za-z][A-Za-z\d]*);)|&(?:#(?:[xX][\da-fA-F]+|\d+)|[A-Za-z][A-Za-z\d]*);/g;
+
+export function escapeHtmlEntities(text: string): string {
+	return text.replace(htmlEntityPattern, entity => `&amp;${entity.slice(1)}`);
+}
 
 export function decodeHtmlEntities(text: string): string {
-	return text.replace(htmlEntityPattern, entity => {
+	return text.replace(htmlEntityWithEscapePattern, entity => {
+		if (entity === "&amp;") return "&";
+
 		const namedEntity = namedHtmlEntities.get(entity);
 		if (namedEntity !== undefined) return namedEntity;
 

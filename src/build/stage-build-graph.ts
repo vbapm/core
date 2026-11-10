@@ -3,7 +3,7 @@ import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
 import * as iconv from "iconv-lite";
 import { env } from "../env";
-import { createNamedHtmlEntityHandler } from "./named-html-entities";
+import { createNamedHtmlEntityHandler, escapeHtmlEntities } from "./named-html-entities";
 import { BuildGraph, ImportGraph } from "./build-graph";
 import { Codepage, codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
@@ -22,10 +22,14 @@ export async function stageBuildGraph(
 
 	const components = await parallel(graph.components, async component => {
 		const path = join(staging, component.filename);
+		const stagedText = component.code.replace(
+			/^([ \t]*')([^\r\n]*)/gm,
+			(_line, prefix: string, comment: string) => `${prefix}${escapeHtmlEntities(comment)}`
+		);
 
-		const encoded = iconv.encode(component.code, targetLabel, {
+		const encoded = iconv.encode(stagedText, targetLabel, {
 			invalidCharHandler: createNamedHtmlEntityHandler(
-				component.code,
+				stagedText,
 				(original, replacement, index) => {
 					debug(
 						'🔄️ Replaced "%s" with "%s" in %s at character %d',
