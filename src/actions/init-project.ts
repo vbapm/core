@@ -4,6 +4,7 @@ import { CliError, ErrorCode } from "../errors";
 import { Manifest, formatManifest, formatManifestToToml } from "../manifest";
 import { TargetType } from "../manifest/target";
 import { initProject as init } from "../project";
+import { codepageToLabel, getSystemCodepage } from "../build/encoding-sniffer";
 import { addTarget } from "../targets/add-target";
 import { copy, ensureDir, pathExists, writeFile } from "../utils/fs";
 import { init as git_init } from "../utils/git";
@@ -98,7 +99,9 @@ export async function initProject(options: InitOptions) {
 	const project = await init(name, dir, {
 		type: asPackage ? "package" : "project"
 	});
-	project.manifest.srcProperties = { encoding: "utf-8-bom" };
+	project.manifest.srcProperties = {
+		encoding: codepageToLabel(getSystemCodepage())
+	};
 
 	// When importing from a workbook at the project root, default build-dir to "."
 	// so the built file is written alongside the source workbook
