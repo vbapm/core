@@ -8,7 +8,6 @@ import { addTarget } from "../targets/add-target";
 import { copy, ensureDir, pathExists, writeFile } from "../utils/fs";
 import { init as git_init } from "../utils/git";
 import { basename, dirname, extname, join } from "../utils/path";
-import { detectImportEncoding } from "./detect-encoding";
 import { fileURLToPath } from "node:url";
 
 const TEMPLATE_FILES = [
@@ -99,6 +98,7 @@ export async function initProject(options: InitOptions) {
 	const project = await init(name, dir, {
 		type: asPackage ? "package" : "project"
 	});
+	project.manifest.srcProperties = { encoding: "utf-8" };
 
 	// When importing from a workbook at the project root, default build-dir to "."
 	// so the built file is written alongside the source workbook
@@ -116,11 +116,6 @@ export async function initProject(options: InitOptions) {
 		await addTarget(<TargetType>targetType, { project, dependencies }, { from });
 	}
 
-	// Auto-detect src-encoding when importing from an existing workbook
-	if (from) {
-		await detectSourceEncoding(project);
-	}
-
 	// Write default wildcard [source.files] entries and [source] for new
 	// projects.  Skip when --list-all (explicit individual listing) or
 	// --from (importing from existing workbook, which already has
@@ -130,6 +125,7 @@ export async function initProject(options: InitOptions) {
 	// produces garbled output.
 	if (!listAll && !from) {
 		project.manifest.srcProperties = {
+			...project.manifest.srcProperties,
 			subfolders: {
 				Objects: "Excel Objects",
 				Forms: "Forms",
@@ -151,32 +147,4 @@ export async function initProject(options: InitOptions) {
 	// [source.files] entries stay on separate lines.
 	const toml = await formatManifestToToml(formatManifest(project.manifest, project.paths.dir));
 	await writeFile(join(project.paths.dir, "vbaproject.toml"), toml);
-}
-
-/**
- * Auto-detect the source encoding for a project initialized from an
- * existing workbook.
- *
- * Important: this should be used right after the first export of the workbook to src,
- * before any source files are modified.
- *
- * If any source file contains non-ASCII characters,
- * the system codepage is used as the default. If jschardet confidently
- * identifies a different encoding (e.g. a Japanese workbook opened on
- * a Western European system), that encoding is used instead.
- */
-async function detectSourceEncoding(project: import("../project").Project): Promise<void> {
-	const firstSource = project.manifest.src[0];
-	if (!firstSource) return;
-
-	const encoding = await detectImportEncoding(join(project.paths.dir, firstSource.path));
-	if (!encoding) return;
-
-	project.manifest.srcProperties = {
-		...project.manifest.srcProperties,
-		encoding
-	};
-	if (project.manifest.target) {
-		project.manifest.target.encoding = encoding;
-	}
 }

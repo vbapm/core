@@ -21,6 +21,7 @@ test("does not add PowerQueries to new project manifests by default", async () =
 			String(path).endsWith("vbaproject.toml")
 		);
 		expect(manifestWrite?.[1]).not.toContain("PowerQueries");
+		expect(manifestWrite?.[1]).toContain('encoding = "utf-8"');
 	} finally {
 		writeFileSpy.mockRestore();
 		await rm(dir, { recursive: true, force: true });
