@@ -23,23 +23,20 @@ export async function stageBuildGraph(
 	const components = await parallel(graph.components, async component => {
 		const path = join(staging, component.filename);
 
-		const encoded =
-			targetCp === Codepage.Ascii
-				? iconv.encode(component.code, targetLabel, {
-						invalidCharHandler: createNamedHtmlEntityHandler(
-							component.code,
-							(original, replacement, index) => {
-								debug(
-									'🔄️ Replaced "%s" with "%s" in %s at character %d',
-									original,
-									replacement,
-									component.details.path ?? component.filename,
-									index + 1
-								);
-							}
-						)
-					})
-				: iconv.encode(component.code, targetLabel);
+		const encoded = iconv.encode(component.code, targetLabel, {
+			invalidCharHandler: createNamedHtmlEntityHandler(
+				component.code,
+				(original, replacement, index) => {
+					debug(
+						'🔄️ Replaced "%s" with "%s" in %s at character %d',
+						original,
+						replacement,
+						component.details.path ?? component.filename,
+						index + 1
+					);
+				}
+			)
+		});
 		if (!encoded) {
 			throw new Error(`Encoding component "${component.name}" was cancelled`);
 		}

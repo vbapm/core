@@ -9,6 +9,7 @@ import { Component } from "../component";
 import { Codepage } from "../encoding-sniffer";
 import { loadFromProject } from "../load-from-project";
 import { stageBuildGraph } from "../stage-build-graph";
+import { toSrc } from "../transform-build-graph";
 
 afterEach(reset);
 
@@ -107,9 +108,10 @@ test("uses named HTML entities, then hex references for unmapped characters in A
 	const stagingDir = join(dir, "projects", "ascii-encoding-stage");
 	await ensureDir(stagingDir);
 
+	const originalComment = `Café ${String.fromCodePoint(0x2242, 0x338)} ${String.fromCodePoint(0xac00)} ${String.fromCodePoint(0x1f600)}`;
 	const component = new Component(
 		"module",
-		`Attribute VB_Name = "AsciiModule"\n' Café ${String.fromCodePoint(0x2242, 0x338)} ${String.fromCodePoint(0xac00)} ${String.fromCodePoint(0x1f600)}\n`,
+		`Attribute VB_Name = "AsciiModule"\n' ${originalComment}\nPublic Const EntityText As String = "&eacute;"\n`,
 		Codepage.Unknown,
 		{ sourceEncoding: "utf-8" }
 	);
@@ -130,6 +132,15 @@ test("uses named HTML entities, then hex references for unmapped characters in A
 		expect(encodedText).toContain("&#xac00;");
 		expect(encodedText).toContain("&#x1f600;");
 		expect(output.every(byte => byte <= 0x7f)).toBe(true);
+
+		const extracted = await toSrc({
+			...graph,
+			components: [new Component("module", output, Codepage.Ascii)]
+		});
+		expect(extracted.components[0].code).toContain(`' ${originalComment}`);
+		expect(extracted.components[0].code).toContain(
+			'Public Const EntityText As String = "&eacute;"'
+		);
 	} finally {
 		rmSync(stagingDir, { recursive: true, force: true });
 	}
