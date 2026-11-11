@@ -68,11 +68,17 @@ jobs:
           pnpm run build:cli
           pnpm run build:addins
 
+      - name: Verify characters shared by the Windows codepages
+        shell: pwsh
+        run: |
+          node scripts/check-common-windows-codepage-characters.mjs
+          ./scripts/ps/Test-CommonWindowsCodepageCharacters.ps1
+
       - name: Run multilingual encoding tests
         shell: pwsh
         run: |
-          # The loop script iterates over codepages (1252, 1251, 1250),
-          # sets each in the registry, and runs the multilang Jest suite.
+          # The loop script tests the eight codepages with fixtures
+          # (1252, 1251, 1250, 932, 936, 950, 949, 874), switching the ACP.
           # Excel is killed between iterations so new processes pick up
           # the changed ACP codepage.
           ./tests/multilang-loop.ps1
