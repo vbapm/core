@@ -49,4 +49,4 @@ node scripts/check-common-windows-codepage-characters.mjs --markdown docs/analys
 .\scripts\ps\Test-CommonWindowsCodepageCharacters.ps1
 ```
 
-The same two checks run in the [multilingual GitHub Actions workflow](../../../../.github/workflows/multilingual-encoding-test.yml).
+The [multilingual GitHub Actions workflow](../../../../.github/workflows/multilingual-encoding-test.yml) continues to run the Excel build/export fixtures; these wider codepage scans are manual checks.
