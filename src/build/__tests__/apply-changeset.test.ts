@@ -8,6 +8,7 @@ import { Codepage } from "../encoding-sniffer";
 import { loadFromExport } from "../load-from-export";
 import { loadFromProject } from "../load-from-project";
 import { writeFile, remove } from "../../utils/fs";
+import { decodeBuffer } from "../../utils/encoding";
 
 beforeEach(() => {
 	jest.clearAllMocks();
@@ -82,4 +83,27 @@ test("writes a UTF-8 BOM for source encoding utf-8-bom", async () => {
 
 	expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
 	expect(bytes.subarray(3).toString("utf8")).toBe(code);
+});
+
+test.each([
+	["utf-16le", Buffer.from([0xff, 0xfe])],
+	["utf-16be", Buffer.from([0xfe, 0xff])]
+])("writes a BOM for source encoding %s", async (sourceEncoding, bom) => {
+	const path = "src/Module.bas";
+	const code = 'Attribute VB_Name = "Module"\r\n\' café\r\n';
+	const component = new Component("module", code, Codepage.Unknown, {
+		sourceEncoding
+	});
+
+	await writeComponent(path, component);
+
+	const writeCalls = (writeFile as jest.Mock).mock.calls;
+	const writeCall = writeCalls[writeCalls.length - 1];
+	const bytes = writeCall?.[1];
+	if (!Buffer.isBuffer(bytes)) {
+		throw new Error("Expected UTF-16 BOM output to be written as a Buffer");
+	}
+
+	expect(bytes.subarray(0, 2)).toEqual(bom);
+	expect(decodeBuffer(bytes).text).toBe(code);
 });

@@ -214,6 +214,7 @@ export async function writeComponent(path: string, component: Component) {
 	if (srcEncoding) {
 		const systemLabel = codepageToLabel(getSystemCodepage());
 		const hasUtf8Bom = /^utf-?8-bom$/i.test(srcEncoding);
+		const utf16Endian = /^utf-?16(le|be)$/i.exec(srcEncoding)?.[1].toLowerCase();
 		const encodingLabel = hasUtf8Bom ? "utf-8" : srcEncoding;
 
 		if (srcEncoding.toLowerCase() !== systemLabel.toLowerCase()) {
@@ -243,7 +244,12 @@ export async function writeComponent(path: string, component: Component) {
 
 		data = hasUtf8Bom
 			? encodeBuffer(component.code, { encoding: "utf8", hasBom: true })
-			: Buffer.from(iconv.encode(component.code, encodingLabel));
+			: utf16Endian
+				? encodeBuffer(component.code, {
+						encoding: utf16Endian === "le" ? "utf16le" : "utf16be",
+						hasBom: true
+					})
+				: Buffer.from(iconv.encode(component.code, encodingLabel));
 	}
 
 	await writeFile(path, data);
