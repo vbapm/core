@@ -1,3 +1,4 @@
+import { Minimatch } from "minimatch";
 import dedent from "@timhall/dedent";
 import { manifestOk } from "../errors";
 import { isString } from "../utils/is";
@@ -56,15 +57,7 @@ export function sourcePathMatches(
 
 	if (!sourcePath.includes("*")) return pattern === normalisedPath;
 
-	const regexStr = pattern
-		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
-		.replace(/\*\*\//g, "<<<GSTARSLASH>>>")
-		.replace(/\*\*/g, "<<<GSTAR>>>")
-		.replace(/\*/g, "[^/]*")
-		.replace(/<<<GSTARSLASH>>>/g, "(.*/)?")
-		.replace(/<<<GSTAR>>>/g, ".*");
-
-	return new RegExp(`^${regexStr}$`).test(normalisedPath);
+	return new Minimatch(pattern).match(normalisedPath);
 }
 
 function relativeToProject(path: string, projectDir: string): string {

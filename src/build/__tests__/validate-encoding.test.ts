@@ -154,6 +154,38 @@ JapaneseExample = { path = "src/**/*.bas", encoding = "cp932" }
 		expect(graph.components[0].code).toContain("日本語");
 	});
 
+	test.each(["src/*.{bas,cls}", "src/*[0-9].bas"])(
+		"wildcard encoding override matches glob pattern %s",
+		async pattern => {
+			const toml = `\
+[package]
+name = "glob-wildcard-encoding"
+version = "1.0.0"
+authors = ["Test"]
+
+[source]
+encoding = "cp1252"
+
+[src]
+Modules = { path = "${pattern}", encoding = "cp932" }
+`;
+
+			const srcPath = join(fixtureDir, "src", "Module1.bas");
+			const manifestPath = join(fixtureDir, "vbaproject.toml");
+			const srcContent = readFileSync(
+				join(dir, "multilingual", "cp932", "src", "JapaneseExample.bas")
+			);
+			writeFileSync(srcPath, srcContent);
+			writeFileSync(manifestPath, toml);
+
+			const { project, dependencies } = await setup(fixtureDir);
+			const graph = await loadFromProject(project, dependencies);
+			expect(graph.components).toHaveLength(1);
+			expect(graph.components[0].details.sourceEncoding).toBe("cp932");
+			expect(graph.components[0].code).toContain("日本語");
+		}
+	);
+
 	test("exact source encoding takes priority over a matching wildcard", async () => {
 		const toml = `\
 [package]
