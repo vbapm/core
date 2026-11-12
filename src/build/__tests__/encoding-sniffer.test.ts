@@ -3,6 +3,7 @@ import {
 	Codepage,
 	codepageToLabel,
 	labelToCodepage,
+	encodeForCodepage,
 	decodeBuffer,
 	getSystemCodepage,
 	sniffEncoding
@@ -211,6 +212,11 @@ describe("codepageToLabel", () => {
 		expect(codepageToLabel(Codepage.Unknown)).toBe("");
 	});
 
+	test("Ascii → cp20127 with strict 7-bit encoding", () => {
+		expect(codepageToLabel(Codepage.Ascii)).toBe("cp20127");
+		expect([...encodeForCodepage("Aé", Codepage.Ascii)]).toEqual([0x41, 0x3f]);
+	});
+
 	for (const cp of [
 		Codepage.Windows1250,
 		Codepage.Windows1251,
@@ -258,6 +264,7 @@ describe("labelToCodepage", () => {
 	test("ascii → Ascii", () => {
 		expect(labelToCodepage("ascii")).toBe(Codepage.Ascii);
 		expect(labelToCodepage("us-ascii")).toBe(Codepage.Ascii);
+		expect(labelToCodepage("cp20127")).toBe(Codepage.Ascii);
 	});
 
 	test("windows-1252 → Windows1252", () => {

@@ -59,7 +59,10 @@ export interface SniffResult {
 }
 
 /**
- * Map a {@link Codepage} to a {@link TextDecoder} label.
+ * Map a Windows codepage number to an encoding label accepted by iconv-lite.
+ * The returned labels are for iconv-lite conversions; they are not necessarily
+ * the same aliases returned by encoding detectors.
+ *
  * Returns `""` for {@link Codepage.Unknown} (caller must sniff instead).
  */
 export function codepageToLabel(codepage: Codepage): string {
@@ -67,9 +70,11 @@ export function codepageToLabel(codepage: Codepage): string {
 }
 
 /**
- * Reverse of {@link codepageToLabel}: map an encoding label back to
- * a {@link Codepage}. Returns {@link Codepage.Unknown} if the label
- * is not recognised.
+ * Map a recognized encoding label or alias back to a {@link Codepage}.
+ * This accepts aliases from encoding detectors and project configuration, not
+ * just the labels returned by {@link codepageToLabel}.
+ *
+ * Returns {@link Codepage.Unknown} if the label is not recognised.
  */
 export function labelToCodepage(label: string): Codepage {
 	return LABEL_TO_CODEPAGE[label.toLowerCase()] ?? Codepage.Unknown;
@@ -77,8 +82,9 @@ export function labelToCodepage(label: string): Codepage {
 
 const LABEL_TO_CODEPAGE: Record<string, Codepage> = {};
 
+// These are the labels passed to iconv-lite's encode/decode functions.
 const CODEPAGE_LABELS: Record<number, string> = {
-	[Codepage.Ascii]: "ascii",
+	[Codepage.Ascii]: "cp20127",
 	[Codepage.UTF8]: "utf-8",
 	[Codepage.Windows1250]: "windows-1250", // Central European
 	[Codepage.Windows1251]: "windows-1251", // Cyrillic
@@ -94,7 +100,7 @@ const CODEPAGE_LABELS: Record<number, string> = {
 	// Namely, 0x5C → ¥ and 0x7E → ‾, while the
 	// Windows codepage maps them to \ and ~ respectively.
 	// READ MORE: https://en.wikipedia.org/wiki/Code_page_932_(Microsoft_Windows)#Differences_from_standard_Shift_JIS
-	[Codepage.Windows932]: "windows-932", // Japanese (Windows-31J, not Shift_JIS)
+	[Codepage.Windows932]: "windows-932", // Japanese (Windows-31J)
 	[Codepage.Windows936]: "windows-936", // Simplified Chinese (GBK)
 	[Codepage.Windows874]: "windows-874", // Thai
 	[Codepage.Windows949]: "windows-949", // Korean (ks_c_5601-1987)
@@ -108,6 +114,7 @@ for (const [cp, label] of Object.entries(CODEPAGE_LABELS)) {
 	const short = "cp" + cp;
 	LABEL_TO_CODEPAGE[short] = Number(cp) as Codepage;
 }
+LABEL_TO_CODEPAGE["ascii"] = Codepage.Ascii;
 LABEL_TO_CODEPAGE["us-ascii"] = Codepage.Ascii;
 // jschardet may return "SHIFT_JIS" for Windows-932 content
 LABEL_TO_CODEPAGE["shift_jis"] = Codepage.Windows932;

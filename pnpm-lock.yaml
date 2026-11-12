@@ -203,8 +203,8 @@ importers:
         specifier: ^11
         version: 11.4.1
       iconv-lite:
-        specifier: 1.0.0-alpha.4
-        version: 1.0.0-alpha.4
+        specifier: 1.0.0-beta.1
+        version: 1.0.0-beta.1
       isomorphic-git:
         specifier: ^1.37.1
         version: 1.43.2
@@ -2083,8 +2083,8 @@ packages:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
 
-  iconv-lite@1.0.0-alpha.4:
-    resolution: {integrity: sha512-I2ebhymGRELPJY4PL6XrjMyyq4Hbr622hr0nR4seMCT736vOFkuNSSXb+Po3dEmS/7IA4wYBjUWExiM+Vz/+0Q==}
+  iconv-lite@1.0.0-beta.1:
+    resolution: {integrity: sha512-Jn+jT79aZH6CGhkKIUzuIF1WTFInWntKOMCcCDiiUC94x7oOOrDnl7uroWpDG4NgkneXjhfkKHAWkC5MQi8ZjA==}
     engines: {node: '>=22'}
 
   ieee754@1.1.13:
@@ -4851,7 +4851,7 @@ snapshots:
 
   human-signals@2.1.0: {}
 
-  iconv-lite@1.0.0-alpha.4: {}
+  iconv-lite@1.0.0-beta.1: {}
 
   ieee754@1.1.13: {}
 
