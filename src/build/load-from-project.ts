@@ -14,7 +14,13 @@ import { join, relative } from "../utils/path";
 import { joinCommas } from "../utils/text";
 import { BuildGraph, FromDependences } from "./build-graph";
 import { loadPowerQueries } from "./load-power-queries";
-import { Codepage, labelToCodepage, SUPPORTED_WINDOWS_CODEPAGE_LABELS } from "./encoding-sniffer";
+import {
+	Codepage,
+	codepageToLabel,
+	labelToCodepage,
+	sniffEncoding,
+	SUPPORTED_WINDOWS_CODEPAGE_LABELS
+} from "./encoding-sniffer";
 import { byComponentTypeThenName, Component } from "./component";
 
 import jschardet from "jschardet";
@@ -195,7 +201,7 @@ function validateGraph(project: Project, graph: BuildGraph) {
 /**
  * Validate that any source file containing non-ASCII characters has
  * an encoding declared (encoding in [source] or encoding on
- * the individual source entry). If not, fail with a jschardet
+ * the individual source entry). If not, fail with an encoding
  * suggestion.
  */
 async function validateEncoding(project: Project, graph: BuildGraph) {
@@ -216,24 +222,40 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		// Check for non-ASCII characters
 		if (!hasNonAscii(component.code)) continue;
 
-		// Try jschardet to suggest an encoding
+		// BOM detections are certain; the no-BOM UTF-8 heuristic is also more reliable than jschardet.
 		let suggestion = "";
 		const sourcePath = source?.path;
 		if (sourcePath) {
 			try {
 				const buffer = await readFile(sourcePath);
+				const sniffed = sniffEncoding(buffer);
+				const sniffedLabel = {
+					utf8: codepageToLabel(Codepage.UTF8),
+					utf16le: "utf-16le",
+					utf16be: "utf-16be",
+					unknown: undefined
+				}[sniffed.encoding];
 
-				const results = (
-					jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
-				)
-					.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding.toLowerCase()))
-					.sort((a, b) => b.confidence - a.confidence);
-
-				if (results.length > 0 && results[0].confidence >= 0.5) {
-					const label = results[0].encoding.toLowerCase();
+				if (sniffedLabel && (sniffed.hasBom || sniffed.encoding === "utf8")) {
+					const detectionNote = sniffed.hasBom
+						? "Detected from BOM by the encoding sniffer"
+						: "Detected as UTF-8 by the encoding sniffer";
 					suggestion =
-						`\nSuggested change:\n\n  [source]\n  encoding = "${label}"` +
-						`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
+						`\nSuggested change:\n\n  [source]\n  encoding = "${sniffedLabel}"` +
+						`\n\n(${detectionNote})`;
+				} else {
+					const results = (
+						jschardet.detectAll(buffer) as Array<{ encoding: string; confidence: number }>
+					)
+						.filter(r => SUPPORTED_WINDOWS_CODEPAGE_LABELS.has(r.encoding.toLowerCase()))
+						.sort((a, b) => b.confidence - a.confidence);
+
+					if (results.length > 0 && results[0].confidence >= 0.5) {
+						const label = results[0].encoding.toLowerCase();
+						suggestion =
+							`\nSuggested change:\n\n  [source]\n  encoding = "${label}"` +
+							`\n\n(Detection by jschardet, confidence: ${Math.round(results[0].confidence * 100)}%)`;
+					}
 				}
 			} catch (err) {
 				suggestion =

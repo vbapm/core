@@ -82,7 +82,7 @@
         "editorconfig": "^3.0.0",
         "env-paths": "^4.0.0",
         "fs-extra": "^11",
-        "iconv-lite": "1.0.0-alpha.4",
+        "iconv-lite": "1.0.0-beta.1",
         "isomorphic-git": "^1.37.1",
         "jschardet": "^4.0.0",
         "logic-solver": "^2",
