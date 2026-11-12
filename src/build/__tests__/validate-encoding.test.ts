@@ -69,9 +69,12 @@ describe("encoding validation", () => {
 			"utf-8",
 			Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(nonAsciiSource, "utf8")])
 		],
-		[	"UTF-16 LE BOM", 
-			"utf-16le", 
-			Buffer.concat([Buffer.from([0xff, 0xfe]), utf16leSource])],
+		// oxfmt-ignore
+		[
+			"UTF-16 LE BOM",
+			"utf-16le",
+			Buffer.concat([Buffer.from([0xff, 0xfe]), utf16leSource])
+		],
 		[
 			"UTF-16 BE BOM",
 			"utf-16be",
@@ -100,12 +103,12 @@ describe("encoding validation", () => {
 
 			const detectAllSpy = jest.spyOn(jschardet, "detectAll");
 			const { project, dependencies } = await setup(fixtureDir);
-			// Attempting to load the project should throw due 
+			// Attempting to load the project should throw due
 			// to missing encoding from the manifest
 			await expect(loadFromProject(project, dependencies)).rejects.toThrow(
 				`encoding = "${expectedEncoding}"`
 			);
-			// Making sure that jschardet.detectAll was not called 
+			// Making sure that jschardet.detectAll was not called
 			// since the encoding should be certain from the BOM
 			expect(detectAllSpy).not.toHaveBeenCalled();
 		}
