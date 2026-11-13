@@ -4,6 +4,7 @@ import { basename, join } from "../utils/path";
 import * as iconv from "iconv-lite";
 import { env } from "../env";
 import { createNamedHtmlEntityHandler, escapeHtmlEntities } from "./named-html-entities";
+import { wrapVbaComment } from "./comment-continuations";
 import { BuildGraph, ImportGraph } from "./build-graph";
 import { Codepage, codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
@@ -23,8 +24,9 @@ export async function stageBuildGraph(
 	const components = await parallel(graph.components, async component => {
 		const path = join(staging, component.filename);
 		const stagedText = component.code.replace(
-			/^([ \t]*')([^\r\n]*)/gm,
-			(_line, prefix: string, comment: string) => `${prefix}${escapeHtmlEntities(comment)}`
+			/^([ \t]*')([^\r\n]*)(\r\n|\r|\n|$)/gm,
+			(_line, prefix: string, comment: string, lineEnding: string) =>
+				`${wrapVbaComment(prefix, escapeHtmlEntities(comment), lineEnding, component.name)}${lineEnding}`
 		);
 
 		const encoded = iconv.encode(stagedText, targetLabel, {

@@ -145,3 +145,62 @@ test("uses named HTML entities, then hex references for unmapped characters in A
 		rmSync(stagingDir, { recursive: true, force: true });
 	}
 });
+
+test("wraps escaped comments within VBA's physical-line limit and reassembles them on extraction", async () => {
+	const stagingDir = join(dir, "projects", "long-comment-stage");
+	await ensureDir(stagingDir);
+
+	const originalComment = "&eacute;".repeat(86);
+	const originalCode = `Attribute VB_Name = "LongComment"\n' ${originalComment}\n`;
+	const component = new Component("module", originalCode, Codepage.Unknown);
+	const graph = {
+		name: "long-comment-test",
+		components: [component],
+		references: [],
+		fromDependencies: { components: new Map(), references: new Map() }
+	};
+
+	try {
+		const importGraph = await stageBuildGraph(graph, stagingDir, Codepage.Ascii);
+		const output = await readFile(importGraph.components[0].path);
+		const encodedText = output.toString("ascii");
+		const commentLines = encodedText.split(/\r?\n/).filter(line => line.startsWith("'"));
+
+		expect(commentLines).toHaveLength(2);
+		expect(commentLines.every(line => line.length <= 1023)).toBe(true);
+		expect(commentLines[0]).toMatch(/ _$/);
+
+		const extracted = await toSrc({
+			...graph,
+			components: [new Component("module", output, Codepage.Ascii)]
+		});
+		expect(extracted.components[0].code).toContain(`' ${originalComment}`);
+	} finally {
+		rmSync(stagingDir, { recursive: true, force: true });
+	}
+});
+
+test("rejects comments that exceed VBA's line-continuation limit", async () => {
+	const stagingDir = join(dir, "projects", "oversized-comment-stage");
+	await ensureDir(stagingDir);
+
+	const component = new Component(
+		"module",
+		`Attribute VB_Name = "OversizedComment"\n' ${"x".repeat(26_000)}\n`,
+		Codepage.Unknown
+	);
+	const graph = {
+		name: "oversized-comment-test",
+		components: [component],
+		references: [],
+		fromDependencies: { components: new Map(), references: new Map() }
+	};
+
+	try {
+		await expect(stageBuildGraph(graph, stagingDir, Codepage.Ascii)).rejects.toThrow(
+			"maximum of 24 line continuations"
+		);
+	} finally {
+		rmSync(stagingDir, { recursive: true, force: true });
+	}
+});
