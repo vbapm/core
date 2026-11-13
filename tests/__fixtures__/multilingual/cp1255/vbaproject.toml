@@ -1,0 +1,10 @@
+# Hebrew (CP1255) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1255"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source]
+encoding = "cp1255"
+
+[src]
+Hebrew = "src/Hebrew.bas"

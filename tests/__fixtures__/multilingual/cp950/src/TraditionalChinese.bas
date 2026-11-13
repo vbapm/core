@@ -1,4 +1,4 @@
-Attribute VB_Name = "NiHao"
+Attribute VB_Name = "TraditionalChinese"
 Option Explicit
 
 ' 繁體中文 : 你好世界！

@@ -1,0 +1,10 @@
+# Arabic (CP1256) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1256"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source]
+encoding = "cp1256"
+
+[src]
+Arabic = "src/Arabic.bas"

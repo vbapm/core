@@ -1,4 +1,4 @@
-Attribute VB_Name = "Sawasdee"
+Attribute VB_Name = "Thai"
 Option Explicit
 
 ' ภาษาไทย : สวัสดีโลก!

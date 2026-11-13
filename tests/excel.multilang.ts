@@ -120,7 +120,7 @@ const FIXTURES: MultilingualFixture[] = [
 	{
 		codepage: "1252",
 		dir: join(fixturesDir, "cp1252"),
-		filename: "Bonjour.bas",
+		filename: "French.bas",
 		expectedStrings: [
 			"é è ê ë à â ä ù û ü ç",
 			"É È Ê Ë À Â Ä Ù Û Ü Ç",
@@ -133,43 +133,83 @@ const FIXTURES: MultilingualFixture[] = [
 	{
 		codepage: "1251",
 		dir: join(fixturesDir, "cp1251"),
-		filename: "Privet.bas",
+		filename: "Russian.bas",
 		expectedStrings: ["Привет мир", "А Б В Г Д Е"]
 	},
 	{
 		codepage: "1250",
 		dir: join(fixturesDir, "cp1250"),
-		filename: "Witaj.bas",
+		filename: "Polish.bas",
 		expectedStrings: ["ą ć ę ł ń ó ś ź ż", "Ą Ć Ę Ł Ń Ó Ś Ź Ż", "Witaj świecie"]
+	},
+	{
+		codepage: "1253",
+		dir: join(fixturesDir, "cp1253"),
+		filename: "Greek.bas",
+		expectedStrings: ["Ελληνικά", "Καλημέρα κόσμε!"]
+	},
+	{
+		codepage: "1254",
+		dir: join(fixturesDir, "cp1254"),
+		filename: "Turkish.bas",
+		expectedStrings: ["Türkçe: Ç Ğ İ Ö Ş Ü ç ğ ı ö ş ü", "Merhaba dünya!"]
+	},
+	{
+		codepage: "1255",
+		dir: join(fixturesDir, "cp1255"),
+		filename: "Hebrew.bas",
+		expectedStrings: ["עברית", "שלום עולם!"]
+	},
+	{
+		codepage: "1256",
+		dir: join(fixturesDir, "cp1256"),
+		filename: "Arabic.bas",
+		expectedStrings: ["اللغة العربية", "مرحبا بالعالم!"]
+	},
+	{
+		codepage: "1257",
+		dir: join(fixturesDir, "cp1257"),
+		filename: "Lithuanian.bas",
+		expectedStrings: [
+			"Latviešu: ā č ē ģ ī ķ ļ ņ š ū ž",
+			"Lietuvių: ą č ę ė į š ų ū ž",
+			"Sveiki, lietuvių pasauli!"
+		]
+	},
+	{
+		codepage: "1258",
+		dir: join(fixturesDir, "cp1258"),
+		filename: "Vietnamese.bas",
+		expectedStrings: ["Vietnamese: Đ đ Ă ă Ơ ơ Ư ư ₫", "Xin chào!"]
 	},
 	{
 		codepage: "932",
 		dir: join(fixturesDir, "cp932"),
-		filename: "Konnichiwa.bas",
+		filename: "Japanese.bas",
 		expectedStrings: ["こんにちは世界", "日本語", "漢字"]
 	},
 	{
 		codepage: "936",
 		dir: join(fixturesDir, "cp936"),
-		filename: "NiHao.bas",
+		filename: "SimplifiedChinese.bas",
 		expectedStrings: ["你好世界", "简体中文", "汉字"]
 	},
 	{
 		codepage: "874",
 		dir: join(fixturesDir, "cp874"),
-		filename: "Sawasdee.bas",
+		filename: "Thai.bas",
 		expectedStrings: ["สวัสดี", "ไทย", "ภาษาไทย"]
 	},
 	{
 		codepage: "949",
 		dir: join(fixturesDir, "cp949"),
-		filename: "Annyeong.bas",
+		filename: "Korean.bas",
 		expectedStrings: ["안녕하세요", "한국어", "한글"]
 	},
 	{
 		codepage: "950",
 		dir: join(fixturesDir, "cp950"),
-		filename: "NiHao.bas",
+		filename: "TraditionalChinese.bas",
 		expectedStrings: ["你好世界", "繁體中文", "漢字", "臺灣"]
 	}
 ];

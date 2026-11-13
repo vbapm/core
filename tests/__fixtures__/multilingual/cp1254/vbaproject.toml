@@ -1,0 +1,10 @@
+# Turkish (CP1254) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1254"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source]
+encoding = "cp1254"
+
+[src]
+Turkish = "src/Turkish.bas"

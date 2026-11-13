@@ -2,7 +2,7 @@ name: Multilingual Encoding Test
 
 on:
   push:
-    branches:
+branches:
       - main*
     paths-ignore:
       - "**/*.md"
@@ -34,11 +34,20 @@ jobs:
         shell: pwsh
         run: |
           $files = @{
-            cp1252 = "Bonjour.bas"
-            cp1251 = "Privet.bas"
-            cp1250 = "Witaj.bas"
-            cp932  = "Konnichiwa.bas"
-            cp936  = "NiHao.bas"
+            cp1252 = "French.bas"
+            cp1251 = "Russian.bas"
+            cp1250 = "Polish.bas"
+            cp1253 = "Greek.bas"
+            cp1254 = "Turkish.bas"
+            cp1255 = "Hebrew.bas"
+            cp1256 = "Arabic.bas"
+            cp1257 = "Lithuanian.bas"
+            cp1258 = "Vietnamese.bas"
+            cp932  = "Japanese.bas"
+            cp936  = "SimplifiedChinese.bas"
+            cp874  = "Thai.bas"
+            cp949  = "Korean.bas"
+            cp950  = "TraditionalChinese.bas"
           }
           foreach ($cp in $files.Keys) {
             $file = "tests/__fixtures__/multilingual/$cp/src/$($files[$cp])"
@@ -68,11 +77,14 @@ jobs:
           pnpm run build:cli
           pnpm run build:addins
 
+      # After some verifications, the ACP  codepage change needs a restart of Windows to take effect.
+      # This means that we can't test the ACP change and that test only makes sure that the VBE is able 
+      # to handle build-extract rountrip in CP1252 encoding (default encodng of GitHub's windows-runners)
+
       - name: Run multilingual encoding tests
         shell: pwsh
         run: |
-          # The loop script tests the eight codepages with fixtures
-          # (1252, 1251, 1250, 932, 936, 950, 949, 874), switching the ACP.
+          # The loop script tests all codepages with fixtures, switching the ACP.
           # Excel is killed between iterations so new processes pick up
           # the changed ACP codepage.
           ./tests/multilang-loop.ps1

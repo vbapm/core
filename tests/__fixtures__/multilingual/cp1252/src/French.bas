@@ -1,4 +1,4 @@
-Attribute VB_Name = "Bonjour"
+Attribute VB_Name = "French"
 Option Explicit
 
 ' Français : é è ê ë à â ä ù û ü ç É È Ê Ë À Â Ä Ù Û Ü Ç

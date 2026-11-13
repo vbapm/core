@@ -1,4 +1,4 @@
-Attribute VB_Name = "Konnichiwa"
+Attribute VB_Name = "Japanese"
 Option Explicit
 
 ' 日本語テスト : こんにちは世界！

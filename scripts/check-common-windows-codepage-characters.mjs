@@ -49,7 +49,7 @@ function createMarkdownReport() {
 		`The scan found **${commonCodepoints.length} non-ASCII characters** that round-trip through CP1252 and all ${CODEPAGES.length - 1} other codepages in this analysis.`,
 		"",
 		`Codepages checked, in order: ${CODEPAGES.map(codepage => `CP${codepage}`).join(", ")}.`,
-		"The set includes the eight codepages with multilingual fixtures plus Windows-1253 through Windows-1258. The Excel build/export loop still runs only for codepages with fixtures.",
+		`These are also the ${CODEPAGES.length} codepages exercised by the multilingual Excel build/export fixture loop.`,
 		"ASCII characters are not listed; the report focuses on non-ASCII characters.",
 		"",
 		"## Method",

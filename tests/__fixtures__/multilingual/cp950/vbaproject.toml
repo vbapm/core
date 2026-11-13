@@ -7,4 +7,4 @@ target = { type = "xlsm", path = "targets/xlsm" }
 encoding = "cp950"
 
 [src]
-NiHao = "src/NiHao.bas"
+TraditionalChinese = "src/TraditionalChinese.bas"

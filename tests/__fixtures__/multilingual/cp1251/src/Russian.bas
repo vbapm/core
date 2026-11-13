@@ -1,4 +1,4 @@
-Attribute VB_Name = "Privet"
+Attribute VB_Name = "Russian"
 Option Explicit
 
 ' Русский : Привет мир! Как дела?

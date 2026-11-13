@@ -7,4 +7,4 @@ target = { type = "xlsm", path = "targets/xlsm" }
 encoding = "cp932"
 
 [src]
-Konnichiwa = "src/Konnichiwa.bas"
+Japanese = "src/Japanese.bas"

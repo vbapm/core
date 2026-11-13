@@ -13,7 +13,10 @@
     Restores the original ACP after all tests complete.
 #>
 param(
-    [string[]]$Codepages = @("1252", "1251", "1250", "932", "936", "950", "949", "874")
+    [string[]]$Codepages = @(
+        "1252", "1251", "1250", "932", "936", "950", "949", "874",
+        "1253", "1254", "1255", "1256", "1257", "1258"
+    )
 )
 
 $ErrorActionPreference = "Stop"

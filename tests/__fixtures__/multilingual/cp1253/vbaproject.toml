@@ -1,0 +1,10 @@
+# Greek (CP1253) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1253"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source]
+encoding = "cp1253"
+
+[src]
+Greek = "src/Greek.bas"

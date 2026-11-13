@@ -3,7 +3,7 @@
 The scan found **5 non-ASCII characters** that round-trip through CP1252 and all 13 other codepages in this analysis.
 
 Codepages checked, in order: CP1252, CP1251, CP1250, CP932, CP936, CP874, CP949, CP950, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258.
-The set includes the eight codepages with multilingual fixtures plus Windows-1253 through Windows-1258. The Excel build/export loop still runs only for codepages with fixtures.
+These are also the 14 codepages exercised by the multilingual Excel build/export fixture loop.
 ASCII characters are not listed; the report focuses on non-ASCII characters.
 
 ## Method

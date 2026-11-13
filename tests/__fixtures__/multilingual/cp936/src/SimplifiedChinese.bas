@@ -1,4 +1,4 @@
-Attribute VB_Name = "NiHao"
+Attribute VB_Name = "SimplifiedChinese"
 Option Explicit
 
 ' 中文测试 : 你好世界！

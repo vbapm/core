@@ -11,6 +11,12 @@ export roundtrip.
 | `cp1252/` | 1252 | Western European (French, German, Spanish, etc.) |
 | `cp1251/` | 1251 | Cyrillic (Russian) |
 | `cp1250/` | 1250 | Central European (Polish, Czech) |
+| `cp1253/` | 1253 | Greek |
+| `cp1254/` | 1254 | Turkish |
+| `cp1255/` | 1255 | Hebrew |
+| `cp1256/` | 1256 | Arabic |
+| `cp1257/` | 1257 | Baltic (Estonian, Latvian, Lithuanian) |
+| `cp1258/` | 1258 | Vietnamese |
 | `cp932/`  | 932  | Japanese (Windows-31J / CP932) |
 | `cp936/`  | 936  | Simplified Chinese (GBK / CP936) |
 | `cp950/`  | 950  | Traditional Chinese (Big5 / CP950) |

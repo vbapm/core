@@ -1,4 +1,4 @@
-Attribute VB_Name = "Annyeong"
+Attribute VB_Name = "Korean"
 Option Explicit
 
 ' 한국어 : 안녕하세요 세계!

@@ -1,0 +1,10 @@
+# Vietnamese (CP1258) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1258"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source]
+encoding = "cp1258"
+
+[src]
+Vietnamese = "src/Vietnamese.bas"

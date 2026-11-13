@@ -1,4 +1,4 @@
-Attribute VB_Name = "Witaj"
+Attribute VB_Name = "Polish"
 Option Explicit
 
 ' Polski : π Ê Í ≥ Ò Û ú ü ø • ∆   £ — ” å è Ø

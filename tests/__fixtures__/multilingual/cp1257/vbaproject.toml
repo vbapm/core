@@ -1,0 +1,10 @@
+# Baltic (CP1257) project fixture for testing encoding detection and handling.
+[project]
+name = "multilingual-cp1257"
+target = { type = "xlsm", path = "targets/xlsm" }
+
+[source]
+encoding = "cp1257"
+
+[src]
+Lithuanian = "src/Lithuanian.bas"
