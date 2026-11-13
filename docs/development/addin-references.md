@@ -357,7 +357,7 @@ Or, for a more robust check, hash the referenced file's content.
 | `src/build/load-from-project.ts` | Load peer references from manifest |
 | `src/build/compare-build-graphs.ts` | Compare peer refs by `path` instead of `guid`/`major`/`minor` |
 | `src/build/apply-changeset.ts` | Handle peer reference additions/removals |
-| `src/build/stage-build-graph.ts` | Include peer references in staged graph |
+| `src/build/stage-build-graph.ts` | Include peer references in transpiled graph |
 | `src/addin.ts` | Serialize `peer` and `path` in JSON passed to VBA |
 | `src/build/resolve-peers.ts` *(new)* | Workspace search + path resolution for `peer = true` |
 
@@ -366,7 +366,7 @@ Or, for a more robust check, hash the referenced file's content.
 |---|---|
 | `src/manifest/__tests__/manifest.test.ts` | Test parsing of `peer = true` references |
 | `src/build/__tests__/compare-build-graphs.test.ts` | Test peer reference change detection |
-| `src/build/__tests__/stage-build-graph.test.ts` | Test peer reference staging |
+| `src/build/__tests__/stage-build-graph.test.ts` | Test peer reference transpilation |
 | `src/build/__tests__/resolve-peers.test.ts` *(new)* | Test workspace peer resolution |
 
 ---

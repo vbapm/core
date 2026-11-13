@@ -2,12 +2,12 @@
 
 ## Context
 
-When staging VBA source for import, vbapm escapes HTML entities in comments so
-characters can survive conversion to the target codepage. Escaping can make a
-comment exceed VBA's 1,023-character physical-line limit. The current staging
-transform splits an overlong comment at a fixed character boundary, adding
-` _` to each continued physical line. During extraction, vbapm joins lines
-matching the generated shape before decoding entities.
+When transpiling VBA source for a build, vbapm escapes HTML entities in
+comments so characters can survive conversion to the target codepage.
+Escaping can make a comment exceed VBA's 1,023-character physical-line limit.
+The current transpilation step splits an overlong comment at a fixed character
+boundary, adding ` _` to each continued physical line. During extraction,
+vbapm joins lines matching the generated shape before decoding entities.
 
 The reassembly is heuristic: a generated line must be exactly 1,023 characters,
 end in ` _`, and be followed by a comment line with the same prefix. This
@@ -21,7 +21,7 @@ vbapm rather than written in the source.
 The current fixed-width split can break in the middle of an HTML entity such as
 `&amp;eacute;` or in the middle of a word. Reassembly restores the comment
 before entity decoding, so this should not change the extracted source, but
-the staged module can be harder to read and inspect.
+the transpiled module can be harder to read and inspect.
 
 A future wrapper could prefer boundaries in this order:
 
@@ -44,7 +44,7 @@ A source comment may already end in ` _`. If a wrapped comment's final physical
 line is exactly 1,023 characters and naturally ends in ` _`, the reassembler
 can mistake that source text for another generated continuation. This can
 cause an unintended join or make the 24-continuation limit appear to be
-exceeded. The staging limit counts markers it inserts, but reassembly
+exceeded. The transpilation limit counts markers it inserts, but reassembly
 recognizes markers by their textual shape.
 
 Any change to this behavior should cover both ordinary source comments ending
@@ -56,7 +56,7 @@ heuristic alone.
 ### Source-level comment continuation syntax complicates round-tripping
 
 A longer-term option is to reserve comment continuation (` _`) for vbapm's
-staging transform and disallow it at the end of source comment lines. VBA
+transpilation step and disallow it at the end of source comment lines. VBA
 comments can instead be written as consecutive apostrophe-prefixed lines.
 That gives vbapm a clearer distinction between source text and generated
 wrapping.
@@ -69,7 +69,7 @@ otherwise be literal comment text.
 
 ## Constraints
 
-- Every staged physical line must remain at or below 1,023 characters.
+- Every transpiled physical line must remain at or below 1,023 characters.
 - A wrapped logical comment must use at most 24 generated continuation
   markers, producing no more than 25 physical lines.
 - Reassembly must happen before HTML entity decoding because a split may fall

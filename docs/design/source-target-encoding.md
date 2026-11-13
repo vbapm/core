@@ -45,8 +45,8 @@ target = { type = "xlsm", path = "targets/xlsm", encoding = "cp932" }
 ```
 
 When `target.encoding` differs from a source's encoding, the build pipeline
-automatically transcodes the source to the target encoding before importing
-into VBA.
+automatically transcodes the source to the target encoding during
+transpilation, before the target is built.
 
 ## Validation: when encoding is required
 
@@ -110,7 +110,7 @@ const best = results[0];
 ### Current flow
 
 ```
-loadFromProject → stageBuildGraph (encode as system ACP) → VBA Import
+loadFromProject → transpile for the target codepage → build target
 ```
 
 ### Proposed flow
@@ -120,15 +120,12 @@ loadFromProject
   ├── For each component: if encoding is NOT declared, check for non-ASCII.
   │     If non-ASCII found → fail with error + jschardet suggestion.
   │
-  └── stageBuildGraph
-        ├── For each component:
-        │     sourceEncoding = declared encoding (or "unknown" if ASCII-only)
-        │     targetEncoding = target.encoding ?? getSystemCodepage()
-        │
-        │     if sourceEncoding ≠ targetEncoding:
-        │       transcode component.code from sourceEncoding → targetEncoding
-        │
-        └── Write encoded bytes to staging
+  └── Transpile each component for the target
+        ├── sourceEncoding = declared encoding (or "unknown" if ASCII-only)
+        ├── targetEncoding = target.encoding ?? getSystemCodepage()
+        ├── if sourceEncoding ≠ targetEncoding:
+        │     transcode component.code from sourceEncoding → targetEncoding
+        └── Produce target-encoded component bytes for the build
 ```
 
 ### Transcoding
@@ -164,7 +161,7 @@ export interface Source {
 5. **Add `encoding` key under `[source]`** as a default for all sources
 6. **Add non-ASCII check + encoding validation** in `loadFromProject` or a
    new pre-build validation step
-7. **Implement transcoding** in `stageBuildGraph` when source ≠ target encoding
+7. **Implement transcoding** during source transpilation when source ≠ target encoding
 8. **Tests:**
    - ASCII-only source without encoding → builds fine
    - Non-ASCII source without encoding → fails with jschardet suggestion
