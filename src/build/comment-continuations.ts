@@ -28,8 +28,13 @@ export function wrapVbaComment(
 		remainder = next;
 	}
 
-	if (prefix.length + remainder.length > maxPhysicalLineLength || remainder.length > finalBodyLength) {
-		throw new Error(`Unable to wrap comment in component "${componentName}" within VBA's line limit`);
+	if (
+		prefix.length + remainder.length > maxPhysicalLineLength ||
+		remainder.length > finalBodyLength
+	) {
+		throw new Error(
+			`Unable to wrap comment in component "${componentName}" within VBA's line limit`
+		);
 	}
 
 	lines.push(`${prefix}${remainder}`);
@@ -96,8 +101,7 @@ function splitPhysicalLines(code: string): { text: string; lineEnding: string }[
 	for (let index = 0; index < code.length; index++) {
 		if (code[index] !== "\r" && code[index] !== "\n") continue;
 
-		const lineEnding =
-			code[index] === "\r" && code[index + 1] === "\n" ? "\r\n" : code[index];
+		const lineEnding = code[index] === "\r" && code[index + 1] === "\n" ? "\r\n" : code[index];
 		lines.push({ text: code.slice(start, index), lineEnding });
 		index += lineEnding.length - 1;
 		start = index + 1;
