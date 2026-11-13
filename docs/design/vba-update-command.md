@@ -1,6 +1,7 @@
 # `vbapm update` Command
 
-Import VBA source directly into a built target — including one that is currently open in Excel — without rebuilding the file from XML.
+Build an existing target directly from VBA source, including one that is
+currently open in Excel, without rebuilding the file from XML.
 
 ## Usage
 
@@ -20,19 +21,21 @@ loadProject()
         │
         ▼
 loadFromProject()          ← reads src/*.bas / .cls / .frm
-stageBuildGraph()          ← copies files to a temp staging dir
+transpile source           ← prepares target-compatible component files
         │
         ▼
-importTarget(target, info, builtFilePath, options)
-  └─ Build.ImportGraph VBA macro (via run.ps1)
+build target in place
+  └─ Build.ImportGraph VBA macro (actual macro name, via run.ps1)
        ├─ if file already open in Excel → attaches to it
        ├─ if file not open             → opens build/file from disk
-       ├─ imports all src components
+       ├─ adds all transpiled src components
        ├─ updates references
        └─ Document.Save()
 ```
 
-The key difference from `build`: `update` operates on `build/<target>` directly instead of a staged copy, and performs **no** zip/unzip, backup, or move operations.
+The key difference from `build`: `update` applies transpiled source directly to
+`build/<target>` instead of creating a new target copy, and performs **no**
+zip/unzip, backup, or move operations.
 
 ## Files to Add / Modify
 
@@ -47,7 +50,12 @@ The key difference from `build`: `update` operates on `build/<target>` directly 
 
 ### `src/actions/update-project.ts`
 
-Reuses `importTarget` (already exported from `src/targets/build-target.ts`) — that function does exactly: load build graph → stage → call `Build.ImportGraph`. The only difference is that we pass the live built file path directly instead of a staged copy.
+Reuses `importTarget` (the existing function exported from
+`src/targets/build-target.ts`) to apply the transpiled graph through the
+`Build.ImportGraph` macro. `importTarget` is an implementation identifier; the
+build process is described here as building the target. For `update`, it
+receives the live built file path directly instead of a newly created target
+copy.
 
 ```typescript
 export async function updateProject(options: UpdateOptions = {}): Promise<string> {
@@ -62,7 +70,7 @@ export async function updateProject(options: UpdateOptions = {}): Promise<string
     throw new CliError(ErrorCode.UpdateTargetNotBuilt, `...`);
   }
 
-  // [2/2] Import VBA into target (live or on-disk)
+  // [2/2] Build target from VBA source (live or on-disk)
   await importTarget(target, { project, dependencies }, builtFile, options);
 
   return builtFile;
@@ -101,7 +109,8 @@ The `Dispose()` logic becomes:
 }
 ```
 
-`update-project.ts` passes `options.open` down through `importTarget` so the value reaches the `run.ps1` invocation.
+`update-project.ts` passes `options.open` through `importTarget` so the value
+reaches the `run.ps1` invocation.
 
 ### Error codes to add to `src/errors.ts`
 
@@ -114,4 +123,3 @@ update: async () => (await import("./vbapm-update")).default,
 ```
 
 And add `update` to the `Commands:` section of the help string.
-

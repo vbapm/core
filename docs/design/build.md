@@ -53,8 +53,8 @@ Potential Errors:
 1. Create binary for target by zipping the given or blank target into a Workbook, Document, Presentation, etc. with no VBA project
 2. Create a `BuildGraph` from the projects src files and dependencies. The `BuildGraph` is a representation of the VBA project, including the project name, components, and references
 3. Transform the `BuildGraph` as needed. Currently, this entails normalizing line-endings, but in the future additional source transformations can occur
-4. Stage the `BuildGraph` to the filesystem in a staging directory that Office can access
-5. Import the staged `BuildGraph` into the previously created binary from the vbapm addin
+4. Transpile the `BuildGraph` into target-compatible component files
+5. Build the target by applying the transpiled `BuildGraph` with the vbapm addin
 
 Details:
 

@@ -64,6 +64,94 @@ describe("export", () => {
 		});
 	});
 
+	timedTest("build and extract round-trip Unicode apostrophe comments", async () => {
+		await setup(standard, "export-html-entity-comments", async cwd => {
+			const manifestPath = join(cwd, "vbaproject.toml");
+			const manifest = await readFile(manifestPath, "utf-8");
+			const asciiManifest = manifest
+				.replace(
+					'target = { type = "xlsm", path = "targets/xlsm" }',
+					'target = { type = "xlsm", path = "targets/xlsm", encoding = "ascii" }'
+				)
+				.replace("\n[src]\n", '\n[source]\nencoding = "utf-8"\n\n[src]\n');
+
+			expect(asciiManifest).toContain('encoding = "ascii"');
+			expect(asciiManifest).toContain('encoding = "utf-8"');
+			await writeFile(manifestPath, asciiManifest, "utf-8");
+
+			const componentPath = join(cwd, "src/Validation.bas");
+			const originalCode = await readFile(componentPath, "utf-8");
+			const comment = "Café ≂̸ 한 😀";
+			const separator = originalCode.endsWith("\n") ? "" : "\n";
+			await writeFile(componentPath, `${originalCode}${separator}' ${comment}\n`, "utf-8");
+
+			await execute(cwd, "build");
+			await execute(cwd, "export --target xlsm");
+
+			const extractedCode = await readFile(componentPath, "utf-8");
+			expect(extractedCode).toContain(`' ${comment}`);
+		});
+	});
+
+	timedTest("build and extract round-trip comments with CP1252-only substitutions", async () => {
+		await setup(standard, "export-cp1252-entity-comments", async cwd => {
+			const manifestPath = join(cwd, "vbaproject.toml");
+			const manifest = await readFile(manifestPath, "utf-8");
+			const cp1252Manifest = manifest
+				.replace(
+					'target = { type = "xlsm", path = "targets/xlsm" }',
+					'target = { type = "xlsm", path = "targets/xlsm", encoding = "cp1252" }'
+				)
+				.replace("\n[src]\n", '\n[source]\nencoding = "utf-8"\n\n[src]\n');
+
+			expect(cp1252Manifest).toContain('encoding = "cp1252"');
+			expect(cp1252Manifest).toContain('encoding = "utf-8"');
+			await writeFile(manifestPath, cp1252Manifest, "utf-8");
+
+			const componentPath = join(cwd, "src/Validation.bas");
+			const originalCode = await readFile(componentPath, "utf-8");
+			const comment = "Café ≂̸ 한 😀";
+			const separator = originalCode.endsWith("\n") ? "" : "\n";
+			await writeFile(componentPath, `${originalCode}${separator}' ${comment}\n`, "utf-8");
+
+			await execute(cwd, "build");
+			await execute(cwd, "export --target xlsm");
+
+			const extractedCode = await readFile(componentPath, "utf-8");
+			expect(extractedCode).toContain(`' ${comment}`);
+		});
+	});
+
+	timedTest("export preserves literal numeric entities in non-ASCII comments", async () => {
+		await setup(standard, "export-literal-html-entity", async cwd => {
+			const manifestPath = join(cwd, "vbaproject.toml");
+			const manifest = await readFile(manifestPath, "utf-8");
+			const cp1252Manifest = manifest
+				.replace(
+					'target = { type = "xlsm", path = "targets/xlsm" }',
+					'target = { type = "xlsm", path = "targets/xlsm", encoding = "cp1252" }'
+				)
+				.replace("\n[src]\n", '\n[source]\nencoding = "utf-8"\n\n[src]\n');
+
+			expect(cp1252Manifest).toContain('encoding = "cp1252"');
+			expect(cp1252Manifest).toContain('encoding = "utf-8"');
+			await writeFile(manifestPath, cp1252Manifest, "utf-8");
+
+			const componentPath = join(cwd, "src/Validation.bas");
+			const originalCode = await readFile(componentPath, "utf-8");
+			const comment = "Café - Show &#x1f600; literally";
+			const separator = originalCode.endsWith("\n") ? "" : "\n";
+			await writeFile(componentPath, `${originalCode}${separator}' ${comment}\n`, "utf-8");
+
+			await execute(cwd, "build");
+			await execute(cwd, "export --target xlsm");
+
+			const extractedCode = await readFile(componentPath, "utf-8");
+			expect(extractedCode).toContain(`' ${comment}`);
+			expect(extractedCode).not.toContain("' Café - Show 😀 literally");
+		});
+	});
+
 	timedTest("export fails when --xml-only and --vba-only are both specified", async () => {
 		await tmp("export-options-conflict", async cwd => {
 			await expect(

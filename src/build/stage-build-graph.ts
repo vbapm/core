@@ -3,7 +3,8 @@ import { parallel } from "../utils/parallel";
 import { basename, join } from "../utils/path";
 import * as iconv from "iconv-lite";
 import { env } from "../env";
-import { createNamedHtmlEntityHandler } from "./named-html-entities";
+import { createNamedHtmlEntityHandler, escapeHtmlEntities } from "./named-html-entities";
+import { wrapVbaComment } from "./comment-continuations";
 import { BuildGraph, ImportGraph } from "./build-graph";
 import { Codepage, codepageToLabel, getSystemCodepage } from "./encoding-sniffer";
 
@@ -22,24 +23,26 @@ export async function stageBuildGraph(
 
 	const components = await parallel(graph.components, async component => {
 		const path = join(staging, component.filename);
+		const stagedText = component.code.replace(
+			/^([ \t]*')([^\r\n]*)(\r\n|\r|\n|$)/gm,
+			(_line, prefix: string, comment: string, lineEnding: string) =>
+				`${wrapVbaComment(prefix, escapeHtmlEntities(comment), lineEnding, component.name)}${lineEnding}`
+		);
 
-		const encoded =
-			targetCp === Codepage.Ascii
-				? iconv.encode(component.code, targetLabel, {
-						invalidCharHandler: createNamedHtmlEntityHandler(
-							component.code,
-							(original, replacement, index) => {
-								debug(
-									'🔄️ Replaced "%s" with "%s" in %s at character %d',
-									original,
-									replacement,
-									component.details.path ?? component.filename,
-									index + 1
-								);
-							}
-						)
-					})
-				: iconv.encode(component.code, targetLabel);
+		const encoded = iconv.encode(stagedText, targetLabel, {
+			invalidCharHandler: createNamedHtmlEntityHandler(
+				stagedText,
+				(original, replacement, index) => {
+					debug(
+						'🔄️ Replaced "%s" with "%s" in %s at character %d',
+						original,
+						replacement,
+						component.details.path ?? component.filename,
+						index + 1
+					);
+				}
+			)
+		});
 		if (!encoded) {
 			throw new Error(`Encoding component "${component.name}" was cancelled`);
 		}

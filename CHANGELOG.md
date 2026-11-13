@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Fixed
+- `vba build` and `vba extract` now preserve non-ASCII comment characters and literal HTML entities across round-trips. ([#176])
 - `vba config --global <key> <value>` now saves the requested setting instead of consuming the key as an option value. ([#166](https://github.com/vbapm/core/issues/166))
 - `vba extract` now handles a missing target directory by treating the previous worksheet-selection baseline as empty. ([#165](https://github.com/vbapm/core/issues/165))
 - `vba build` and `vba update` now pass Power Query formulas to Excel through staged UTF-8 files, avoiding command-line length failures with large query sets.
@@ -162,3 +163,4 @@ Note: The online registry remains the vba-blocks.com registry.
 [#64]: https://github.com/vbapm/core/pull/64
 [#98]: https://github.com/vbapm/core/pull/98
 [#164]: https://github.com/vbapm/core/pull/164
+[#176]: https://github.com/vbapm/core/pull/176
