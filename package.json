@@ -87,6 +87,7 @@
         "jschardet": "^4.0.0",
         "logic-solver": "^2",
         "meant": "^2.0.0",
+        "minimatch": "^10.2.5",
         "mri": "^1",
         "node-fetch": "^3.0.0",
         "open": "^11.0.0",

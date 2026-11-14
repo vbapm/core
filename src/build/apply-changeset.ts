@@ -2,11 +2,12 @@ import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
 import { Reference, relativizePeerPath } from "../manifest/reference";
-import { Source } from "../manifest/source";
+import { resolveSourceEncoding, Source, sourcePathMatches } from "../manifest/source";
 import { Project } from "../project";
 import { ensureDir, remove, writeFile } from "../utils/fs";
 import { parallel } from "../utils/parallel";
-import { dirname, join, relative } from "../utils/path";
+import { dirname, join } from "../utils/path";
+import { encodeBuffer } from "../utils/encoding";
 import * as iconv from "iconv-lite";
 import { Changeset } from "./changeset";
 import { Component, extensionToType } from "./component";
@@ -25,7 +26,11 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 	// Update src directory
 	await parallel(
 		changeset.components.changed,
-		component => writeComponent(component.details.path!, component),
+		component => {
+			const path = component.details.path!;
+			setDeclaredSourceEncoding(project, path, component);
+			return writeComponent(path, component);
+		},
 		{ progress }
 	);
 
@@ -36,6 +41,7 @@ export async function applyChangeset(project: Project, changeset: Changeset) {
 			const sub = resolveSrcSubfolders(project.manifest.srcProperties?.subfolders, component.type);
 			const path = join(project.paths.dir, folder, sub, component.filename);
 			component.details.path = path;
+			setDeclaredSourceEncoding(project, path, component);
 
 			await writeComponent(path, component);
 		},
@@ -180,37 +186,19 @@ export function isCoveredByWildcard(
 	sources: Source[],
 	projectDir: string
 ): boolean {
-	// Normalise to forward slashes for cross-platform glob matching
-	const normalisedPath = srcPath.replace(/\\/g, "/");
+	return sources.some(
+		source => source.path.includes("*") && sourcePathMatches(source.path, srcPath, projectDir)
+	);
+}
 
-	for (const source of sources) {
-		if (!source.path.includes("*")) continue;
-
-		// Normalise the wildcard pattern to a path relative to the project.
-		// Normalise to forward slashes — source.path uses / but
-		// projectDir may use \ on Windows.
-		const projectDirFwd = projectDir.replace(/\\/g, "/");
-		const pattern = source.path.startsWith(projectDirFwd)
-			? relative(projectDir, source.path)
-			: source.path;
-
-		// Convert glob to regex:
-		//   **/  → zero or more path segments (e.g. dir/**/*.ext)
-		//   **   → anything including /
-		//   *    → anything except /
-		const regexStr = pattern
-			.replace(/[.+^${}()|[\]\\]/g, "\\$&")
-			.replace(/\*\*\//g, "<<<GSTARSLASH>>>")
-			.replace(/\*\*/g, "<<<GSTAR>>>")
-			.replace(/\*/g, "[^/]*")
-			.replace(/<<<GSTARSLASH>>>/g, "(.*/)?")
-			.replace(/<<<GSTAR>>>/g, ".*");
-
-		if (new RegExp(`^${regexStr}$`).test(normalisedPath)) {
-			return true;
-		}
-	}
-	return false;
+function setDeclaredSourceEncoding(project: Project, path: string, component: Component): void {
+	const encoding = resolveSourceEncoding(
+		project.manifest.src,
+		path,
+		project.paths.dir,
+		project.manifest.srcProperties?.encoding
+	);
+	if (encoding) component.details.sourceEncoding = encoding;
 }
 
 export async function writeComponent(path: string, component: Component) {
@@ -225,12 +213,16 @@ export async function writeComponent(path: string, component: Component) {
 
 	if (srcEncoding) {
 		const systemLabel = codepageToLabel(getSystemCodepage());
+		const hasUtf8Bom = /^utf-?8-bom$/i.test(srcEncoding);
+		const utf16Endian = /^utf-?16(le|be)$/i.exec(srcEncoding)?.[1].toLowerCase();
+		const encodingLabel = hasUtf8Bom ? "utf-8" : srcEncoding;
 
 		if (srcEncoding.toLowerCase() !== systemLabel.toLowerCase()) {
 			// Source encoding differs from the system codepage — transcode.
 			// Warn if the target encoding is not UTF-8/UTF-16 and the
 			// content has non-ASCII characters that may not be representable.
-			const isLossyTarget = !/^utf-?8$/i.test(srcEncoding) && !/^utf-?16/i.test(srcEncoding);
+			const isLossyTarget =
+				!/^utf-?8(?:-bom)?$/i.test(srcEncoding) && !/^utf-?16/i.test(srcEncoding);
 
 			if (isLossyTarget) {
 				const hasNonAscii = [...component.code].some(c => c.charCodeAt(0) > 127);
@@ -248,12 +240,16 @@ export async function writeComponent(path: string, component: Component) {
 					// See https://github.com/pillarjs/iconv-lite/pull/388
 				}
 			}
-
-			data = Buffer.from(iconv.encode(component.code, srcEncoding));
-		} else {
-			// Same encoding as system codepage — encode directly
-			data = Buffer.from(iconv.encode(component.code, srcEncoding));
 		}
+
+		data = hasUtf8Bom
+			? encodeBuffer(component.code, { encoding: "utf8", hasBom: true })
+			: utf16Endian
+				? encodeBuffer(component.code, {
+						encoding: utf16Endian === "le" ? "utf16le" : "utf16be",
+						hasBom: true
+					})
+				: Buffer.from(iconv.encode(component.code, encodingLabel));
 	}
 
 	await writeFile(path, data);
