@@ -13,6 +13,7 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [source]
+encoding = \\"windows-1252\\"
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [source.files]
@@ -58,6 +59,9 @@ authors = []
 license = \\"UNLICENSED\\"
 target = { type = \\"xlsm\\", name = \\"standard\\" }
 
+[source]
+encoding = \\"windows-1252\\"
+
 [source.files]
 Sheet1 = \\"src/Sheet1.cls\\"
 Sheet2 = \\"src/Sheet2.cls\\"
@@ -98,6 +102,7 @@ license = \\"UNLICENSED\\"
 target = \\"xlsm\\"
 
 [source]
+encoding = \\"windows-1252\\"
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [source.files]

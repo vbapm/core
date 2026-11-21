@@ -97,6 +97,35 @@ describe("resolveSourceFiles", () => {
 		expect(entry.source.name).toBe("Validation");
 		expect(entry.component.name).toBe("Validation");
 	});
+
+	test("resolves encoding by exact entry, matching wildcard, then source default", async () => {
+		const { project } = await setup(wildcard);
+		const validationPath = join(project.paths.dir, "src", "Modules", "Validation.bas");
+		const sheetPath = join(project.paths.dir, "src", "Excel Objects", "Sheet1.cls");
+		const classPath = join(project.paths.dir, "src", "Class Modules", "Class1.cls");
+		project.manifest.src = [
+			{ name: "Validation", path: validationPath, encoding: "cp932" },
+			{ name: "Sheet1", path: sheetPath },
+			{ name: "Class1", path: classPath },
+			{ name: "ExcelObjects", path: "src/Excel Objects/**/*.cls", encoding: "cp1251" }
+		];
+		project.manifest.srcProperties = {
+			...project.manifest.srcProperties,
+			encoding: "cp1252"
+		};
+
+		const sources = await resolveSourceFiles(project);
+		const byName = new Map(
+			[...sources.values()].map(({ component }) => [
+				component.name,
+				component.details.sourceEncoding
+			])
+		);
+
+		expect(byName.get("Validation")).toBe("cp932");
+		expect(byName.get("Sheet1")).toBe("cp1251");
+		expect(byName.get("Class1")).toBe("cp1252");
+	});
 });
 
 describe("resolveTargetPaths", () => {
@@ -167,6 +196,17 @@ describe("resolveTargetPaths", () => {
 		const [path] = [...map.keys()];
 		expect(path).toEqual(expect.stringContaining("src/MyModule.bas"));
 		expect(path).not.toEqual(expect.stringContaining("src/Modules/"));
+	});
+
+	test("applies the source-level encoding to exported component files", async () => {
+		const { project } = await setup(wildcard);
+		project.manifest.src = [];
+		project.manifest.srcProperties = { encoding: "utf-8-bom" };
+		const component = makeComponent("module", "NewModule");
+
+		resolveTargetPaths(project, [component]);
+
+		expect(component.details.sourceEncoding).toBe("utf-8-bom");
 	});
 });
 

@@ -4,7 +4,13 @@ import { env } from "../env";
 import { Message } from "../messages";
 import { resolveSrcFolder, resolveSrcSubfolders, writeManifest } from "../manifest";
 import { Reference, relativizePeerPath } from "../manifest/reference";
-import { isPowerQueryPath, isPowerQuerySource, Source } from "../manifest/source";
+import {
+	isPowerQueryPath,
+	isPowerQuerySource,
+	resolveSourceEncoding,
+	Source,
+	sourcePathMatches
+} from "../manifest/source";
 import { Project } from "../project";
 import { remove } from "../utils/fs";
 import { parallel } from "../utils/parallel";
@@ -34,10 +40,6 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 	for (const source of project.manifest.src) {
 		if (isPowerQuerySource(source)) continue;
 
-		// Resolve encoding: per-source override > project-level > Unknown
-		const declaredLabel = source.encoding ?? project.manifest.srcProperties?.encoding;
-		const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
-
 		if (source.path.includes("*")) {
 			// Wildcard — expand against the project directory.
 			// Normalise to forward slashes for startsWith — source.path uses
@@ -52,12 +54,38 @@ export async function resolveSourceFiles(project: Project): Promise<Map<string, 
 				if (isPowerQueryPath(file)) continue;
 
 				const absPath = join(baseDir, file);
+				if (
+					project.manifest.src.some(
+						entry =>
+							!entry.path.includes("*") && sourcePathMatches(entry.path, absPath, project.paths.dir)
+					)
+				) {
+					continue;
+				}
+				if (map.has(absPath)) continue;
+
+				const declaredLabel = resolveSourceEncoding(
+					project.manifest.src,
+					absPath,
+					project.paths.dir,
+					project.manifest.srcProperties?.encoding
+				);
+				const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 				const component = await Component.load(absPath, codepage);
 				component.details.sourceEncoding = declaredLabel;
 				map.set(absPath, { source, component });
 			}
 		} else {
+			if (map.has(source.path)) continue;
+
 			// Single path — load directly
+			const declaredLabel = resolveSourceEncoding(
+				project.manifest.src,
+				source.path,
+				project.paths.dir,
+				project.manifest.srcProperties?.encoding
+			);
+			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 			const component = await Component.load(source.path, codepage, { binary_path: source.binary });
 			component.details.sourceEncoding = declaredLabel;
 
@@ -110,6 +138,12 @@ export function resolveTargetPaths(
 		const sub = resolveSrcSubfolders(subfolders, component.type);
 		const path = explicitPath ?? join(project.paths.dir, folder, sub, component.filename);
 		component.details.path = path;
+		component.details.sourceEncoding = resolveSourceEncoding(
+			project.manifest.src,
+			path,
+			project.paths.dir,
+			project.manifest.srcProperties?.encoding
+		);
 		map.set(path, component);
 	}
 

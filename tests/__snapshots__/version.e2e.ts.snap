@@ -13,6 +13,7 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [source]
+encoding = \\"windows-1252\\"
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [source.files]
@@ -37,6 +38,7 @@ authors = []
 license = \\"UNLICENSED\\"
 
 [source]
+encoding = \\"windows-1252\\"
 subfolders = { Objects = \\"Excel Objects\\", Forms = \\"Forms\\", Modules = \\"Modules\\", Classes = \\"Class Modules\\" }
 
 [source.files]

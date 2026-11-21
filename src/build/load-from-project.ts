@@ -6,7 +6,13 @@ import { CliError, ErrorCode } from "../errors";
 import { Message } from "../messages";
 import { Manifest, resolveSrcFolder, resolveSrcSubfolders } from "../manifest";
 import { Reference } from "../manifest/reference";
-import { isPowerQueryPath, isPowerQuerySource } from "../manifest/source";
+import {
+	isPowerQueryPath,
+	isPowerQuerySource,
+	resolveSourceEncoding,
+	Source,
+	sourcePathMatches
+} from "../manifest/source";
 import { Project } from "../project";
 import { BuildOptions } from "../targets/build-target";
 import { readFile } from "../utils/fs";
@@ -19,6 +25,19 @@ import { byComponentTypeThenName, Component } from "./component";
 
 import jschardet from "jschardet";
 
+/**
+ * Loads project and dependency sources, references and Power Query files into
+ * a build graph, then validates the graph and its source encodings.
+ *
+ * Development sources and dependencies are included unless release mode is
+ * enabled.
+ *
+ * @param project - Project whose manifest and source files will be loaded.
+ * @param dependencies - Resolved dependency manifests to include in the graph.
+ * @param options - Build options controlling release filtering.
+ * @returns The validated build graph.
+ * @throws {CliError} If graph validation fails or a source encoding is required.
+ */
 export async function loadFromProject(
 	project: Project,
 	dependencies: Manifest[],
@@ -40,49 +59,29 @@ export async function loadFromProject(
 
 	// Load components and references from project and dependencies
 	for (const manifest of manifests) {
-		for (const source of manifest.src) {
-			if (isPowerQuerySource(source)) continue;
-
-			// Resolve encoding: per-source override > project-level > Unknown
-			const declaredLabel = source.encoding ?? manifest.srcProperties?.encoding;
+		for (const [sourcePath, source] of expandManifestSources(manifest.src, project.paths.dir)) {
+			const declaredLabel = resolveSourceEncoding(
+				manifest.src,
+				sourcePath,
+				project.paths.dir,
+				manifest.srcProperties?.encoding
+			);
 			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
 
-			// Expand wildcards against the project directory
-			if (source.path.includes("*")) {
-				const baseDir = project.paths.dir;
-				const normalizedSourcePath = source.path.replace(/\\/g, "/");
-				const normalizedBaseDir = baseDir.replace(/\\/g, "/");
-				const pattern = normalizedSourcePath.startsWith(normalizedBaseDir)
-					? relative(baseDir, source.path)
-					: source.path;
-				const matched = walk(baseDir, { globs: [pattern], directories: false });
-				for (const file of matched) {
-					if (isPowerQueryPath(file)) continue;
-
-					const absPath = join(baseDir, file);
-					loadingComponents.push(
-						Component.load(absPath, codepage, {}).then(component => {
-							markObjectComponent(component, project, absPath);
-							component.details.sourceEncoding = declaredLabel;
-							if (manifest !== project.manifest) {
-								fromDependencies.components.set(component, manifest.name);
-							}
-							return component;
-						})
-					);
-				}
-			} else {
-				loadingComponents.push(
-					Component.load(source.path, codepage, { binary_path: source.binary }).then(component => {
-						markObjectComponent(component, project, source.path);
-						component.details.sourceEncoding = declaredLabel;
-						if (manifest !== project.manifest) {
-							fromDependencies.components.set(component, manifest.name);
-						}
-						return component;
-					})
-				);
-			}
+			loadingComponents.push(
+				Component.load(
+					sourcePath,
+					codepage,
+					source.path.includes("*") ? {} : { binary_path: source.binary }
+				).then(component => {
+					markObjectComponent(component, project, sourcePath);
+					component.details.sourceEncoding = declaredLabel;
+					if (manifest !== project.manifest) {
+						fromDependencies.components.set(component, manifest.name);
+					}
+					return component;
+				})
+			);
 		}
 		for (const reference of manifest.references) {
 			const nameGuid = `${reference.name}_${reference.guid}`;
@@ -98,30 +97,27 @@ export async function loadFromProject(
 	}
 
 	if (!options.release) {
-		for (const source of project.manifest.devSrc) {
-			if (isPowerQuerySource(source)) continue;
-
-			if (source.path.includes("*")) {
-				const baseDir = project.paths.dir;
-				const normalizedSourcePath = source.path.replace(/\\/g, "/");
-				const normalizedBaseDir = baseDir.replace(/\\/g, "/");
-				const pattern = normalizedSourcePath.startsWith(normalizedBaseDir)
-					? relative(baseDir, source.path)
-					: source.path;
-				const matched = walk(baseDir, { globs: [pattern], directories: false });
-				for (const file of matched) {
-					if (isPowerQueryPath(file)) continue;
-
-					const absPath = join(baseDir, file);
-					loadingComponents.push(
-						Component.load(absPath, Codepage.Unknown, { binary_path: source.binary })
-					);
-				}
-			} else {
-				loadingComponents.push(
-					Component.load(source.path, Codepage.Unknown, { binary_path: source.binary })
-				);
-			}
+		for (const [sourcePath, source] of expandManifestSources(
+			project.manifest.devSrc,
+			project.paths.dir
+		)) {
+			const declaredLabel = resolveSourceEncoding(
+				project.manifest.devSrc,
+				sourcePath,
+				project.paths.dir,
+				project.manifest.srcProperties?.encoding
+			);
+			const codepage = declaredLabel ? labelToCodepage(declaredLabel) : Codepage.Unknown;
+			loadingComponents.push(
+				Component.load(
+					sourcePath,
+					codepage,
+					source.path.includes("*") ? {} : { binary_path: source.binary }
+				).then(component => {
+					component.details.sourceEncoding = declaredLabel;
+					return component;
+				})
+			);
 		}
 		for (const reference of project.manifest.devReferences) {
 			const nameGuid = `${reference.name}_${reference.guid}`;
@@ -149,6 +145,37 @@ export async function loadFromProject(
 	await validateEncoding(project, graph);
 	validateGraph(project, graph);
 	return graph;
+}
+
+function expandManifestSources(sources: Source[], projectDir: string): Map<string, Source> {
+	const paths = new Map<string, Source>();
+
+	for (const source of sources) {
+		if (isPowerQuerySource(source)) continue;
+
+		if (!source.path.includes("*")) {
+			if (!paths.has(source.path)) paths.set(source.path, source);
+			continue;
+		}
+
+		const normalizedSourcePath = source.path.replace(/\\/g, "/");
+		const normalizedBaseDir = projectDir.replace(/\\/g, "/");
+		const pattern = normalizedSourcePath.startsWith(normalizedBaseDir)
+			? relative(projectDir, source.path)
+			: source.path;
+		const matched = walk(projectDir, { globs: [pattern], directories: false });
+		for (const file of matched) {
+			if (isPowerQueryPath(file)) continue;
+
+			const sourcePath = join(projectDir, file);
+			const hasExactEntry = sources.some(
+				entry => !entry.path.includes("*") && sourcePathMatches(entry.path, sourcePath, projectDir)
+			);
+			if (!hasExactEntry && !paths.has(sourcePath)) paths.set(sourcePath, source);
+		}
+	}
+
+	return paths;
 }
 
 function validateGraph(project: Project, graph: BuildGraph) {
@@ -199,26 +226,17 @@ function validateGraph(project: Project, graph: BuildGraph) {
  * suggestion.
  */
 async function validateEncoding(project: Project, graph: BuildGraph) {
-	const srcEncoding = project.manifest.srcProperties?.encoding;
-
 	for (const component of graph.components) {
 		// Only check project-owned components, not dependency components
 		if (graph.fromDependencies.components.has(component)) continue;
 
-		// Check if encoding is declared (project-level or per-source)
-		// VBA component names are case-insensitive
-		const source = project.manifest.src.find(
-			s => s.name.localeCompare(component.name, undefined, { sensitivity: "base" }) === 0
-		);
-		const declaredEncoding = source?.encoding ?? srcEncoding;
-		if (declaredEncoding) continue;
+		if (component.details.sourceEncoding) continue;
 
 		// Check for non-ASCII characters
 		if (!hasNonAscii(component.code)) continue;
 
-		// Try jschardet to suggest an encoding
+		const sourcePath = component.details.path;
 		let suggestion = "";
-		const sourcePath = source?.path;
 		if (sourcePath) {
 			try {
 				const buffer = await readFile(sourcePath);
@@ -246,7 +264,7 @@ async function validateEncoding(project: Project, graph: BuildGraph) {
 		throw new CliError(
 			ErrorCode.BuildInvalid,
 			dedent`
-        Non-ASCII characters detected in "${source?.path || component.filename}".
+        Non-ASCII characters detected in "${sourcePath || component.filename}".
         Please specify the encoding of the source code so the build process
         can preserve them correctly.${suggestion}
       `
