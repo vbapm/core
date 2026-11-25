@@ -79,7 +79,7 @@
         "date-fns": "^4.0.0",
         "debug": "^4",
         "decompress": "^4",
-        "editorconfig": "^3.0.0",
+        "editorconfig": "^4.0.0",
         "env-paths": "^4.0.0",
         "fs-extra": "^11",
         "iconv-lite": "1.0.0-alpha.4",
